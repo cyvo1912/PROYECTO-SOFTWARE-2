@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, StatusBar, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ScrollView, StatusBar, SafeAreaView, Platform } from 'react-native';
 import Header from '../components/Header';
 import HeroSection from '../components/HeroSection';
 import StatsSection from '../components/StatsSection';
@@ -10,7 +10,7 @@ import Footer from '../components/Footer';
 import ActionModal from '../components/ActionModal';
 import { colors } from '../theme/colors';
 
-export default function LandingScreen() {
+export default function LandingScreen({ onNavigateToLogin }) {
   const [modalConfig, setModalConfig] = useState({ visible: false, type: null });
 
   const handleOpenModal = (type) => {
@@ -31,7 +31,7 @@ export default function LandingScreen() {
       >
         {/* 1. Header (Navbar) */}
         <Header 
-          onLoginPress={() => handleOpenModal('login')} 
+          onLoginPress={onNavigateToLogin || (() => handleOpenModal('login'))} 
           onRegisterPress={() => handleOpenModal('register')} 
         />
 
@@ -70,7 +70,8 @@ export default function LandingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 16) : 0,
   },
   scrollView: {
     flex: 1,
