@@ -9,7 +9,10 @@ app.use(express.json());
 
 // Routes
 const landingRoutes = require('./routes/landing.routes');
+const authRoutes = require('./routes/auth.routes');
+
 app.use('/api', landingRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {

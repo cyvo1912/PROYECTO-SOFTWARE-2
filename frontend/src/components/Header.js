@@ -23,6 +23,7 @@ export default function Header({ onLoginPress, onRegisterPress }) {
           style={styles.loginButton} 
           onPress={onLoginPress}
           activeOpacity={0.7}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
         >
           <Text style={styles.loginText}>Iniciar Sesión</Text>
         </TouchableOpacity>
@@ -31,6 +32,7 @@ export default function Header({ onLoginPress, onRegisterPress }) {
           style={styles.registerButton} 
           onPress={onRegisterPress}
           activeOpacity={0.85}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
         >
           <Text style={styles.registerText}>Registrarse</Text>
         </TouchableOpacity>
@@ -44,8 +46,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 18,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F1EEF9',
