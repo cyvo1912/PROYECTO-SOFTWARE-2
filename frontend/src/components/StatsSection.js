@@ -5,7 +5,7 @@ import { colors } from '../theme/colors';
 const statsData = [
   { value: '+500', label: 'Niñeras Verificadas', detail: 'Con antecedentes revisados' },
   { value: '+1,200', label: 'Familias Satisfechas', detail: 'En Lima Metropolitana' },
-  { value: '4.9 ★', label: 'Calificación Promedio', detail: 'De más de 3,500 servicios' },
+  { value: '4.9 / 5', label: 'Calificación Promedio', detail: 'De más de 3,500 servicios' },
   { value: '100%', label: 'Confianza y Seguridad', detail: 'Soporte y seguimiento continuo' },
 ];
 

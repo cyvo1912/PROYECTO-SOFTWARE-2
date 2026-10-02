@@ -15,32 +15,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-const DEMO_CREDENTIALS = {
-  Familia: {
-    email: 'familia.garcia@correo.com',
-    password: 'password123',
-    name: 'Familia García',
-    verified: true,
-  },
-  Ninera: {
-    email: '20191495@aloe.ulima.edu.pe',
-    password: 'password123',
-    name: 'María García (Niñera)',
-    verified: true,
-  },
-  NineraPendiente: {
-    email: 'ana.martinez@correo.com',
-    password: 'password123',
-    name: 'Ana Martínez',
-    verified: false,
-  },
-};
-
 export default function LoginScreen({ onBack, onNavigateToRegister }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
-  // Roles móviles: 'Familia' | 'Ninera'
+  // Roles móviles del proyecto: 'Familia' | 'Ninera'
   const [selectedRole, setSelectedRole] = useState('Familia');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,14 +30,6 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
 
   const handleRoleChange = (role) => {
     setSelectedRole(role);
-    setErrorMessage('');
-    setLoggedInUser(null);
-  };
-
-  const fillDemoData = (role) => {
-    setSelectedRole(role);
-    setEmail(DEMO_CREDENTIALS[role].email);
-    setPassword(DEMO_CREDENTIALS[role].password);
     setErrorMessage('');
     setLoggedInUser(null);
   };
@@ -76,19 +47,7 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
 
     setLoading(true);
 
-    // Validación HU4 Escenario 2: "Cuenta pendiente de validación"
-    if (selectedRole === 'Ninera' && email.trim().toLowerCase() === 'ana.martinez@correo.com') {
-      setTimeout(() => {
-        setLoading(false);
-        setErrorMessage('Cuenta pendiente de verificación.');
-      }, 500);
-      return;
-    }
-
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,9 +56,7 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
           password: password.trim(),
           role: selectedRole,
         }),
-        signal: controller.signal,
       });
-      clearTimeout(timeoutId);
 
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -109,15 +66,11 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
           name: data.user.nombre,
           email: data.user.correo,
           role: data.user.rol,
+          detalles: data.user.detalles,
         });
       }
     } catch (err) {
-      // Fallback local en caso de que el backend esté detenido
-      setLoggedInUser({
-        name: DEMO_CREDENTIALS[selectedRole]?.name || email.trim().split('@')[0],
-        email: email.trim(),
-        role: selectedRole,
-      });
+      setErrorMessage('No se pudo conectar con el servidor backend. Verifica tu conexión.');
     } finally {
       setLoading(false);
     }
@@ -137,13 +90,14 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
             style={styles.backButton}
             onPress={onBack}
             activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
             <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Tarjeta Central del Mockup (Figura 13 y 16) */}
+        {/* Tarjeta Central del Mockup */}
         <View style={[styles.loginCard, isMobile ? styles.loginCardMobile : styles.loginCardDesktop]}>
           
           {/* Logo Mi Nana */}
@@ -199,12 +153,34 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
               <Text style={styles.successSubtitle}>
                 Has iniciado sesión exitosamente con el perfil de <Text style={{ fontWeight: '700' }}>{loggedInUser.role}</Text>.
               </Text>
+
+              {loggedInUser.detalles && (
+                <View style={styles.detailsCard}>
+                  {loggedInUser.detalles.direccion && (
+                    <Text style={styles.detailText}>Dirección: {loggedInUser.detalles.direccion}</Text>
+                  )}
+                  {loggedInUser.detalles.numero_ninos !== undefined && (
+                    <Text style={styles.detailText}>Hijos: {loggedInUser.detalles.numero_ninos}</Text>
+                  )}
+                  {loggedInUser.detalles.zona && (
+                    <Text style={styles.detailText}>Zona: {loggedInUser.detalles.zona}</Text>
+                  )}
+                  {loggedInUser.detalles.tarifa_hora && (
+                    <Text style={styles.detailText}>Tarifa: S/. {loggedInUser.detalles.tarifa_hora}/hora</Text>
+                  )}
+                </View>
+              )}
+
               <TouchableOpacity
                 style={styles.logoutBtn}
-                onPress={() => setLoggedInUser(null)}
+                onPress={() => {
+                  setLoggedInUser(null);
+                  setEmail('');
+                  setPassword('');
+                }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.logoutBtnText}>Cerrar Sesión / Probar otro perfil</Text>
+                <Text style={styles.logoutBtnText}>Cerrar Sesión</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -286,41 +262,6 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
               </View>
             </>
           )}
-        </View>
-
-        {/* Leyenda Demo del Mockup */}
-        <Text style={styles.demoLegend}>
-          Demo: usa cualquier correo y contraseña para probar
-        </Text>
-
-        {/* Accesos rápidos de prueba (chips demo) */}
-        <View style={styles.demoChipsContainer}>
-          <Text style={styles.demoChipsTitle}>Rellenar credenciales demo:</Text>
-          <View style={styles.chipsRow}>
-            <TouchableOpacity
-              style={styles.demoChip}
-              onPress={() => fillDemoData('Familia')}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.demoChipText}>Padre / Familia</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.demoChip}
-              onPress={() => fillDemoData('Ninera')}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.demoChipText}>Niñera Verificada</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.demoChip, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}
-              onPress={() => fillDemoData('NineraPendiente')}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.demoChipText, { color: '#B45309' }]}>Niñera Pendiente (HU4)</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -443,7 +384,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#111827',
     paddingVertical: 12,
-    outlineStyle: 'none',
   },
   passwordWrapper: {
     flexDirection: 'row',
@@ -502,41 +442,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
-  demoLegend: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  demoChipsContainer: {
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  demoChipsTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  demoChip: {
-    backgroundColor: '#F3E8FF',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-  },
-  demoChipText: {
-    color: colors.primaryDark,
-    fontSize: 12,
-    fontWeight: '600',
-  },
   successBox: {
     alignItems: 'center',
     paddingVertical: 20,
@@ -553,7 +458,22 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     textAlign: 'center',
     lineHeight: 21,
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  detailsCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    width: '100%',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  detailText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
   },
   logoutBtn: {
     backgroundColor: '#F3F4F6',
