@@ -66,7 +66,7 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
           contrasena,
           nombreFamilia: nombreFamilia.trim(),
           direccion: direccion.trim(),
-          numeroNinos: Number(numeroNinos),
+          numeroNinos: numeroNinos !== '' ? Number(numeroNinos) : '',
           edadesNinos: edadesNinos
             .split(',')
             .map((e) => e.trim())

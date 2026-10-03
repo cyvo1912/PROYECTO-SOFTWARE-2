@@ -60,8 +60,9 @@ class ServicioRegistro {
     if (!direccion || !direccion.trim()) errores.direccion = 'La dirección es obligatoria.';
 
     const numNinos = Number(numeroNinos);
-    if (!numeroNinos && numeroNinos !== 0) errores.numeroNinos = 'El número de niños es obligatorio.';
-    else if (!Number.isInteger(numNinos) || numNinos < 1 || numNinos > 10) {
+    if (numeroNinos === undefined || numeroNinos === null || numeroNinos === '' || isNaN(numNinos)) {
+      errores.numeroNinos = 'El número de niños es obligatorio.';
+    } else if (!Number.isInteger(numNinos) || numNinos < 1 || numNinos > 10) {
       errores.numeroNinos = 'Debe ser un número entero entre 1 y 10.';
     }
 
@@ -138,8 +139,11 @@ class ServicioRegistro {
     if (!experiencia || !experiencia.trim()) errores.experiencia = 'Cuéntanos tu experiencia.';
 
     const tarifa = Number(tarifaHora);
-    if (!tarifaHora && tarifaHora !== 0) errores.tarifaHora = 'La tarifa por hora es obligatoria.';
-    else if (!Number.isFinite(tarifa) || tarifa <= 0) errores.tarifaHora = 'Ingresa un monto mayor a 0.';
+    if (tarifaHora === undefined || tarifaHora === null || tarifaHora === '' || isNaN(tarifa)) {
+      errores.tarifaHora = 'La tarifa por hora es obligatoria.';
+    } else if (!Number.isFinite(tarifa) || tarifa <= 0) {
+      errores.tarifaHora = 'Ingresa un monto mayor a 0.';
+    }
 
     if (Object.keys(errores).length > 0) {
       throw new ValidationError('Revisa los campos del formulario.', errores);
