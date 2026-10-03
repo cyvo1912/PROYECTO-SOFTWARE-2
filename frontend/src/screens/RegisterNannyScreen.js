@@ -64,7 +64,7 @@ export default function RegisterNannyScreen({ onBack, onRegistered, onNavigateTo
           correo: correo.trim(),
           contrasena,
           experiencia: experiencia.trim(),
-          tarifaHora: Number(tarifaHora.replace(',', '.')),
+          tarifaHora: tarifaHora && tarifaHora.trim() ? Number(tarifaHora.replace(',', '.')) : '',
           descripcion: certificaciones.trim() || null,
         }),
       });
@@ -130,7 +130,7 @@ export default function RegisterNannyScreen({ onBack, onRegistered, onNavigateTo
               </Text>
 
               <Text style={styles.sectionLabel}>Tus datos</Text>
-              <Field label="Nombre Completo" value={nombre} onChangeText={updateField(setNombre, 'nombre')} error={fieldErrors.nombre} placeholder="María García" />
+              <Field label="Nombre" value={nombre} onChangeText={updateField(setNombre, 'nombre')} error={fieldErrors.nombre} placeholder="María" />
               <Field label="Apellido" value={apellido} onChangeText={updateField(setApellido, 'apellido')} error={fieldErrors.apellido} placeholder="García" />
               <Field label="DNI" value={dni} onChangeText={updateField(setDni, 'dni')} error={fieldErrors.dni} placeholder="12345678" keyboardType="number-pad" maxLength={8} />
               <Field label="Teléfono" value={celular} onChangeText={updateField(setCelular, 'celular')} error={fieldErrors.celular} placeholder="987654321" keyboardType="phone-pad" />
