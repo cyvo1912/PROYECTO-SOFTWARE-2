@@ -5,7 +5,7 @@ class InvalidCredentialsError extends Error {
     this.statusCode = 401;
   }
 }
-
+ 
 class AccountPendingError extends Error {
   constructor(message = 'Cuenta pendiente de verificación.') {
     super(message);
@@ -14,7 +14,7 @@ class AccountPendingError extends Error {
     this.isPending = true;
   }
 }
-
+ 
 class AccountInactiveError extends Error {
   constructor(message = 'Tu cuenta se encuentra inactiva o suspendida.') {
     super(message);
@@ -22,7 +22,7 @@ class AccountInactiveError extends Error {
     this.statusCode = 403;
   }
 }
-
+ 
 class RoleMismatchError extends Error {
   constructor(expectedRole) {
     super(`Esta cuenta pertenece al perfil de ${expectedRole}. Por favor selecciona el perfil correcto.`);
@@ -31,9 +31,37 @@ class RoleMismatchError extends Error {
   }
 }
 
+class ValidationError extends Error {
+  constructor(message, fields = {}) {
+    super(message);
+    this.name = 'ValidationError';
+    this.statusCode = 400;
+    this.fields = fields;
+  }
+}
+ 
+class EmailAlreadyExistsError extends Error {
+  constructor(message = 'Ya existe una cuenta registrada con ese correo.') {
+    super(message);
+    this.name = 'EmailAlreadyExistsError';
+    this.statusCode = 409;
+  }
+}
+ 
+class DniAlreadyExistsError extends Error {
+  constructor(message = 'Ya existe una cuenta registrada con ese DNI.') {
+    super(message);
+    this.name = 'DniAlreadyExistsError';
+    this.statusCode = 409;
+  }
+}
+ 
 module.exports = {
   InvalidCredentialsError,
   AccountPendingError,
   AccountInactiveError,
   RoleMismatchError,
+  ValidationError,
+  EmailAlreadyExistsError,
+  DniAlreadyExistsError,
 };

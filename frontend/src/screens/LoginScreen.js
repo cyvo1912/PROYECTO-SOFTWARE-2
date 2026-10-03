@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function LoginScreen({ onBack, onNavigateToRegister }) {
+export default function LoginScreen({ onBack, onNavigateToRegisterFamily, onNavigateToRegisterNanny }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
@@ -254,7 +254,10 @@ export default function LoginScreen({ onBack, onNavigateToRegister }) {
               <View style={styles.registerLinkRow}>
                 <Text style={styles.registerLinkQuestion}>¿No tienes cuenta? </Text>
                 <TouchableOpacity
-                  onPress={onNavigateToRegister || onBack}
+                  onPress={() => {
+                    const navigate = selectedRole === 'Ninera' ? onNavigateToRegisterNanny : onNavigateToRegisterFamily;
+                    (navigate || onBack)();
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.registerLinkAction}>Regístrate aquí</Text>

@@ -10,7 +10,7 @@ import Footer from '../components/Footer';
 import ActionModal from '../components/ActionModal';
 import { colors } from '../theme/colors';
 
-export default function LandingScreen({ onNavigateToLogin }) {
+export default function LandingScreen({ onNavigateToLogin, onNavigateToRegisterFamily, onNavigateToRegisterNanny }) {
   const [modalConfig, setModalConfig] = useState({ visible: false, type: null });
 
   const handleOpenModal = (type) => {
@@ -32,13 +32,13 @@ export default function LandingScreen({ onNavigateToLogin }) {
         {/* 1. Header (Navbar) */}
         <Header 
           onLoginPress={onNavigateToLogin || (() => handleOpenModal('login'))} 
-          onRegisterPress={() => handleOpenModal('register')} 
+          onRegisterPress={onNavigateToRegisterFamily || (() => handleOpenModal('register'))} 
         />
 
         {/* 2. Hero Section (Mockup 1 Principal) */}
         <HeroSection 
-          onRegisterFamily={() => handleOpenModal('family')} 
-          onRegisterNanny={() => handleOpenModal('nanny')} 
+          onRegisterFamily={onNavigateToRegisterFamily || (() => handleOpenModal('family'))} 
+          onRegisterNanny={onNavigateToRegisterNanny || (() => handleOpenModal('nanny'))} 
         />
 
         {/* 3. Métricas y Estadísticas de Confianza */}

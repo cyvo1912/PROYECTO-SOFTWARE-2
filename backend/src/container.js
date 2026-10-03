@@ -3,6 +3,7 @@ const PostgresUserRepository = require('./infrastructure/adapters/db/PostgresUse
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
 const ServicioAuth = require('./application/services/ServicioAuth');
+const ServicioRegistro = require('./application/services/ServicioRegistro');
 const AuthController = require('./infrastructure/http/controllers/AuthController');
 
 /**
@@ -16,15 +17,20 @@ class Container {
     this.passwordHasher = new BcryptPasswordHasher();
     this.tokenService = new JwtTokenService();
 
-    // Servicio de Aplicación (Núcleo de Negocio UML)
+    // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
+      userRepository: this.userRepository,
+      passwordHasher: this.passwordHasher,
+      tokenService: this.tokenService,
+    });
+    this.servicioRegistro = new ServicioRegistro({
       userRepository: this.userRepository,
       passwordHasher: this.passwordHasher,
       tokenService: this.tokenService,
     });
 
     // Adaptador Primario (Controlador de Entrada)
-    this.authController = new AuthController(this.servicioAuth);
+    this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
   }
 }
 
