@@ -9,5 +9,6 @@ const container = require('../container');
 router.post('/login', (req, res) => container.authController.login(req, res));
 router.post('/register/familia', (req, res) => container.authController.registrarPadre(req, res));
 router.post('/register/ninera', (req, res) => container.authController.registrarNinera(req, res));
- 
+router.post('/logout', (req, res) => container.authController.logout(req, res));
+
 module.exports = router;

@@ -15,7 +15,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function LoginScreen({ onBack, onNavigateToRegisterFamily, onNavigateToRegisterNanny }) {
+export default function LoginScreen({
+  onBack,
+  onNavigateToRegisterFamily,
+  onNavigateToRegisterNanny,
+  onLoginSuccess,
+}) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
@@ -62,12 +67,16 @@ export default function LoginScreen({ onBack, onNavigateToRegisterFamily, onNavi
       if (!response.ok || !data.success) {
         setErrorMessage(data.message || 'Credenciales inválidas.');
       } else {
-        setLoggedInUser({
-          name: data.user.nombre,
-          email: data.user.correo,
-          role: data.user.rol,
-          detalles: data.user.detalles,
-        });
+        if (onLoginSuccess) {
+          onLoginSuccess({ user: data.user, token: data.token });
+        } else {
+          setLoggedInUser({
+            name: data.user.nombre,
+            email: data.user.correo,
+            role: data.user.rol,
+            detalles: data.user.detalles,
+          });
+        }
       }
     } catch (err) {
       setErrorMessage('No se pudo conectar con el servidor backend. Verifica tu conexión.');

@@ -97,6 +97,24 @@ class ServicioAuth {
       },
     };
   }
+
+  /**
+   * Cierre de sesión (HU6 / Figura 5 Diagrama de Secuencia - Sprint 1)
+   * Invalida el token JWT para impedir el uso posterior de recursos protegidos.
+   */
+  async cerrarSesion(token) {
+    if (!token) {
+      return { success: true, message: 'Sesión ya finalizada.' };
+    }
+
+    // Invalida el token en el servicio de tokens (lista de revocación)
+    this.tokenService.invalidateToken(token);
+
+    return {
+      success: true,
+      message: 'Cierre de sesión exitoso.',
+    };
+  }
 }
 
 module.exports = ServicioAuth;

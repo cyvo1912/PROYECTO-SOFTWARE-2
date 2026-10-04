@@ -59,6 +59,31 @@ class AuthController {
     }
   }
 
+  /**
+   * Cierre de sesión (HU6 / Figura 5)
+   * Extrae el token de la cabecera Authorization o el body e invoca la invalidación en el servicio.
+   */
+  async logout(req, res) {
+    try {
+      let token = null;
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      } else if (req.body && req.body.token) {
+        token = req.body.token;
+      }
+
+      const resultado = await this.servicioAuth.cerrarSesion(token);
+
+      return res.status(200).json({
+        success: true,
+        message: resultado.message || 'Cierre de sesión exitoso.',
+      });
+    } catch (error) {
+      return this._responderError(res, error);
+    }
+  }
+
   _responderError(res, error) {
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
