@@ -15,7 +15,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function LoginScreen({ onBack, onNavigateToRegisterFamily, onNavigateToRegisterNanny }) {
+export default function LoginScreen({
+  onBack,
+  onNavigateToRegisterFamily,
+  onNavigateToRegisterNanny,
+  onLoginSuccess,
+  confirmationMessage = '',
+}) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
@@ -62,12 +68,16 @@ export default function LoginScreen({ onBack, onNavigateToRegisterFamily, onNavi
       if (!response.ok || !data.success) {
         setErrorMessage(data.message || 'Credenciales inválidas.');
       } else {
-        setLoggedInUser({
-          name: data.user.nombre,
-          email: data.user.correo,
-          role: data.user.rol,
-          detalles: data.user.detalles,
-        });
+        if (onLoginSuccess) {
+          onLoginSuccess({ user: data.user, token: data.token });
+        } else {
+          setLoggedInUser({
+            name: data.user.nombre,
+            email: data.user.correo,
+            role: data.user.rol,
+            detalles: data.user.detalles,
+          });
+        }
       }
     } catch (err) {
       setErrorMessage('No se pudo conectar con el servidor backend. Verifica tu conexión.');
@@ -105,6 +115,14 @@ export default function LoginScreen({ onBack, onNavigateToRegisterFamily, onNavi
             <Ionicons name="heart" size={28} color={colors.primary} />
             <Text style={styles.brandTitle}>Mi Nana</Text>
           </View>
+
+          {/* Banner de confirmación visual (HU6 - Escenario 2) */}
+          {confirmationMessage ? (
+            <View style={styles.confirmationBanner}>
+              <Ionicons name="checkmark-circle" size={18} color="#059669" />
+              <Text style={styles.confirmationBannerText}>{confirmationMessage}</Text>
+            </View>
+          ) : null}
 
           {/* Segmented Control / Selector de Perfil (Familia / Niñera) */}
           <View style={styles.segmentedControl}>
@@ -490,5 +508,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#374151',
+  },
+  confirmationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '100%',
+  },
+  confirmationBannerText: {
+    color: '#065F46',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
   },
 });

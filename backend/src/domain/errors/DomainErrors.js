@@ -55,7 +55,39 @@ class DniAlreadyExistsError extends Error {
     this.statusCode = 409;
   }
 }
- 
+
+class CriticalFieldModificationError extends Error {
+  constructor(message = 'No está permitido modificar datos críticos como DNI o correo electrónico.') {
+    super(message);
+    this.name = 'CriticalFieldModificationError';
+    this.statusCode = 400;
+  }
+}
+
+class UnauthorizedError extends Error {
+  constructor(message = 'No autorizado. Se requiere un token válido.') {
+    super(message);
+    this.name = 'UnauthorizedError';
+    this.statusCode = 401;
+  }
+}
+
+class ForbiddenError extends Error {
+  constructor(message = 'No tienes permiso para realizar esta acción.') {
+    super(message);
+    this.name = 'ForbiddenError';
+    this.statusCode = 403;
+  }
+}
+
+class NotFoundError extends Error {
+  constructor(message = 'Recurso no encontrado.') {
+    super(message);
+    this.name = 'NotFoundError';
+    this.statusCode = 404;
+  }
+}
+
 module.exports = {
   InvalidCredentialsError,
   AccountPendingError,
@@ -64,4 +96,8 @@ module.exports = {
   ValidationError,
   EmailAlreadyExistsError,
   DniAlreadyExistsError,
+  CriticalFieldModificationError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
 };

@@ -10,6 +10,7 @@ class JwtTokenService extends TokenServicePort {
     super();
     this.secret = secret;
     this.expiresIn = expiresIn;
+    this.blacklistedTokens = new Set();
   }
 
   generateToken(payload) {
@@ -17,7 +18,24 @@ class JwtTokenService extends TokenServicePort {
   }
 
   verifyToken(token) {
+    if (this.isTokenInvalidated(token)) {
+      const error = new Error('Token revocado por cierre de sesión.');
+      error.name = 'JsonWebTokenError';
+      throw error;
+    }
     return jwt.verify(token, this.secret);
+  }
+
+  invalidateToken(token) {
+    if (token) {
+      this.blacklistedTokens.add(token);
+    }
+    return true;
+  }
+
+  isTokenInvalidated(token) {
+    if (!token) return true;
+    return this.blacklistedTokens.has(token);
   }
 }
 

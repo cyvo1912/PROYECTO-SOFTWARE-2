@@ -126,6 +126,84 @@ class PostgresUserRepository extends UserRepositoryPort {
       client.release();
     }
   }
+
+  async findById(idUsuario) {
+    const query = `
+      SELECT id_usuario, nombre_usuario, apellido_usuario, correo, dni, contrasena_hash, celular, tipo_usuario, estado_cuenta
+      FROM usuario
+      WHERE id_usuario = $1
+      LIMIT 1;
+    `;
+    const result = await this.pool.query(query, [idUsuario]);
+    if (result.rows.length === 0) return null;
+    return filaAUsuario(result.rows[0]);
+  }
+
+  /**
+   * Actualiza el perfil profesional de una niñera (HU5 / Figura 6).
+   * Ejecuta en una transacción la actualización de tabla usuario y tabla ninera.
+   * Por diseño y seguridad, NO modifica DNI ni correo.
+   */
+  async actualizarPerfilNinera(idUsuario, datosUsuario, datosNinera) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Actualizar datos personales permitidos en tabla usuario
+      const usuarioQuery = `
+        UPDATE usuario
+        SET nombre_usuario = $1, apellido_usuario = $2, celular = $3
+        WHERE id_usuario = $4
+        RETURNING id_usuario, nombre_usuario, apellido_usuario, correo, dni, contrasena_hash, celular, tipo_usuario, estado_cuenta;
+      `;
+      const resUsuario = await client.query(usuarioQuery, [
+        datosUsuario.nombre,
+        datosUsuario.apellido,
+        datosUsuario.celular,
+        idUsuario,
+      ]);
+
+      if (resUsuario.rows.length === 0) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      // Actualizar datos profesionales en tabla ninera
+      const nineraQuery = `
+        UPDATE ninera
+        SET zona = $1, experiencia = $2, tarifa_hora = $3, descripcion = $4
+        WHERE id_ninera = $5
+        RETURNING id_ninera, zona, experiencia, tarifa_hora, descripcion;
+      `;
+      const resNinera = await client.query(nineraQuery, [
+        datosNinera.zona || null,
+        datosNinera.experiencia,
+        datosNinera.tarifaHora,
+        datosNinera.descripcion || null,
+        idUsuario,
+      ]);
+
+      await client.query('COMMIT');
+
+      const uRow = resUsuario.rows[0];
+      const nRow = resNinera.rows[0] || {};
+
+      return new Ninera(
+        filaAUsuario(uRow),
+        {
+          idNinera: nRow.id_ninera || idUsuario,
+          zona: nRow.zona,
+          experiencia: nRow.experiencia,
+          tarifaHora: nRow.tarifa_hora,
+          descripcion: nRow.descripcion,
+        }
+      );
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 function filaAUsuario(row) {
