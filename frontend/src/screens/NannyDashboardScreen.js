@@ -12,15 +12,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import ConfirmLogoutModal from '../components/ConfirmLogoutModal';
-
 /**
  * Pantalla: Dashboard / Panel de Niñera (HU6 & HU5)
  * Basada en el Mockup Oficial del Documento (Figura 18 - Sprint 2, Pág. 44).
  *
  * Ofrece acceso rápido a:
  * - Edición de Perfil Profesional (HU5)
- * - Cierre de Sesión con Confirmación Modal (HU6)
+ * - Cierre de Sesión directo (HU6)
  * - Métricas del panel y resumen de información
  */
 export default function NannyDashboardScreen({
@@ -32,17 +30,10 @@ export default function NannyDashboardScreen({
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-
   const nombreUsuario = user?.nombreUsuario || user?.nombre || 'Niñera';
   const tarifa = user?.detalles?.tarifa_hora || user?.detalles?.tarifaHora || 15;
   const zona = user?.detalles?.zona || 'Lima Metropolitana';
   const experiencia = user?.detalles?.experiencia || 'No especificada';
-
-  const handleConfirmLogout = () => {
-    setShowLogoutModal(false);
-    onLogout && onLogout();
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -76,7 +67,8 @@ export default function NannyDashboardScreen({
 
             <TouchableOpacity
               style={styles.logoutNavBtn}
-              onPress={() => setShowLogoutModal(true)}
+              onPress={onLogout}
+              disabled={logoutLoading}
               activeOpacity={0.7}
             >
               <Ionicons name="log-out-outline" size={18} color="#DC2626" />
@@ -114,7 +106,7 @@ export default function NannyDashboardScreen({
                   </View>
                 </View>
                 <Text style={styles.profileDetailsText}>
-                  📍 {zona}  •  ⭐ 5.0 (Valoraciones)
+                  Zona: {zona}  •  Calificación: 5.0 / 5
                 </Text>
                 <Text style={styles.profileRateText}>
                   Tarifa: <Text style={styles.profileRateValue}>S/. {tarifa}/hora</Text>
@@ -126,7 +118,7 @@ export default function NannyDashboardScreen({
 
             <View style={styles.profileActionsRow}>
               <Text style={styles.experienceSummary} numberOfLines={1}>
-                💼 {experiencia}
+                Experiencia: {experiencia}
               </Text>
               <TouchableOpacity
                 style={styles.editProfileBtn}
@@ -218,14 +210,6 @@ export default function NannyDashboardScreen({
           </View>
         </View>
       </ScrollView>
-
-      {/* Modal de Confirmación de Cierre de Sesión (HU6) */}
-      <ConfirmLogoutModal
-        visible={showLogoutModal}
-        loading={logoutLoading}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={handleConfirmLogout}
-      />
     </SafeAreaView>
   );
 }

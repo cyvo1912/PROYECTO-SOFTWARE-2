@@ -20,7 +20,6 @@ export default function LoginScreen({
   onNavigateToRegisterFamily,
   onNavigateToRegisterNanny,
   onLoginSuccess,
-  confirmationMessage = '',
 }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
@@ -115,14 +114,6 @@ export default function LoginScreen({
             <Ionicons name="heart" size={28} color={colors.primary} />
             <Text style={styles.brandTitle}>Mi Nana</Text>
           </View>
-
-          {/* Banner de confirmación visual (HU6 - Escenario 2) */}
-          {confirmationMessage ? (
-            <View style={styles.confirmationBanner}>
-              <Ionicons name="checkmark-circle" size={18} color="#059669" />
-              <Text style={styles.confirmationBannerText}>{confirmationMessage}</Text>
-            </View>
-          ) : null}
 
           {/* Segmented Control / Selector de Perfil (Familia / Niñera) */}
           <View style={styles.segmentedControl}>
@@ -508,23 +499,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#374151',
-  },
-  confirmationBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 16,
-    width: '100%',
-  },
-  confirmationBannerText: {
-    color: '#065F46',
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
   },
 });

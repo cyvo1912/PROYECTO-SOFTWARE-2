@@ -258,15 +258,9 @@ export default function EditNannyProfileScreen({
                 error={fieldErrors.celular}
               />
 
-              {/* Campo Protegido: Correo Electrónico (Restricción 2) */}
+              {/* Campo: Correo Electrónico */}
               <View style={styles.formGroup}>
-                <View style={styles.protectedLabelRow}>
-                  <Text style={styles.label}>Correo Electrónico</Text>
-                  <View style={styles.protectedBadge}>
-                    <Ionicons name="lock-closed" size={11} color="#6B7280" />
-                    <Text style={styles.protectedBadgeText}>No modificable</Text>
-                  </View>
-                </View>
+                <Text style={styles.label}>Correo Electrónico</Text>
                 <View style={[styles.inputWrapper, styles.inputDisabled]}>
                   <TextInput
                     style={[styles.input, styles.inputTextDisabled]}
@@ -275,20 +269,11 @@ export default function EditNannyProfileScreen({
                     selectTextOnFocus={false}
                   />
                 </View>
-                <Text style={styles.fieldHelpText}>
-                  Por seguridad, el correo solo puede modificarse mediante solicitud a soporte.
-                </Text>
               </View>
 
-              {/* Campo Protegido: DNI (Restricción 2 / HU5 Escenario 2) */}
+              {/* Campo: DNI */}
               <View style={styles.formGroup}>
-                <View style={styles.protectedLabelRow}>
-                  <Text style={styles.label}>DNI</Text>
-                  <View style={styles.protectedBadge}>
-                    <Ionicons name="lock-closed" size={11} color="#6B7280" />
-                    <Text style={styles.protectedBadgeText}>No modificable</Text>
-                  </View>
-                </View>
+                <Text style={styles.label}>DNI</Text>
                 <View style={[styles.inputWrapper, styles.inputDisabled]}>
                   <TextInput
                     style={[styles.input, styles.inputTextDisabled]}
@@ -297,9 +282,6 @@ export default function EditNannyProfileScreen({
                     selectTextOnFocus={false}
                   />
                 </View>
-                <Text style={styles.fieldHelpText}>
-                  El DNI es la identidad legal vinculada a tu cuenta y no puede cambiarse.
-                </Text>
               </View>
 
               <View style={styles.formGroup}>

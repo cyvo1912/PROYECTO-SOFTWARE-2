@@ -11,11 +11,9 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
-  const [logoutMessage, setLogoutMessage] = useState('');
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const navigateToLogin = () => {
-    setLogoutMessage('');
     setCurrentScreen('login');
   };
   const navigateToLanding = () => setCurrentScreen('landing');
@@ -28,7 +26,6 @@ export default function App() {
   const handleLoginSuccess = ({ user, token }) => {
     setCurrentUser(user);
     setAuthToken(token);
-    setLogoutMessage('');
 
     if (user?.rol === 'NINERA') {
       setCurrentScreen('nannyDashboard');
@@ -38,7 +35,7 @@ export default function App() {
     }
   };
 
-  // Flujo HU6: Cerrar sesión con invalidación en backend y confirmación visual
+  // Flujo HU6: Cerrar sesión con invalidación en backend
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
@@ -58,7 +55,6 @@ export default function App() {
       setCurrentUser(null);
       setAuthToken(null);
       setLogoutLoading(false);
-      setLogoutMessage('Has cerrado sesión exitosamente. ¡Hasta pronto!');
       setCurrentScreen('login');
     }
   };
@@ -100,7 +96,6 @@ export default function App() {
         onNavigateToRegisterFamily={navigateToRegisterFamily}
         onNavigateToRegisterNanny={navigateToRegisterNanny}
         onLoginSuccess={handleLoginSuccess}
-        confirmationMessage={logoutMessage}
       />
     );
   }
