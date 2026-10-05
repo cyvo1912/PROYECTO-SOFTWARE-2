@@ -3,11 +3,15 @@ const PostgresUserRepository = require('./infrastructure/adapters/db/PostgresUse
 const PrismaUserRepository = require('./infrastructure/adapters/db/PrismaUserRepository');
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
+const PostgresMultimediaRepository = require('./infrastructure/adapters/db/PostgresMultimediaRepository');
+const CloudinaryAlmacenamiento = require('./infrastructure/adapters/storage/CloudinaryAlmacenamiento');
 const ServicioAuth = require('./application/services/ServicioAuth');
 const ServicioRegistro = require('./application/services/ServicioRegistro');
 const ServicioUsuario = require('./application/services/ServicioUsuario');
+const ServicioMultimedia = require('./application/services/ServicioMultimedia');
 const AuthController = require('./infrastructure/http/controllers/AuthController');
 const UsuarioController = require('./infrastructure/http/controllers/UsuarioController');
+const MultimediaController = require('./infrastructure/http/controllers/MultimediaController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 /**
@@ -36,6 +40,8 @@ class Container {
     // Adaptadores Secundarios (Seguridad / Tokens)
     this.passwordHasher = new BcryptPasswordHasher();
     this.tokenService = new JwtTokenService();
+    this.multimediaRepository = new PostgresMultimediaRepository(pool);
+    this.almacenamiento = new CloudinaryAlmacenamiento();
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -51,10 +57,15 @@ class Container {
     this.servicioUsuario = new ServicioUsuario({
       userRepository: this.userRepository,
     });
+    this.servicioMultimedia = new ServicioMultimedia({
+      multimediaRepository: this.multimediaRepository,
+      almacenamiento: this.almacenamiento,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
     this.usuarioController = new UsuarioController(this.servicioUsuario);
+    this.multimediaController = new MultimediaController(this.servicioMultimedia);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);

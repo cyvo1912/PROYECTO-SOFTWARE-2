@@ -11,10 +11,12 @@ app.use(express.json());
 const landingRoutes = require('./routes/landing.routes');
 const authRoutes = require('./routes/auth.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
+const multimediaRoutes = require('./routes/multimedia.routes');
 
 app.use('/api', landingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/multimedia', multimediaRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {
