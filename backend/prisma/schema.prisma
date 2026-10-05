@@ -41,6 +41,7 @@ model Padre {
   informacion_adicional String?
 
   usuario Usuario @relation(fields: [id_padre], references: [id_usuario], onDelete: Cascade)
+  hijos   Hijo[]
 
   @@map("padre")
 }
@@ -58,6 +59,20 @@ model Ninera {
   certificados Certificado[]
 
   @@map("ninera")
+}
+
+model Hijo {
+  id_hijo             Int     @id @default(autoincrement())
+  id_padre            Int
+  nombre_hijo         String  @db.VarChar(100)
+  edad                Int
+  alergias            String?
+  condiciones_medicas String?
+  notas               String?
+
+  padre Padre @relation(fields: [id_padre], references: [id_padre], onDelete: Cascade)
+
+  @@map("hijo")
 }
 
 // HU8: certificados de la niñera (los CHECK están en database/migrations/001_hu8_multimedia.sql)
@@ -80,3 +95,4 @@ model Certificado {
   @@index([id_ninera], map: "idx_certificado_ninera")
   @@map("certificado")
 }
+

@@ -1,6 +1,8 @@
 const pool = require('./config/db');
 const PostgresUserRepository = require('./infrastructure/adapters/db/PostgresUserRepository');
 const PrismaUserRepository = require('./infrastructure/adapters/db/PrismaUserRepository');
+const PostgresHijoRepository = require('./infrastructure/adapters/db/PostgresHijoRepository');
+const PrismaHijoRepository = require('./infrastructure/adapters/db/PrismaHijoRepository');
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
 const PostgresMultimediaRepository = require('./infrastructure/adapters/db/PostgresMultimediaRepository');
@@ -8,18 +10,15 @@ const CloudinaryAlmacenamiento = require('./infrastructure/adapters/storage/Clou
 const ServicioAuth = require('./application/services/ServicioAuth');
 const ServicioRegistro = require('./application/services/ServicioRegistro');
 const ServicioUsuario = require('./application/services/ServicioUsuario');
+const ServicioHijo = require('./application/services/ServicioHijo');
 const ServicioMultimedia = require('./application/services/ServicioMultimedia');
 const AuthController = require('./infrastructure/http/controllers/AuthController');
 const UsuarioController = require('./infrastructure/http/controllers/UsuarioController');
+const HijoController = require('./infrastructure/http/controllers/HijoController');
 const MultimediaController = require('./infrastructure/http/controllers/MultimediaController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
-/**
- * Contenedor de Inversión de Control / Fábrica de Dependencias (IoC / Factory Pattern)
- * Demuestra los principios SOLID (Dependency Inversion Principle):
- * Permite conmutar la implementación de persistencia (PostgreSQL nativo vs Prisma ORM)
- * sin modificar una sola línea de la lógica de negocio ni de los servicios.
- */
+
 class Container {
   constructor(options = {}) {
     // Selección de estrategia de persistencia (SOLID DIP)
@@ -33,8 +32,10 @@ class Container {
         // Fallback seguro si la librería del cliente aún no se ha generado
       }
       this.userRepository = new PrismaUserRepository(prismaClient);
+      this.hijoRepository = new PrismaHijoRepository(prismaClient);
     } else {
       this.userRepository = new PostgresUserRepository(pool);
+      this.hijoRepository = new PostgresHijoRepository(pool);
     }
 
     // Adaptadores Secundarios (Seguridad / Tokens)
@@ -57,6 +58,9 @@ class Container {
     this.servicioUsuario = new ServicioUsuario({
       userRepository: this.userRepository,
     });
+    this.servicioHijo = new ServicioHijo({
+      hijoRepository: this.hijoRepository,
+    });
     this.servicioMultimedia = new ServicioMultimedia({
       multimediaRepository: this.multimediaRepository,
       almacenamiento: this.almacenamiento,
@@ -65,6 +69,7 @@ class Container {
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
     this.usuarioController = new UsuarioController(this.servicioUsuario);
+    this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
 
     // Middleware de Autenticación
