@@ -1,5 +1,5 @@
 /**
- * Middleware de Autenticación y Autorización
+ * Middleware de Autenticación y Autorización (SOLID: Dependency Inversion)
  * Verifica el token JWT emitido por TokenService y valida roles y revocación.
  */
 function crearAuthMiddleware(tokenService) {

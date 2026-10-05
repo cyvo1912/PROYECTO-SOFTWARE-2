@@ -1,0 +1,58 @@
+// ==========================================================
+// PROYECTO: Mi Nana (Ingeniería de Software)
+// ORM: Prisma Schema oficial sincronizado con Neon PostgreSQL
+// ==========================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id_usuario       Int      @id @default(autoincrement())
+  nombre_usuario   String   @db.VarChar(100)
+  apellido_usuario String   @db.VarChar(100)
+  correo           String   @unique @db.VarChar(150)
+  dni              String   @unique @db.VarChar(20)
+  contrasena_hash  String   @db.VarChar(255)
+  celular          String?  @db.VarChar(20)
+  tipo_usuario     String   @db.VarChar(30)
+  estado_cuenta    String?  @default("ACTIVA") @db.VarChar(30)
+  fecha_registro   DateTime @default(now())
+
+  padre  Padre?
+  ninera Ninera?
+
+  @@map("usuario")
+}
+
+model Padre {
+  id_padre              Int     @id
+  nombre_familia        String? @db.VarChar(150)
+  direccion             String? @db.VarChar(255)
+  numero_ninos          Int?    @default(0)
+  edades_ninos          String? @db.VarChar(100)
+  informacion_adicional String?
+
+  usuario Usuario @relation(fields: [id_padre], references: [id_usuario], onDelete: Cascade)
+
+  @@map("padre")
+}
+
+model Ninera {
+  id_ninera             Int      @id
+  zona                  String?  @db.VarChar(100)
+  experiencia           String?
+  tarifa_hora           Decimal  @db.Decimal(10, 2)
+  descripcion           String?
+  verificada            Boolean  @default(false)
+  calificacion_promedio Decimal? @default(5.00) @db.Decimal(3, 2)
+
+  usuario Usuario @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
+
+  @@map("ninera")
+}

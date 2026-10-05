@@ -14,8 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/api';
 
 /**
  * Pantalla: Editar Perfil Profesional de Niñera (HU5)

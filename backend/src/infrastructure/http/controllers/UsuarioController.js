@@ -29,15 +29,11 @@ class UsuarioController {
 
   /**
    * PUT /api/usuarios/perfil/ninera
-   * Actualiza el perfil profesional de la niñera autenticada.
-   * Reglas HU5:
-   * - No permite modificar DNI ni correo.
-   * - Solo la niñera dueña de la sesión puede editar su propio perfil.
+   * Actualiza el perfil profesional de la niñera autenticada (HU5).
    */
   async actualizarPerfilNinera(req, res) {
     try {
       const idUsuarioAutenticado = req.user.id;
-      // Si el cliente envía id en el body o param, se valida contra el token para evitar IDOR
       const idObjetivo = req.body.id ? req.body.id : idUsuarioAutenticado;
 
       const perfilActualizado = await this.servicioUsuario.actualizarPerfilNinera(
