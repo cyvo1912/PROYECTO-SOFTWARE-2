@@ -39,6 +39,7 @@ model Padre {
   informacion_adicional String?
 
   usuario Usuario @relation(fields: [id_padre], references: [id_usuario], onDelete: Cascade)
+  hijos   Hijo[]
 
   @@map("padre")
 }
@@ -55,4 +56,18 @@ model Ninera {
   usuario Usuario @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
 
   @@map("ninera")
+}
+
+model Hijo {
+  id_hijo             Int     @id @default(autoincrement())
+  id_padre            Int
+  nombre_hijo         String  @db.VarChar(100)
+  edad                Int
+  alergias            String?
+  condiciones_medicas String?
+  notas               String?
+
+  padre Padre @relation(fields: [id_padre], references: [id_padre], onDelete: Cascade)
+
+  @@map("hijo")
 }

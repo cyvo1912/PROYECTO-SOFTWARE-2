@@ -39,9 +39,20 @@ function crearAuthMiddleware(tokenService) {
     return next();
   };
 
+  const soloFamilia = (req, res, next) => {
+    if (!req.user || req.user.tipo_usuario !== 'FAMILIA') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acceso restringido: Solo familias pueden realizar esta operación.',
+      });
+    }
+    return next();
+  };
+
   return {
     autenticar,
     soloNinera,
+    soloFamilia,
   };
 }
 

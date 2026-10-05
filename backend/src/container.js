@@ -1,13 +1,17 @@
 const pool = require('./config/db');
 const PostgresUserRepository = require('./infrastructure/adapters/db/PostgresUserRepository');
 const PrismaUserRepository = require('./infrastructure/adapters/db/PrismaUserRepository');
+const PostgresHijoRepository = require('./infrastructure/adapters/db/PostgresHijoRepository');
+const PrismaHijoRepository = require('./infrastructure/adapters/db/PrismaHijoRepository');
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
 const ServicioAuth = require('./application/services/ServicioAuth');
 const ServicioRegistro = require('./application/services/ServicioRegistro');
 const ServicioUsuario = require('./application/services/ServicioUsuario');
+const ServicioHijo = require('./application/services/ServicioHijo');
 const AuthController = require('./infrastructure/http/controllers/AuthController');
 const UsuarioController = require('./infrastructure/http/controllers/UsuarioController');
+const HijoController = require('./infrastructure/http/controllers/HijoController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 /**
@@ -29,8 +33,10 @@ class Container {
         // Fallback seguro si la librería del cliente aún no se ha generado
       }
       this.userRepository = new PrismaUserRepository(prismaClient);
+      this.hijoRepository = new PrismaHijoRepository(prismaClient);
     } else {
       this.userRepository = new PostgresUserRepository(pool);
+      this.hijoRepository = new PostgresHijoRepository(pool);
     }
 
     // Adaptadores Secundarios (Seguridad / Tokens)
@@ -51,10 +57,14 @@ class Container {
     this.servicioUsuario = new ServicioUsuario({
       userRepository: this.userRepository,
     });
+    this.servicioHijo = new ServicioHijo({
+      hijoRepository: this.hijoRepository,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
     this.usuarioController = new UsuarioController(this.servicioUsuario);
+    this.hijoController = new HijoController(this.servicioHijo);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
