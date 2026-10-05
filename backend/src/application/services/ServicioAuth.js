@@ -45,15 +45,9 @@ class ServicioAuth {
       throw new InvalidCredentialsError('Credenciales inválidas.');
     }
 
-    // 3. Validación de rol móvil si fue especificado
-    if (rolSolicitado) {
-      const rolUpper = rolSolicitado.toUpperCase();
-      if (
-        (rolUpper === 'NINERA' && usuario.tipoUsuario !== 'NINERA') ||
-        (rolUpper === 'FAMILIA' && usuario.tipoUsuario !== 'FAMILIA')
-      ) {
-        throw new RoleMismatchError(usuario.tipoUsuario);
-      }
+    // 3. Validación de rol móvil si fue especificado (SOLID OCP via Dominio)
+    if (rolSolicitado && !usuario.coincideConRol(rolSolicitado)) {
+      throw new RoleMismatchError(usuario.tipoUsuario);
     }
 
     // 4. Criterio HU4 Escenario 2: Cuenta pendiente de validación

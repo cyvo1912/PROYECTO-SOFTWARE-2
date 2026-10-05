@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { AUTH_API_URL } from '../config/api';
 
 /**
  * Registro de Niñera (mockup "Registro como Niñera").
@@ -53,7 +54,7 @@ export default function RegisterNannyScreen({ onBack, onRegistered, onNavigateTo
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register/ninera', {
+      const response = await fetch(`${AUTH_API_URL}/register/ninera`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,7 +63,7 @@ export default function RegisterNannyScreen({ onBack, onRegistered, onNavigateTo
           dni: dni.trim(),
           celular: celular.trim(),
           correo: correo.trim(),
-          contrasena,
+          contrasena: contrasena.trim(),
           experiencia: experiencia.trim(),
           tarifaHora: tarifaHora && tarifaHora.trim() ? Number(tarifaHora.replace(',', '.')) : '',
           descripcion: certificaciones.trim() || null,

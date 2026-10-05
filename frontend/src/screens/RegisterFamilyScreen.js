@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { AUTH_API_URL } from '../config/api';
 
 /**
  * Registro de Familia (mockup "Registro como Familia").
@@ -54,7 +55,7 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register/familia', {
+      const response = await fetch(`${AUTH_API_URL}/register/familia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -63,7 +64,7 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
           dni: dni.trim(),
           celular: celular.trim(),
           correo: correo.trim(),
-          contrasena,
+          contrasena: contrasena.trim(),
           nombreFamilia: nombreFamilia.trim(),
           direccion: direccion.trim(),
           numeroNinos: numeroNinos !== '' ? Number(numeroNinos) : '',

@@ -204,6 +204,66 @@ class PostgresUserRepository extends UserRepositoryPort {
       client.release();
     }
   }
+
+  async actualizarPerfilPadre(idUsuario, datosUsuario, datosPadre) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const usuarioQuery = `
+        UPDATE usuario
+        SET nombre_usuario = $1, apellido_usuario = $2, celular = $3
+        WHERE id_usuario = $4
+        RETURNING id_usuario, nombre_usuario, apellido_usuario, correo, dni, contrasena_hash, celular, tipo_usuario, estado_cuenta;
+      `;
+      const resUsuario = await client.query(usuarioQuery, [
+        datosUsuario.nombre,
+        datosUsuario.apellido,
+        datosUsuario.celular,
+        idUsuario,
+      ]);
+
+      if (resUsuario.rows.length === 0) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      const padreQuery = `
+        UPDATE padre
+        SET nombre_familia = $1, direccion = $2, numero_ninos = $3, edades_ninos = $4
+        WHERE id_padre = $5
+        RETURNING id_padre, nombre_familia, direccion, numero_ninos, edades_ninos, informacion_adicional;
+      `;
+      const resPadre = await client.query(padreQuery, [
+        datosPadre.nombreFamilia,
+        datosPadre.direccion,
+        datosPadre.numeroNinos,
+        datosPadre.edadesNinos,
+        idUsuario,
+      ]);
+
+      await client.query('COMMIT');
+
+      const uRow = resUsuario.rows[0];
+      const pRow = resPadre.rows[0] || {};
+
+      return new Padre(
+        filaAUsuario(uRow),
+        {
+          idPadre: pRow.id_padre || idUsuario,
+          nombreFamilia: pRow.nombre_familia,
+          direccion: pRow.direccion,
+          numeroNinos: pRow.numero_ninos,
+          edadesNinos: pRow.edades_ninos,
+          informacionAdicional: pRow.informacion_adicional,
+        }
+      );
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 function filaAUsuario(row) {

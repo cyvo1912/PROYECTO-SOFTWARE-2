@@ -1,6 +1,7 @@
 /**
  * Entidad de Dominio Base: Usuario
  * Basada en el Diagrama de Clases UML (Figura 1 - Sprint 1)
+ * Aplica principios SOLID y encapsulamiento de reglas de negocio en el Dominio.
  */
 class Usuario {
   constructor({
@@ -35,6 +36,15 @@ class Usuario {
 
   estaPendienteVerificacion() {
     return this.estadoCuenta === 'PENDIENTE_VERIFICACION';
+  }
+
+  /**
+   * Encapsulamiento OCP: verifica si el usuario coincide con un rol solicitado
+   */
+  coincideConRol(rolSolicitado) {
+    if (!rolSolicitado) return true;
+    const rolUpper = String(rolSolicitado).toUpperCase().trim();
+    return this.tipoUsuario.toUpperCase() === rolUpper;
   }
 }
 

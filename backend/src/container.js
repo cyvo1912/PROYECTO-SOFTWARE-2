@@ -1,5 +1,6 @@
 const pool = require('./config/db');
 const PostgresUserRepository = require('./infrastructure/adapters/db/PostgresUserRepository');
+const PrismaUserRepository = require('./infrastructure/adapters/db/PrismaUserRepository');
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
 const ServicioAuth = require('./application/services/ServicioAuth');
@@ -11,12 +12,28 @@ const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddl
 
 /**
  * Contenedor de Inversión de Control / Fábrica de Dependencias (IoC / Factory Pattern)
- * Ensambla los adaptadores de infraestructura e inyecta las dependencias en la capa de aplicación
+ * Demuestra los principios SOLID (Dependency Inversion Principle):
+ * Permite conmutar la implementación de persistencia (PostgreSQL nativo vs Prisma ORM)
+ * sin modificar una sola línea de la lógica de negocio ni de los servicios.
  */
 class Container {
-  constructor() {
-    // Adaptadores Secundarios (Infraestructura / Salida)
-    this.userRepository = new PostgresUserRepository(pool);
+  constructor(options = {}) {
+    // Selección de estrategia de persistencia (SOLID DIP)
+    const usePrisma = options.usePrisma || process.env.USE_PRISMA === 'true';
+    if (usePrisma) {
+      let prismaClient = null;
+      try {
+        const { PrismaClient } = require('@prisma/client');
+        prismaClient = new PrismaClient();
+      } catch (e) {
+        // Fallback seguro si la librería del cliente aún no se ha generado
+      }
+      this.userRepository = new PrismaUserRepository(prismaClient);
+    } else {
+      this.userRepository = new PostgresUserRepository(pool);
+    }
+
+    // Adaptadores Secundarios (Seguridad / Tokens)
     this.passwordHasher = new BcryptPasswordHasher();
     this.tokenService = new JwtTokenService();
 

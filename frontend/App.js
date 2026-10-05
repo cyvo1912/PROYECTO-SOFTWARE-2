@@ -5,6 +5,7 @@ import RegisterFamilyScreen from './src/screens/RegisterFamilyScreen';
 import RegisterNannyScreen from './src/screens/RegisterNannyScreen';
 import NannyDashboardScreen from './src/screens/NannyDashboardScreen';
 import EditNannyProfileScreen from './src/screens/EditNannyProfileScreen';
+import { AUTH_API_URL } from './src/config/api';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
@@ -22,7 +23,7 @@ export default function App() {
   const navigateToNannyDashboard = () => setCurrentScreen('nannyDashboard');
   const navigateToEditNannyProfile = () => setCurrentScreen('editNannyProfile');
 
-  // Callback al iniciar sesión exitosamente
+  // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
     setCurrentUser(user);
     setAuthToken(token);
@@ -30,17 +31,16 @@ export default function App() {
     if (user?.rol === 'NINERA') {
       setCurrentScreen('nannyDashboard');
     } else {
-      // Para otros perfiles o vista general
       setCurrentScreen('landing');
     }
   };
 
-  // Flujo HU6: Cerrar sesión con invalidación en backend
+  // Flujo HU4: Cerrar sesión con invalidación en backend
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
       if (authToken) {
-        await fetch('http://localhost:5000/api/auth/logout', {
+        await fetch(`${AUTH_API_URL}/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -101,11 +101,23 @@ export default function App() {
   }
 
   if (currentScreen === 'registerFamily') {
-    return <RegisterFamilyScreen onBack={navigateToLanding} onNavigateToLogin={navigateToLogin} />;
+    return (
+      <RegisterFamilyScreen
+        onBack={navigateToLanding}
+        onNavigateToLogin={navigateToLogin}
+        onRegistered={handleLoginSuccess}
+      />
+    );
   }
 
   if (currentScreen === 'registerNanny') {
-    return <RegisterNannyScreen onBack={navigateToLanding} onNavigateToLogin={navigateToLogin} />;
+    return (
+      <RegisterNannyScreen
+        onBack={navigateToLanding}
+        onNavigateToLogin={navigateToLogin}
+        onRegistered={handleLoginSuccess}
+      />
+    );
   }
 
   return (
