@@ -5,14 +5,19 @@ import RegisterFamilyScreen from './src/screens/RegisterFamilyScreen';
 import RegisterNannyScreen from './src/screens/RegisterNannyScreen';
 import NannyDashboardScreen from './src/screens/NannyDashboardScreen';
 import EditNannyProfileScreen from './src/screens/EditNannyProfileScreen';
+import ChildrenScreen from './src/screens/ChildrenScreen';
+import ChildFormScreen from './src/screens/ChildFormScreen';
 import { AUTH_API_URL } from './src/config/api';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
+  // | 'familyChildren' | 'childForm'
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  // Hijo seleccionado para editar (null = registrar uno nuevo)
+  const [selectedChild, setSelectedChild] = useState(null);
 
   const navigateToLogin = () => {
     setCurrentScreen('login');
@@ -22,6 +27,14 @@ export default function App() {
   const navigateToRegisterNanny = () => setCurrentScreen('registerNanny');
   const navigateToNannyDashboard = () => setCurrentScreen('nannyDashboard');
   const navigateToEditNannyProfile = () => setCurrentScreen('editNannyProfile');
+  const navigateToFamilyChildren = () => {
+    setSelectedChild(null);
+    setCurrentScreen('familyChildren');
+  };
+  const navigateToChildForm = (child = null) => {
+    setSelectedChild(child);
+    setCurrentScreen('childForm');
+  };
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -30,6 +43,8 @@ export default function App() {
 
     if (user?.rol === 'NINERA') {
       setCurrentScreen('nannyDashboard');
+    } else if (user?.rol === 'FAMILIA') {
+      setCurrentScreen('familyChildren');
     } else {
       setCurrentScreen('landing');
     }
@@ -54,6 +69,7 @@ export default function App() {
     } finally {
       setCurrentUser(null);
       setAuthToken(null);
+      setSelectedChild(null);
       setLogoutLoading(false);
       setCurrentScreen('login');
     }
@@ -85,6 +101,31 @@ export default function App() {
         initialUser={currentUser}
         onBack={navigateToNannyDashboard}
         onProfileUpdated={handleProfileUpdated}
+      />
+    );
+  }
+
+  if (currentScreen === 'familyChildren' && currentUser) {
+    return (
+      <ChildrenScreen
+        token={authToken}
+        user={currentUser}
+        onAddChild={() => navigateToChildForm(null)}
+        onEditChild={navigateToChildForm}
+        onLogout={handleLogout}
+        logoutLoading={logoutLoading}
+      />
+    );
+  }
+
+  if (currentScreen === 'childForm' && currentUser) {
+    return (
+      <ChildFormScreen
+        key={selectedChild ? selectedChild.id : 'nuevo'}
+        token={authToken}
+        child={selectedChild}
+        onBack={navigateToFamilyChildren}
+        onSaved={navigateToFamilyChildren}
       />
     );
   }
