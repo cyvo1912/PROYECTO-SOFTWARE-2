@@ -23,6 +23,8 @@ model Usuario {
   tipo_usuario     String   @db.VarChar(30)
   estado_cuenta    String?  @default("ACTIVA") @db.VarChar(30)
   fecha_registro   DateTime @default(now())
+  foto_url         String?
+  foto_public_id   String?  @db.VarChar(255)
 
   padre  Padre?
   ninera Ninera?
@@ -53,7 +55,8 @@ model Ninera {
   verificada            Boolean  @default(false)
   calificacion_promedio Decimal? @default(5.00) @db.Decimal(3, 2)
 
-  usuario Usuario @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
+  usuario      Usuario       @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
+  certificados Certificado[]
 
   @@map("ninera")
 }
@@ -71,3 +74,25 @@ model Hijo {
 
   @@map("hijo")
 }
+
+// HU8: certificados de la niñera (los CHECK están en database/migrations/001_hu8_multimedia.sql)
+model Certificado {
+  id_certificado       Int       @id @default(autoincrement())
+  id_ninera            Int
+  tipo                 String    @db.VarChar(40)
+  nombre               String    @db.VarChar(100)
+  institucion          String    @db.VarChar(100)
+  fecha_emision        DateTime  @db.Date
+  fecha_vencimiento    DateTime? @db.Date
+  archivo_public_id    String    @db.VarChar(255)
+  archivo_formato      String    @db.VarChar(10)
+  archivo_tipo_recurso String    @default("image") @db.VarChar(10)
+  estado_revision      String    @default("PENDIENTE") @db.VarChar(20)
+  fecha_subida         DateTime  @default(now()) @db.Timestamp(6)
+
+  ninera Ninera @relation(fields: [id_ninera], references: [id_ninera], onDelete: Cascade)
+
+  @@index([id_ninera], map: "idx_certificado_ninera")
+  @@map("certificado")
+}
+

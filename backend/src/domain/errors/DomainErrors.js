@@ -88,6 +88,14 @@ class NotFoundError extends Error {
   }
 }
 
+class ServiceUnavailableError extends Error {
+  constructor(message = 'El servicio no está disponible en este momento.') {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+    this.statusCode = 503;
+  }
+}
+
 module.exports = {
   InvalidCredentialsError,
   AccountPendingError,
@@ -100,4 +108,5 @@ module.exports = {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
+  ServiceUnavailableError,
 };

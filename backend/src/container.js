@@ -5,21 +5,20 @@ const PostgresHijoRepository = require('./infrastructure/adapters/db/PostgresHij
 const PrismaHijoRepository = require('./infrastructure/adapters/db/PrismaHijoRepository');
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
+const PostgresMultimediaRepository = require('./infrastructure/adapters/db/PostgresMultimediaRepository');
+const CloudinaryAlmacenamiento = require('./infrastructure/adapters/storage/CloudinaryAlmacenamiento');
 const ServicioAuth = require('./application/services/ServicioAuth');
 const ServicioRegistro = require('./application/services/ServicioRegistro');
 const ServicioUsuario = require('./application/services/ServicioUsuario');
 const ServicioHijo = require('./application/services/ServicioHijo');
+const ServicioMultimedia = require('./application/services/ServicioMultimedia');
 const AuthController = require('./infrastructure/http/controllers/AuthController');
 const UsuarioController = require('./infrastructure/http/controllers/UsuarioController');
 const HijoController = require('./infrastructure/http/controllers/HijoController');
+const MultimediaController = require('./infrastructure/http/controllers/MultimediaController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
-/**
- * Contenedor de Inversión de Control / Fábrica de Dependencias (IoC / Factory Pattern)
- * Demuestra los principios SOLID (Dependency Inversion Principle):
- * Permite conmutar la implementación de persistencia (PostgreSQL nativo vs Prisma ORM)
- * sin modificar una sola línea de la lógica de negocio ni de los servicios.
- */
+
 class Container {
   constructor(options = {}) {
     // Selección de estrategia de persistencia (SOLID DIP)
@@ -42,6 +41,8 @@ class Container {
     // Adaptadores Secundarios (Seguridad / Tokens)
     this.passwordHasher = new BcryptPasswordHasher();
     this.tokenService = new JwtTokenService();
+    this.multimediaRepository = new PostgresMultimediaRepository(pool);
+    this.almacenamiento = new CloudinaryAlmacenamiento();
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -60,11 +61,16 @@ class Container {
     this.servicioHijo = new ServicioHijo({
       hijoRepository: this.hijoRepository,
     });
+    this.servicioMultimedia = new ServicioMultimedia({
+      multimediaRepository: this.multimediaRepository,
+      almacenamiento: this.almacenamiento,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
     this.usuarioController = new UsuarioController(this.servicioUsuario);
     this.hijoController = new HijoController(this.servicioHijo);
+    this.multimediaController = new MultimediaController(this.servicioMultimedia);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);

@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
+  Image,
   useWindowDimensions,
   Platform,
 } from 'react-native';
@@ -24,6 +25,7 @@ import { colors } from '../theme/colors';
 export default function NannyDashboardScreen({
   user,
   onNavigateToEditProfile,
+  onNavigateToMultimedia,
   onLogout,
   logoutLoading = false,
 }) {
@@ -94,9 +96,13 @@ export default function NannyDashboardScreen({
           {/* Tarjeta de Resumen de Perfil Profesional (HU5) */}
           <View style={styles.profileCard}>
             <View style={styles.profileCardTop}>
-              <View style={styles.avatar}>
-                <Ionicons name="person" size={28} color={colors.primary} />
-              </View>
+              <TouchableOpacity style={styles.avatar} onPress={onNavigateToMultimedia} activeOpacity={0.8}>
+                {user?.fotoUrl ? (
+                  <Image source={{ uri: user.fotoUrl }} style={styles.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={28} color={colors.primary} />
+                )}
+              </TouchableOpacity>
               <View style={styles.profileInfo}>
                 <View style={styles.nameRow}>
                   <Text style={styles.profileName}>{nombreUsuario}</Text>
@@ -120,14 +126,24 @@ export default function NannyDashboardScreen({
               <Text style={styles.experienceSummary} numberOfLines={1}>
                 Experiencia: {experiencia}
               </Text>
-              <TouchableOpacity
-                style={styles.editProfileBtn}
-                onPress={onNavigateToEditProfile}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.editProfileBtnText}>Editar Perfil</Text>
-              </TouchableOpacity>
+              <View style={styles.profileButtons}>
+                <TouchableOpacity
+                  style={styles.mediaBtn}
+                  onPress={onNavigateToMultimedia}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+                  <Text style={styles.mediaBtnText}>Certificados</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.editProfileBtn}
+                  onPress={onNavigateToEditProfile}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="create-outline" size={16} color="#FFFFFF" />
+                  <Text style={styles.editProfileBtnText}>Editar Perfil</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -341,6 +357,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3E8FF',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   profileInfo: {
     flex: 1,
@@ -390,13 +411,16 @@ const styles = StyleSheet.create({
   },
   profileActionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
   },
   experienceSummary: {
     fontSize: 13,
     color: '#4B5563',
     flex: 1,
+    minWidth: 180,
     marginRight: 12,
   },
   editProfileBtn: {
@@ -407,6 +431,26 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 10,
+  },
+  profileButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  mediaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  mediaBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
   },
   editProfileBtnText: {
     fontSize: 13,

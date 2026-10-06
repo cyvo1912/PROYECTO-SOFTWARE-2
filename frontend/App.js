@@ -7,11 +7,12 @@ import NannyDashboardScreen from './src/screens/NannyDashboardScreen';
 import EditNannyProfileScreen from './src/screens/EditNannyProfileScreen';
 import ChildrenScreen from './src/screens/ChildrenScreen';
 import ChildFormScreen from './src/screens/ChildFormScreen';
-import { AUTH_API_URL } from './src/config/api';
+import MultimediaScreen from './src/screens/MultimediaScreen';
+import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
-  // | 'familyChildren' | 'childForm'
+  // | 'familyChildren' | 'childForm' | 'multimedia'
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
@@ -35,11 +36,13 @@ export default function App() {
     setSelectedChild(child);
     setCurrentScreen('childForm');
   };
+  const navigateToMultimedia = () => setCurrentScreen('multimedia');
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
     setCurrentUser(user);
     setAuthToken(token);
+    cargarFotoPerfil(token);
 
     if (user?.rol === 'NINERA') {
       setCurrentScreen('nannyDashboard');
@@ -48,6 +51,25 @@ export default function App() {
     } else {
       setCurrentScreen('landing');
     }
+  };
+
+  // HU8: la foto se guarda aparte del login; se consulta al iniciar sesión
+  const cargarFotoPerfil = async (token) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/multimedia`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        handleFotoActualizada(data.data.fotoUrl);
+      }
+    } catch (error) {
+      // Sin foto se muestra el avatar por defecto
+    }
+  };
+
+  const handleFotoActualizada = (fotoUrl) => {
+    setCurrentUser((prev) => (prev ? { ...prev, fotoUrl } : prev));
   };
 
   // Flujo HU4: Cerrar sesión con invalidación en backend
@@ -88,6 +110,7 @@ export default function App() {
       <NannyDashboardScreen
         user={currentUser}
         onNavigateToEditProfile={navigateToEditNannyProfile}
+        onNavigateToMultimedia={navigateToMultimedia}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
       />
@@ -101,6 +124,17 @@ export default function App() {
         initialUser={currentUser}
         onBack={navigateToNannyDashboard}
         onProfileUpdated={handleProfileUpdated}
+      />
+    );
+  }
+
+  if (currentScreen === 'multimedia' && currentUser) {
+    return (
+      <MultimediaScreen
+        token={authToken}
+        user={currentUser}
+        onBack={navigateToNannyDashboard}
+        onFotoActualizada={handleFotoActualizada}
       />
     );
   }
