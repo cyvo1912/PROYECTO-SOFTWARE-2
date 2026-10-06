@@ -25,7 +25,7 @@ export default function LoginScreen({
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
-  // Roles móviles del proyecto: 'Familia' | 'Ninera'
+  // Roles disponibles: Familia | Ninera | Admin
   const [selectedRole, setSelectedRole] = useState('Familia');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -151,6 +151,23 @@ export default function LoginScreen({
                 ]}
               >
                 Niñera
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.segmentItem,
+                selectedRole === 'Admin' && styles.segmentItemActive,
+              ]}
+              onPress={() => handleRoleChange('Admin')}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.segmentText,
+                  selectedRole === 'Admin' && styles.segmentTextActive,
+                ]}
+              >
+                Admin
               </Text>
             </TouchableOpacity>
           </View>

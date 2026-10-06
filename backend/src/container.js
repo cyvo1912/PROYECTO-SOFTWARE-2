@@ -16,6 +16,9 @@ const AuthController = require('./infrastructure/http/controllers/AuthController
 const UsuarioController = require('./infrastructure/http/controllers/UsuarioController');
 const HijoController = require('./infrastructure/http/controllers/HijoController');
 const MultimediaController = require('./infrastructure/http/controllers/MultimediaController');
+const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
+const ServicioAdministrador = require('./application/services/ServicioAdministrador');
+const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 
@@ -42,6 +45,7 @@ class Container {
     this.passwordHasher = new BcryptPasswordHasher();
     this.tokenService = new JwtTokenService();
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
+    this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.almacenamiento = new CloudinaryAlmacenamiento();
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
@@ -66,11 +70,17 @@ class Container {
       almacenamiento: this.almacenamiento,
     });
 
+    this.servicioAdministrador = new ServicioAdministrador({
+      administradorRepository: this.administradorRepository,
+      almacenamiento: this.almacenamiento,
+    });
+
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
     this.usuarioController = new UsuarioController(this.servicioUsuario);
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
+    this.administradorController = new AdministradorController(this.servicioAdministrador);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);

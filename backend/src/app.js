@@ -12,12 +12,14 @@ const landingRoutes = require('./routes/landing.routes');
 const authRoutes = require('./routes/auth.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
 const multimediaRoutes = require('./routes/multimedia.routes');
+const administradorRoutes = require('./routes/administrador.routes');
 const hijoRoutes = require('./routes/hijo.routes');
 
 app.use('/api', landingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/multimedia', multimediaRoutes);
+app.use('/api/administracion', administradorRoutes);
 app.use('/api/hijos', hijoRoutes);
 
 // Health check endpoint
