@@ -291,11 +291,9 @@ export default function MultimediaScreen({ token, user, onBack, onFotoActualizad
 
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
-          <Text style={styles.screenTitle}>{esNinera ? 'Foto y Certificados' : 'Foto de Perfil'}</Text>
+          <Text style={styles.screenTitle}>Certificados Profesionales</Text>
           <Text style={styles.screenSubtitle}>
-            {esNinera
-              ? 'Una foto clara y tus certificados generan confianza en las familias'
-              : 'Una foto ayuda a las niñeras a reconocer a tu familia'}
+            Registra tus diplomas, capacitaciones y certificaciones para generar confianza en las familias
           </Text>
 
           {mensajeExito ? (
@@ -317,37 +315,8 @@ export default function MultimediaScreen({ token, user, onBack, onFotoActualizad
             </View>
           ) : (
             <>
-              {/* Foto de perfil */}
-              <View style={styles.photoBlock}>
-                <View style={styles.photoCircle}>
-                  {fotoUrl ? (
-                    <Image source={{ uri: fotoUrl }} style={styles.photoImage} />
-                  ) : (
-                    <Ionicons name="person" size={48} color={colors.primary} />
-                  )}
-                </View>
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={elegirFoto}
-                  disabled={subiendoFoto}
-                  activeOpacity={0.8}
-                >
-                  {subiendoFoto ? (
-                    <ActivityIndicator color={colors.primary} />
-                  ) : (
-                    <>
-                      <Ionicons name="camera-outline" size={18} color={colors.primary} />
-                      <Text style={styles.secondaryButtonText}>{fotoUrl ? 'Cambiar foto' : 'Subir foto'}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                <Text style={styles.fieldHelpText}>JPG, PNG o WEBP. Máximo 2 MB.</Text>
-              </View>
-
               {esNinera ? (
                 <>
-                  <View style={styles.divider} />
-
                   {/* Formulario de certificado */}
                   <View style={styles.sectionHeader}>
                     <Ionicons name="ribbon-outline" size={20} color={colors.primary} />

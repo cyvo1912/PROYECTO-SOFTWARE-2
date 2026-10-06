@@ -132,8 +132,8 @@ export default function NannyDashboardScreen({
                   onPress={onNavigateToMultimedia}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-                  <Text style={styles.mediaBtnText}>Foto y Certificados</Text>
+                  <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+                  <Text style={styles.mediaBtnText}>Certificados</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.editProfileBtn}

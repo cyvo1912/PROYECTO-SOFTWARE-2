@@ -1,4 +1,10 @@
-const { v2: cloudinary } = require('cloudinary');
+let cloudinary = null;
+try {
+  cloudinary = require('cloudinary').v2;
+} catch (e) {
+  cloudinary = null;
+}
+
 const AlmacenamientoArchivosPort = require('../../../application/ports/AlmacenamientoArchivosPort');
 const { ServiceUnavailableError } = require('../../../domain/errors/DomainErrors');
 
@@ -12,8 +18,13 @@ const { ServiceUnavailableError } = require('../../../domain/errors/DomainErrors
 class CloudinaryAlmacenamiento extends AlmacenamientoArchivosPort {
   constructor(env = process.env) {
     super();
-    this.configurado = Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET);
-    if (this.configurado) {
+    this.configurado = Boolean(
+      cloudinary &&
+      env.CLOUDINARY_CLOUD_NAME &&
+      env.CLOUDINARY_API_KEY &&
+      env.CLOUDINARY_API_SECRET
+    );
+    if (this.configurado && cloudinary) {
       cloudinary.config({
         cloud_name: env.CLOUDINARY_CLOUD_NAME,
         api_key: env.CLOUDINARY_API_KEY,
@@ -65,6 +76,11 @@ class CloudinaryAlmacenamiento extends AlmacenamientoArchivosPort {
   }
 
   _verificarConfiguracion() {
+    if (!cloudinary) {
+      throw new ServiceUnavailableError(
+        'El paquete "cloudinary" no está instalado en node_modules del backend. Ejecuta "npm install" en la carpeta backend.',
+      );
+    }
     if (!this.configurado) {
       throw new ServiceUnavailableError(
         'El almacenamiento de archivos no está configurado. Agrega las variables CLOUDINARY_* al .env del backend.',

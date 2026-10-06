@@ -1,4 +1,9 @@
-const multer = require('multer');
+let multer = null;
+try {
+  multer = require('multer');
+} catch (e) {
+  multer = null;
+}
 
 /**
  * Middleware de subida de un solo archivo en memoria (HU8).
@@ -7,12 +12,17 @@ const multer = require('multer');
  */
 const LIMITE_BYTES = 6 * 1024 * 1024;
 
-const subida = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: LIMITE_BYTES, files: 1 },
-});
+const subida = multer
+  ? multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: LIMITE_BYTES, files: 1 },
+    })
+  : null;
 
 function subirUnArchivo(campo) {
+  if (!subida) {
+    return (req, res, next) => next();
+  }
   const procesar = subida.single(campo);
   return (req, res, next) =>
     procesar(req, res, (error) => {

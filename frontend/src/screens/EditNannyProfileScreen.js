@@ -8,22 +8,42 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
+  Image,
   useWindowDimensions,
   ActivityIndicator,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 
+const MB = 1024 * 1024;
+
+/** Unifica el resultado de ImagePicker en un asset compatible. */
+function normalizarAsset(asset) {
+  return {
+    uri: asset.uri,
+    name: asset.fileName || asset.name || 'foto_perfil.jpg',
+    mimeType: asset.mimeType || 'image/jpeg',
+    size: asset.fileSize ?? asset.size ?? 0,
+    file: asset.file,
+  };
+}
+
+async function adjuntarArchivo(form, campo, archivo) {
+  if (Platform.OS === 'web') {
+    const blob = archivo.file || (await (await fetch(archivo.uri)).blob());
+    form.append(campo, blob, archivo.name);
+  } else {
+    form.append(campo, { uri: archivo.uri, name: archivo.name, type: archivo.mimeType });
+  }
+}
+
 /**
- * Pantalla: Editar Perfil Profesional de Niñera (HU5)
+ * Pantalla: Editar Perfil Profesional de Niñera (HU5 & HU8)
  * Basada en el Mockup Oficial del Documento (Figura 17 - Sprint 2, Pág. 43).
- *
- * Restricciones Críticas del Documento:
- * 1. DNI y Correo Electrónico NO son editables por la niñera.
- * 2. Validación de campos obligatorios en cliente y backend.
- * 3. Actualización de perfil mediante PUT /api/usuarios/perfil/ninera.
+ * Integración de Foto de Perfil (HU8) directamente en la vista de perfil.
  */
 export default function EditNannyProfileScreen({
   token,
@@ -48,6 +68,10 @@ export default function EditNannyProfileScreen({
   );
   const [zona, setZona] = useState(initialUser?.detalles?.zona || '');
 
+  // Estado de la Foto de Perfil (HU8)
+  const [fotoUrl, setFotoUrl] = useState(initialUser?.fotoUrl || null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+
   // Estados de control UI
   const [loadingInitial, setLoadingInitial] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,21 +79,19 @@ export default function EditNannyProfileScreen({
   const [errorMessage, setErrorMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Cargar datos actuales desde el backend al montar la pantalla
+  // Cargar datos actuales del perfil y foto desde el backend al montar la pantalla
   useEffect(() => {
     let isMounted = true;
     async function cargarDatosPerfil() {
       if (!token) return;
       setLoadingInitial(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/usuarios/perfil/ninera`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const responseUser = await fetch(`${API_BASE_URL}/usuarios/perfil/ninera`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await response.json();
-        if (response.ok && data.success && isMounted) {
-          const u = data.data;
+        const dataUser = await responseUser.json();
+        if (responseUser.ok && dataUser.success && isMounted) {
+          const u = dataUser.data;
           setNombre(u.nombre || '');
           setApellido(u.apellido || '');
           setCelular(u.celular || '');
@@ -79,6 +101,15 @@ export default function EditNannyProfileScreen({
           setExperiencia(u.detalles?.experiencia || '');
           setTarifaHora(u.detalles?.tarifaHora ? String(u.detalles.tarifaHora) : '15');
           setZona(u.detalles?.zona || '');
+        }
+
+        // Cargar foto de perfil desde /api/multimedia
+        const responseMedia = await fetch(`${API_BASE_URL}/multimedia`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const dataMedia = await responseMedia.json();
+        if (responseMedia.ok && dataMedia.success && isMounted && dataMedia.data.fotoUrl) {
+          setFotoUrl(dataMedia.data.fotoUrl);
         }
       } catch (err) {
         // En caso de error de red inicial, se conservan los datos de sesión
@@ -92,12 +123,56 @@ export default function EditNannyProfileScreen({
     };
   }, [token]);
 
+  // Selección y subida de Foto de Perfil a Cloudinary (HU8)
+  const elegirFoto = async () => {
+    setSuccessMessage('');
+    setErrorMessage('');
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (resultado.canceled) return;
+
+    const foto = normalizarAsset(resultado.assets[0]);
+    if (foto.size > 2 * MB) {
+      setErrorMessage('La foto supera el máximo permitido de 2 MB.');
+      return;
+    }
+
+    setSubiendoFoto(true);
+    try {
+      const form = new FormData();
+      await adjuntarArchivo(form, 'foto', foto);
+      const response = await fetch(`${API_BASE_URL}/multimedia/foto`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setErrorMessage(data.message || 'Error al actualizar la foto de perfil.');
+      } else {
+        setFotoUrl(data.data.fotoUrl);
+        setSuccessMessage('¡Foto de perfil actualizada exitosamente en Cloudinary!');
+        if (onProfileUpdated) {
+          onProfileUpdated({ ...initialUser, fotoUrl: data.data.fotoUrl });
+        }
+      }
+    } catch (err) {
+      setErrorMessage('No se pudo conectar con el servidor para subir la foto.');
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setSuccessMessage('');
     setErrorMessage('');
     setFieldErrors({});
 
-    // Validaciones locales rápidas
     const errores = {};
     if (!nombre.trim()) errores.nombre = 'El nombre es obligatorio.';
     if (!apellido.trim()) errores.apellido = 'El apellido es obligatorio.';
@@ -186,7 +261,7 @@ export default function EditNannyProfileScreen({
           {/* Encabezado del Formulario (Figura 17) */}
           <Text style={styles.screenTitle}>Editar Perfil Profesional</Text>
           <Text style={styles.screenSubtitle}>
-            Actualiza tu información para destacar entre las familias que buscan niñeras
+            Actualiza tu foto e información para destacar entre las familias que buscan niñeras
           </Text>
 
           {loadingInitial ? (
@@ -211,6 +286,39 @@ export default function EditNannyProfileScreen({
                   <Text style={styles.errorBannerText}>{errorMessage}</Text>
                 </View>
               ) : null}
+
+              {/* SECCIÓN FOTO DE PERFIL (HU8) */}
+              <View style={styles.avatarSection}>
+                <View style={styles.avatarWrapper}>
+                  {fotoUrl ? (
+                    <Image source={{ uri: fotoUrl }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Ionicons name="person" size={44} color={colors.primary} />
+                    </View>
+                  )}
+                  {subiendoFoto && (
+                    <View style={styles.avatarLoadingOverlay}>
+                      <ActivityIndicator color="#FFFFFF" size="medium" />
+                    </View>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.changePhotoButton}
+                  onPress={elegirFoto}
+                  disabled={subiendoFoto}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="camera-outline" size={16} color={colors.primary} />
+                  <Text style={styles.changePhotoButtonText}>
+                    {subiendoFoto ? 'Subiendo a Cloudinary...' : 'Cambiar foto de perfil'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.photoHelpText}>Formatos: JPG, PNG o WEBP (Máx. 2 MB)</Text>
+              </View>
+
+              <View style={styles.divider} />
 
               {/* SECCIÓN 1: INFORMACIÓN PERSONAL */}
               <View style={styles.sectionHeader}>
@@ -257,7 +365,7 @@ export default function EditNannyProfileScreen({
                 error={fieldErrors.celular}
               />
 
-              {/* Campo: Correo Electrónico */}
+              {/* Campo: Correo Electrónico (Protegido) */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Correo Electrónico</Text>
                 <View style={[styles.inputWrapper, styles.inputDisabled]}>
@@ -270,7 +378,7 @@ export default function EditNannyProfileScreen({
                 </View>
               </View>
 
-              {/* Campo: DNI */}
+              {/* Campo: DNI (Protegido) */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>DNI</Text>
                 <View style={[styles.inputWrapper, styles.inputDisabled]}>
@@ -464,7 +572,61 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 19,
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatarWrapper: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    overflow: 'hidden',
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 3,
+    borderColor: colors.primary,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3E8FF',
+  },
+  avatarLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(124, 58, 237, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  changePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3E8FF',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  changePhotoButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  photoHelpText: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 6,
   },
   loadingBox: {
     paddingVertical: 40,
@@ -538,28 +700,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 6,
   },
-  protectedLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  protectedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  protectedBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
   inputWrapper: {
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
@@ -582,12 +722,6 @@ const styles = StyleSheet.create({
   },
   inputTextDisabled: {
     color: '#6B7280',
-  },
-  fieldHelpText: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 4,
-    fontStyle: 'italic',
   },
   textareaWrapper: {
     paddingVertical: 4,
