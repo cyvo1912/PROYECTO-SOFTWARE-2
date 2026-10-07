@@ -26,6 +26,7 @@ import { API_BASE_URL } from '../config/api';
 export default function ChildrenScreen({
   token,
   user,
+  onBack,
   onAddChild,
   onEditChild,
   onLogout,
@@ -77,6 +78,12 @@ export default function ChildrenScreen({
       <View style={styles.topNav}>
         <View style={styles.topNavContainer}>
           <View style={styles.brandRow}>
+            {onBack ? (
+              <TouchableOpacity style={styles.backNavBtn} onPress={onBack} activeOpacity={0.7}>
+                <Ionicons name="arrow-back" size={18} color="#1E1B4B" />
+                {!isMobile && <Text style={styles.backNavBtnText}>Inicio</Text>}
+              </TouchableOpacity>
+            ) : null}
             <Ionicons name="heart" size={24} color={colors.primary} />
             <Text style={styles.brandTitle}>Mi Nana</Text>
           </View>
@@ -212,6 +219,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  backNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    marginRight: 6,
+  },
+  backNavBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E1B4B',
   },
   brandTitle: {
     fontSize: 20,
