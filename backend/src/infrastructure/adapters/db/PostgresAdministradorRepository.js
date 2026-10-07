@@ -6,43 +6,43 @@ class PostgresAdministradorRepository extends AdministradorRepositoryPort {
     this.pool = pool;
   }
 
-  async listarNinerasPendientes() {
-    const result = await this.pool.query(`
-      SELECT
-        u.id_usuario,
-        u.nombre_usuario,
-        u.apellido_usuario,
-        u.correo,
-        u.dni,
-        u.celular,
-        u.estado_cuenta,
-        u.fecha_registro,
-        n.zona,
-        n.experiencia,
-        n.tarifa_hora,
-        n.descripcion,
-        n.verificada,
-        (
-          SELECT COUNT(*)
-          FROM certificado c
-          WHERE c.id_ninera = u.id_usuario
-        )::int AS total_certificados,
-        (
-          SELECT COUNT(*)
-          FROM certificado c
-          WHERE c.id_ninera = u.id_usuario
-          AND c.estado_revision = 'PENDIENTE'
-        )::int AS certificados_pendientes
-      FROM usuario u
-      INNER JOIN ninera n
-        ON n.id_ninera = u.id_usuario
-      WHERE u.tipo_usuario = 'NINERA'
-        AND u.estado_cuenta = 'PENDIENTE_VERIFICACION'
-      ORDER BY u.fecha_registro ASC;
-    `);
+async listarNinerasPendientes() {
 
-    return result.rows;
-  }
+  const result = await this.pool.query(`
+    SELECT
+      u.id_usuario,
+      u.nombre_usuario,
+      u.apellido_usuario,
+      u.correo,
+      u.dni,
+      u.celular,
+      u.estado_cuenta,
+      n.zona,
+      n.experiencia,
+      n.tarifa_hora,
+      n.descripcion,
+      n.verificada,
+      (
+        SELECT COUNT(*)
+        FROM certificado c
+        WHERE c.id_ninera = u.id_usuario
+      )::int AS total_certificados,
+      (
+        SELECT COUNT(*)
+        FROM certificado c
+        WHERE c.id_ninera = u.id_usuario
+        AND c.estado_revision = 'PENDIENTE'
+      )::int AS certificados_pendientes
+    FROM usuario u
+    INNER JOIN ninera n
+      ON n.id_ninera = u.id_usuario
+    WHERE u.tipo_usuario = 'NINERA'
+      AND u.estado_cuenta = 'PENDIENTE_VERIFICACION'
+    ORDER BY u.id_usuario ASC;
+  `);
+
+  return result.rows;
+}
 
   async obtenerNinera(idNinera) {
     const usuarioResult = await this.pool.query(
@@ -55,7 +55,6 @@ class PostgresAdministradorRepository extends AdministradorRepositoryPort {
         u.dni,
         u.celular,
         u.estado_cuenta,
-        u.fecha_registro,
         n.zona,
         n.experiencia,
         n.tarifa_hora,

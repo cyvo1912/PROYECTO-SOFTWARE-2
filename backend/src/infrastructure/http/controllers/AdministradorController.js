@@ -23,6 +23,11 @@ class AdministradorController {
         data,
       });
     } catch (error) {
+      console.error('❌ ERROR HU9 - listarNinerasPendientes:');
+      console.error(error);
+      console.error('Mensaje:', error.message);
+      console.error('Stack:', error.stack);
+
       return responderError(res, error);
     }
   }
