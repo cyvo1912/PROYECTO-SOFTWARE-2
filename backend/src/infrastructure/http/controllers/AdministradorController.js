@@ -45,7 +45,10 @@ class AdministradorController {
         data,
       });
     } catch (error) {
-      return responderError(res, error);
+      console.error('❌ ERROR HU9 - obtenerNinera:');
+      console.error(error);
+      console.error('Mensaje:', error.message);
+      console.error('Stack:', error.stack);
     }
   }
 

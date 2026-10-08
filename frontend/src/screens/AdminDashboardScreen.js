@@ -186,21 +186,7 @@ export default function AdminDashboardScreen({
 
   const activarNinera = async () => {
     if (!nineraSeleccionada) return;
-
-    Alert.alert(
-      'Activar cuenta',
-      `¿Deseas activar la cuenta de ${nineraSeleccionada.nombre}?`,
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Activar',
-          onPress: ejecutarActivacion,
-        },
-      ],
-    );
+    await ejecutarActivacion();
   };
 
   const ejecutarActivacion = async () => {
