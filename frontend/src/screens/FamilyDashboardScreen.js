@@ -18,17 +18,16 @@ import { API_BASE_URL } from '../config/api';
 
 /**
  * Pantalla: Panel Principal de Familia (HU6 - Gestión de Hogar)
- * HU: Como familia, quiero acceder a mi panel principal de inicio para visualizar
- * el resumen de mi hogar y acceder a mis opciones de gestión.
- *
- * Muestra:
- * - Datos del hogar (nombre de familia y dirección registrados)
- * - Resumen de los hijos registrados (GET /api/hijos)
- * - Accesos a las opciones de gestión disponibles
+ * Muestra tarjetas horizontales limpias:
+ * - Datos del hogar (nombre de familia, dirección, apoderado y avatar)
+ * - Métricas clave del hogar
+ * - Tarjeta "Mis hijos" (Lista horizontal/tarjeta completa)
+ * - Tarjetas en desarrollo "Buscar niñera" y "Mis reservas" (Próximamente)
  */
 export default function FamilyDashboardScreen({
   token,
   user,
+  onNavigateToEditProfile,
   onNavigateToChildren,
   onAddChild,
   onEditChild,
@@ -101,6 +100,16 @@ export default function FamilyDashboardScreen({
                 Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
               </Text>
             )}
+
+            <TouchableOpacity
+              style={styles.profileNavBtn}
+              onPress={onNavigateToEditProfile}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="person-circle-outline" size={18} color="#1E1B4B" />
+              <Text style={styles.profileNavBtnText}>Mi Perfil</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.logoutNavBtn}
               onPress={onLogout}
@@ -118,19 +127,19 @@ export default function FamilyDashboardScreen({
         <View style={[styles.content, isMobile ? styles.contentMobile : styles.contentDesktop]}>
           <View style={styles.headerBlock}>
             <Text style={styles.screenTitle}>Panel de Familia</Text>
-            <Text style={styles.screenSubtitle}>Resumen de tu hogar y accesos de gestión</Text>
+            <Text style={styles.screenSubtitle}>Resumen de tu hogar y servicios</Text>
           </View>
 
           {/* Tarjeta del hogar */}
           <View style={styles.homeCard}>
             <View style={styles.homeCardTop}>
-              <View style={styles.avatar}>
+              <TouchableOpacity style={styles.avatar} onPress={onNavigateToEditProfile} activeOpacity={0.8}>
                 {user?.fotoUrl ? (
                   <Image source={{ uri: user.fotoUrl }} style={styles.avatarImage} />
                 ) : (
                   <Ionicons name="home" size={26} color={colors.primary} />
                 )}
-              </View>
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <Text style={styles.homeName}>{nombreFamilia}</Text>
                 <View style={styles.homeInfoRow}>
@@ -144,6 +153,22 @@ export default function FamilyDashboardScreen({
                   </View>
                 ) : null}
               </View>
+            </View>
+
+            <View style={styles.profileDivider} />
+
+            <View style={styles.homeCardActions}>
+              <Text style={styles.tutorName} numberOfLines={1}>
+                Apoderado: {nombreUsuario}
+              </Text>
+              <TouchableOpacity
+                style={styles.editProfileBtn}
+                onPress={onNavigateToEditProfile}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="create-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.editProfileBtnText}>Editar Perfil</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -179,10 +204,13 @@ export default function FamilyDashboardScreen({
             />
           </View>
 
-          {/* Resumen de hijos */}
+          {/* Tarjeta 1: Mis hijos */}
           <View style={styles.sectionBlock}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Mis hijos</Text>
+              <View style={styles.sectionTitleGroup}>
+                <Ionicons name="people" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Mis hijos</Text>
+              </View>
               {totalHijos > 0 ? (
                 <TouchableOpacity onPress={onNavigateToChildren} activeOpacity={0.7}>
                   <Text style={styles.seeAllText}>Ver todos</Text>
@@ -231,33 +259,36 @@ export default function FamilyDashboardScreen({
             )}
           </View>
 
-          {/* Opciones de gestión */}
-          <Text style={styles.optionsTitle}>Opciones de gestión</Text>
-          <View style={styles.optionsGrid}>
-            <OptionCard
-              icon="people"
-              title="Mis hijos"
-              description="Ver y editar sus perfiles"
-              onPress={onNavigateToChildren}
-            />
-            <OptionCard
-              icon="person-add"
-              title="Agregar hijo"
-              description="Registrar un nuevo perfil"
-              onPress={onAddChild}
-            />
-            <OptionCard
-              icon="search"
-              title="Buscar niñera"
-              description="Próximamente"
-              disabled
-            />
-            <OptionCard
-              icon="calendar"
-              title="Mis reservas"
-              description="Próximamente"
-              disabled
-            />
+          {/* Tarjeta 2: Buscar niñera (Bloqueada) */}
+          <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionTitleGroup}>
+                <Ionicons name="search-outline" size={20} color="#9CA3AF" />
+                <Text style={[styles.sectionTitle, styles.sectionTitleDisabled]}>Buscar niñera</Text>
+              </View>
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonBadgeText}>Próximamente</Text>
+              </View>
+            </View>
+            <Text style={styles.disabledCardDesc}>
+              Explora perfiles verificados de niñeras disponibles cerca de tu zona y filtra por experiencia y tarifas.
+            </Text>
+          </View>
+
+          {/* Tarjeta 3: Mis reservas (Bloqueada) */}
+          <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionTitleGroup}>
+                <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
+                <Text style={[styles.sectionTitle, styles.sectionTitleDisabled]}>Mis reservas</Text>
+              </View>
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonBadgeText}>Próximamente</Text>
+              </View>
+            </View>
+            <Text style={styles.disabledCardDesc}>
+              Gestiona la programación de servicios, historial de contrataciones y seguimiento de reservas activas.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -278,23 +309,6 @@ function MetricCard({ icon, iconColor, bg, value, label }) {
       <Text style={styles.metricValue}>{value === null ? '–' : value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
     </View>
-  );
-}
-
-function OptionCard({ icon, title, description, onPress, disabled = false }) {
-  return (
-    <TouchableOpacity
-      style={[styles.optionCard, disabled && styles.optionCardDisabled]}
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.8}
-    >
-      <View style={[styles.optionIcon, disabled && styles.optionIconDisabled]}>
-        <Ionicons name={icon} size={22} color={disabled ? '#9CA3AF' : colors.primary} />
-      </View>
-      <Text style={[styles.optionTitle, disabled && styles.optionTitleDisabled]}>{title}</Text>
-      <Text style={styles.optionDesc}>{description}</Text>
-    </TouchableOpacity>
   );
 }
 
@@ -341,6 +355,20 @@ const styles = StyleSheet.create({
   userNameText: {
     color: '#1E1B4B',
     fontWeight: '700',
+  },
+  profileNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+  },
+  profileNavBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E1B4B',
   },
   logoutNavBtn: {
     flexDirection: 'row',
@@ -431,6 +459,35 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     flexShrink: 1,
   },
+  profileDivider: {
+    height: 1,
+    backgroundColor: '#F1EEF9',
+    marginVertical: 14,
+  },
+  homeCardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tutorName: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '600',
+  },
+  editProfileBtn: {
+    backgroundColor: colors.buttonDark,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  editProfileBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -487,7 +544,11 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: '#F1EEF9',
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  sectionBlockDisabled: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -495,10 +556,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  sectionTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: '#1E1B4B',
+  },
+  sectionTitleDisabled: {
+    color: '#6B7280',
+  },
+  comingSoonBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  comingSoonBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  disabledCardDesc: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 4,
+    lineHeight: 18,
   },
   seeAllText: {
     fontSize: 13,
@@ -569,53 +657,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
-  },
-  optionsTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    marginBottom: 12,
-  },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  optionCard: {
-    flexGrow: 1,
-    flexBasis: 160,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#F1EEF9',
-  },
-  optionCardDisabled: {
-    backgroundColor: '#F9FAFB',
-  },
-  optionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  optionIconDisabled: {
-    backgroundColor: '#F3F4F6',
-  },
-  optionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    marginBottom: 2,
-  },
-  optionTitleDisabled: {
-    color: '#9CA3AF',
-  },
-  optionDesc: {
-    fontSize: 12,
-    color: '#6B7280',
   },
 });

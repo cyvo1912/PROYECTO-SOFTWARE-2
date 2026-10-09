@@ -173,6 +173,37 @@ class PrismaUserRepository extends UserRepositoryPort {
       }
     );
   }
+
+  async actualizarPerfilPadre(idUsuario, datosUsuario, datosPadre) {
+    const updated = await this.prisma.usuario.update({
+      where: { id_usuario: idUsuario },
+      data: {
+        nombre_usuario: datosUsuario.nombre,
+        apellido_usuario: datosUsuario.apellido,
+        celular: datosUsuario.celular,
+        padre: {
+          update: {
+            nombre_familia: datosPadre.nombreFamilia,
+            direccion: datosPadre.direccion,
+            numero_ninos: datosPadre.numeroNinos,
+            edades_ninos: datosPadre.edadesNinos,
+          },
+        },
+      },
+      include: { padre: true },
+    });
+
+    return new Padre(
+      filaAUsuario(updated),
+      {
+        idPadre: updated.id_usuario,
+        nombreFamilia: updated.padre?.nombre_familia,
+        direccion: updated.padre?.direccion,
+        numeroNinos: updated.padre?.numero_ninos,
+        edadesNinos: updated.padre?.edades_ninos,
+      }
+    );
+  }
 }
 
 function filaAUsuario(row) {

@@ -30,6 +30,10 @@ class UserRepositoryPort {
   async actualizarPerfilNinera(idUsuario, datosUsuario, datosNinera) {
     throw new Error('Método actualizarPerfilNinera no implementado');
   }
+
+  async actualizarPerfilPadre(idUsuario, datosUsuario, datosPadre) {
+    throw new Error('Método actualizarPerfilPadre no implementado');
+  }
 }
 
 module.exports = UserRepositoryPort;

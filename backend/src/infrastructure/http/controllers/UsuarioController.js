@@ -52,6 +52,49 @@ class UsuarioController {
     }
   }
 
+  /**
+   * GET /api/usuarios/perfil/padre
+   * Obtiene los datos del perfil actual de la familia autenticada.
+   */
+  async obtenerPerfilPadre(req, res) {
+    try {
+      const idUsuario = req.user.id;
+      const perfil = await this.servicioUsuario.obtenerPerfilPadre(idUsuario);
+
+      return res.status(200).json({
+        success: true,
+        data: perfil,
+      });
+    } catch (error) {
+      return this._responderError(res, error);
+    }
+  }
+
+  /**
+   * PUT /api/usuarios/perfil/padre
+   * Actualiza el perfil del hogar / familia autenticada.
+   */
+  async actualizarPerfilPadre(req, res) {
+    try {
+      const idUsuarioAutenticado = req.user.id;
+      const idObjetivo = req.body.id ? req.body.id : idUsuarioAutenticado;
+
+      const perfilActualizado = await this.servicioUsuario.actualizarPerfilPadre(
+        idUsuarioAutenticado,
+        idObjetivo,
+        req.body,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Perfil de familia actualizado exitosamente.',
+        user: perfilActualizado,
+      });
+    } catch (error) {
+      return this._responderError(res, error);
+    }
+  }
+
   _responderError(res, error) {
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({

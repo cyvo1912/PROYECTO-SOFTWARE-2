@@ -198,6 +198,144 @@ class ServicioUsuario {
       },
     };
   }
+
+  /**
+   * Obtiene la información del perfil completo de la familia / padre para edición.
+   */
+  async obtenerPerfilPadre(idUsuario) {
+    if (!idUsuario) {
+      throw new UnauthorizedError('Identificador de usuario no proporcionado.');
+    }
+
+    const usuario = await this.userRepository.findById(idUsuario);
+    if (!usuario) {
+      throw new NotFoundError('Usuario no encontrado.');
+    }
+
+    if (usuario.tipoUsuario !== 'FAMILIA') {
+      throw new ForbiddenError('El perfil solicitado no corresponde a una familia.');
+    }
+
+    const detalles = await this.userRepository.findPadreDetails(idUsuario);
+
+    return {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      nombreCompleto: usuario.nombreCompleto,
+      correo: usuario.correo,
+      dni: usuario.dni,
+      celular: usuario.celular,
+      rol: usuario.tipoUsuario,
+      estado: usuario.estadoCuenta,
+      detalles: detalles
+        ? {
+            idPadre: detalles.idPadre || detalles.id_padre,
+            nombreFamilia: detalles.nombreFamilia || detalles.nombre_familia,
+            nombre_familia: detalles.nombre_familia || detalles.nombreFamilia,
+            direccion: detalles.direccion,
+            numeroNinos: detalles.numeroNinos || detalles.numero_ninos,
+            edadesNinos: detalles.edadesNinos || detalles.edades_ninos,
+          }
+        : {
+            nombreFamilia: '',
+            direccion: '',
+            numeroNinos: 0,
+            edadesNinos: '',
+          },
+    };
+  }
+
+  /**
+   * Actualiza el perfil de la familia.
+   * Regla de Seguridad: DNI y Correo protegidos en el servidor.
+   */
+  async actualizarPerfilPadre(idUsuarioAutenticado, idObjetivo, datos) {
+    if (!idUsuarioAutenticado) {
+      throw new UnauthorizedError('Debes iniciar sesión para editar tu perfil.');
+    }
+
+    if (Number(idUsuarioAutenticado) !== Number(idObjetivo)) {
+      throw new ForbiddenError('No tienes permisos para modificar el perfil de otra familia.');
+    }
+
+    const usuarioExistente = await this.userRepository.findById(idUsuarioAutenticado);
+    if (!usuarioExistente) {
+      throw new NotFoundError('Familia no encontrada.');
+    }
+
+    if (usuarioExistente.tipoUsuario !== 'FAMILIA') {
+      throw new ForbiddenError('Solo usuarios con perfil de Familia pueden actualizar datos del hogar.');
+    }
+
+    if (datos.dni !== undefined && String(datos.dni).trim() !== String(usuarioExistente.dni).trim()) {
+      throw new CriticalFieldModificationError('Por políticas de seguridad, el DNI no puede ser modificado.');
+    }
+
+    if (
+      (datos.correo !== undefined && String(datos.correo).trim().toLowerCase() !== String(usuarioExistente.correo).trim().toLowerCase()) ||
+      (datos.email !== undefined && String(datos.email).trim().toLowerCase() !== String(usuarioExistente.correo).trim().toLowerCase())
+    ) {
+      throw new CriticalFieldModificationError('Por políticas de seguridad, el correo electrónico no puede ser modificado.');
+    }
+
+    const errores = {};
+    const { nombre, apellido, celular, nombreFamilia, direccion } = datos;
+
+    if (!nombre || !nombre.trim()) errores.nombre = 'El nombre es obligatorio.';
+    if (!apellido || !apellido.trim()) errores.apellido = 'El apellido es obligatorio.';
+    if (!celular || !celular.trim()) {
+      errores.celular = 'El número de teléfono es obligatorio.';
+    } else if (!CELULAR_REGEX.test(celular.replace(/[\s-]/g, ''))) {
+      errores.celular = 'El teléfono no tiene un formato válido.';
+    }
+    if (!nombreFamilia || !nombreFamilia.trim()) errores.nombreFamilia = 'El nombre de la familia es obligatorio.';
+
+    if (Object.keys(errores).length > 0) {
+      throw new ValidationError('Datos incompletos o inválidos.', errores);
+    }
+
+    const detallesActuales = (await this.userRepository.findPadreDetails(idUsuarioAutenticado)) || {};
+
+    const datosUsuario = {
+      nombre: nombre.trim(),
+      apellido: apellido.trim(),
+      celular: celular.trim(),
+    };
+
+    const datosPadre = {
+      nombreFamilia: nombreFamilia.trim(),
+      direccion: direccion && direccion.trim() ? direccion.trim() : null,
+      numeroNinos: detallesActuales.numero_ninos || detallesActuales.numeroNinos || 0,
+      edadesNinos: detallesActuales.edades_ninos || detallesActuales.edadesNinos || '',
+    };
+
+    const padreActualizado = await this.userRepository.actualizarPerfilPadre(
+      idUsuarioAutenticado,
+      datosUsuario,
+      datosPadre,
+    );
+
+    return {
+      id: padreActualizado.id,
+      nombre: padreActualizado.nombre,
+      apellido: padreActualizado.apellido,
+      nombreCompleto: padreActualizado.nombreCompleto,
+      correo: padreActualizado.correo,
+      dni: padreActualizado.dni,
+      celular: padreActualizado.celular,
+      rol: padreActualizado.tipoUsuario,
+      estado: padreActualizado.estadoCuenta,
+      detalles: {
+        idPadre: padreActualizado.idPadre,
+        nombreFamilia: padreActualizado.nombreFamilia,
+        nombre_familia: padreActualizado.nombreFamilia,
+        direccion: padreActualizado.direccion,
+        numeroNinos: padreActualizado.numeroNinos,
+        edadesNinos: padreActualizado.edadesNinos,
+      },
+    };
+  }
 }
 
 module.exports = ServicioUsuario;
