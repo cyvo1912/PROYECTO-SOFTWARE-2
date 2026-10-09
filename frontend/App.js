@@ -5,14 +5,16 @@ import RegisterFamilyScreen from './src/screens/RegisterFamilyScreen';
 import RegisterNannyScreen from './src/screens/RegisterNannyScreen';
 import NannyDashboardScreen from './src/screens/NannyDashboardScreen';
 import EditNannyProfileScreen from './src/screens/EditNannyProfileScreen';
+import EditFamilyProfileScreen from './src/screens/EditFamilyProfileScreen';
 import ChildrenScreen from './src/screens/ChildrenScreen';
 import ChildFormScreen from './src/screens/ChildFormScreen';
 import MultimediaScreen from './src/screens/MultimediaScreen';
+import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
-  // | 'familyChildren' | 'childForm' | 'multimedia'
+  // | 'familyDashboard' | 'editFamilyProfile' | 'familyChildren' | 'childForm' | 'multimedia'
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
@@ -28,6 +30,11 @@ export default function App() {
   const navigateToRegisterNanny = () => setCurrentScreen('registerNanny');
   const navigateToNannyDashboard = () => setCurrentScreen('nannyDashboard');
   const navigateToEditNannyProfile = () => setCurrentScreen('editNannyProfile');
+  const navigateToEditFamilyProfile = () => setCurrentScreen('editFamilyProfile');
+  const navigateToFamilyDashboard = () => {
+    setSelectedChild(null);
+    setCurrentScreen('familyDashboard');
+  };
   const navigateToFamilyChildren = () => {
     setSelectedChild(null);
     setCurrentScreen('familyChildren');
@@ -47,7 +54,7 @@ export default function App() {
     if (user?.rol === 'NINERA') {
       setCurrentScreen('nannyDashboard');
     } else if (user?.rol === 'FAMILIA') {
-      setCurrentScreen('familyChildren');
+      setCurrentScreen('familyDashboard');
     } else {
       setCurrentScreen('landing');
     }
@@ -97,7 +104,7 @@ export default function App() {
     }
   };
 
-  // Callback al actualizar el perfil profesional (HU5)
+  // Callback al actualizar el perfil (HU5 o Familia)
   const handleProfileUpdated = (updatedUser) => {
     setCurrentUser((prev) => ({
       ...prev,
@@ -139,11 +146,39 @@ export default function App() {
     );
   }
 
+  // HU6: Panel principal de la familia
+  if (currentScreen === 'familyDashboard' && currentUser) {
+    return (
+      <FamilyDashboardScreen
+        token={authToken}
+        user={currentUser}
+        onNavigateToEditProfile={navigateToEditFamilyProfile}
+        onNavigateToChildren={navigateToFamilyChildren}
+        onAddChild={() => navigateToChildForm(null)}
+        onEditChild={navigateToChildForm}
+        onLogout={handleLogout}
+        logoutLoading={logoutLoading}
+      />
+    );
+  }
+
+  if (currentScreen === 'editFamilyProfile' && currentUser) {
+    return (
+      <EditFamilyProfileScreen
+        token={authToken}
+        initialUser={currentUser}
+        onBack={navigateToFamilyDashboard}
+        onProfileUpdated={handleProfileUpdated}
+      />
+    );
+  }
+
   if (currentScreen === 'familyChildren' && currentUser) {
     return (
       <ChildrenScreen
         token={authToken}
         user={currentUser}
+        onBack={navigateToFamilyDashboard}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
         onLogout={handleLogout}
