@@ -32,6 +32,33 @@ class AdministradorController {
     }
   }
 
+  async listarUsuarios(req, res) {
+    try {
+      const data = await this.servicioAdministrador.listarUsuarios(req.user);
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
+
+  async actualizarEstadoCuenta(req, res) {
+    try {
+      const data = await this.servicioAdministrador.actualizarEstadoCuenta(
+        req.user,
+        req.params.id,
+        req.body?.estado,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Estado de cuenta actualizado correctamente.',
+        data,
+      });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
+
   async obtenerNinera(req, res) {
     try {
       const data =
@@ -49,6 +76,7 @@ class AdministradorController {
       console.error(error);
       console.error('Mensaje:', error.message);
       console.error('Stack:', error.stack);
+      return responderError(res, error);
     }
   }
 

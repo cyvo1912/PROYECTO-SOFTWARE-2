@@ -5,6 +5,7 @@ const {
 } = require('../../domain/errors/DomainErrors');
 
 const SEGUNDOS_URL_TEMPORAL = 10 * 60;
+const ESTADOS_CUENTA_MODIFICABLES = ['ACTIVA', 'SUSPENDIDA'];
 
 class ServicioAdministrador {
   constructor({ administradorRepository, almacenamiento }) {
@@ -52,6 +53,59 @@ class ServicioAdministrador {
       totalCertificados: Number(ninera.total_certificados),
       certificadosPendientes: Number(ninera.certificados_pendientes),
     }));
+  }
+
+  async listarUsuarios(usuario) {
+    this.validarAdministrador(usuario);
+
+    const usuarios = await this.administradorRepository.listarUsuarios();
+    return usuarios.map((usuarioListado) => ({
+      id: usuarioListado.id_usuario,
+      nombre: `${usuarioListado.nombre_usuario} ${usuarioListado.apellido_usuario}`.trim(),
+      correo: usuarioListado.correo,
+      dni: usuarioListado.dni,
+      celular: usuarioListado.celular,
+      tipo: usuarioListado.tipo_usuario,
+      estado: usuarioListado.estado_cuenta,
+      fechaRegistro: usuarioListado.fecha_registro,
+    }));
+  }
+
+  async actualizarEstadoCuenta(usuario, idUsuario, estado) {
+    this.validarAdministrador(usuario);
+
+    const id = Number(idUsuario);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new ValidationError('El identificador del usuario no es válido.');
+    }
+
+    if (!ESTADOS_CUENTA_MODIFICABLES.includes(estado)) {
+      throw new ValidationError(
+        'El estado debe ser ACTIVA o SUSPENDIDA.',
+        { estado: 'Selecciona un estado de cuenta válido.' },
+      );
+    }
+
+    if (Number(usuario.id) === id && estado === 'SUSPENDIDA') {
+      throw new ForbiddenError(
+        'No puedes desactivar tu propia cuenta de administrador.',
+      );
+    }
+
+    const resultado =
+      await this.administradorRepository.actualizarEstadoCuenta(id, estado);
+
+    if (!resultado) {
+      throw new NotFoundError('Usuario no encontrado.');
+    }
+
+    if (resultado.bloqueadoPorVerificacion) {
+      throw new ValidationError(
+        'La cuenta de niñera debe completar la verificación antes de modificar su estado.',
+      );
+    }
+
+    return { id: resultado.id_usuario, estado: resultado.estado_cuenta };
   }
 
   async obtenerNinera(usuario, idNinera) {
