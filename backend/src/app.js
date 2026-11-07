@@ -14,7 +14,13 @@ const usuarioRoutes = require('./routes/usuario.routes');
 const multimediaRoutes = require('./routes/multimedia.routes');
 const administradorRoutes = require('./routes/administrador.routes');
 const hijoRoutes = require('./routes/hijo.routes');
+
+// Funcionalidad de búsqueda
 const busquedaRoutes = require('./routes/busqueda.routes');
+
+// HU18 - Notificaciones y valoraciones
+const notificacionRoutes = require('./routes/notificacion.routes');
+const valoracionRoutes = require('./routes/valoracion.routes');
 
 app.use('/api', landingRoutes);
 app.use('/api/auth', authRoutes);
@@ -23,6 +29,10 @@ app.use('/api/multimedia', multimediaRoutes);
 app.use('/api/administracion', administradorRoutes);
 app.use('/api/hijos', hijoRoutes);
 app.use('/api/busqueda', busquedaRoutes);
+
+// HU18
+app.use('/api/notificaciones', notificacionRoutes);
+app.use('/api/valoraciones', valoracionRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {

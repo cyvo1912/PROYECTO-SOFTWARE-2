@@ -22,6 +22,13 @@ const PostgresAdministradorRepository = require('./infrastructure/adapters/db/Po
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
+const PostgresNotificacionRepository = require('./infrastructure/adapters/db/PostgresNotificacionRepository');
+const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
+const ExpoNotificationAdapter = require('./infrastructure/adapters/notifications/ExpoNotificationAdapter');
+const ServicioNotificacion = require('./application/services/ServicioNotificacion');
+const ServicioValoracion = require('./application/services/ServicioValoracion');
+const NotificacionController = require('./infrastructure/http/controllers/NotificacionController');
+const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
 
 
 class Container {
@@ -49,6 +56,11 @@ class Container {
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.almacenamiento = new CloudinaryAlmacenamiento();
+    this.notificacionRepository = new PostgresNotificacionRepository(pool);
+    this.valoracionRepository = new PostgresValoracionRepository(pool);
+
+    // HU18 - Adaptador de notificaciones push
+    this.expoNotificationAdapter = new ExpoNotificationAdapter();
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -75,8 +87,21 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+
+    // Servicio de búsqueda
     this.servicioBusqueda = new ServicioBusqueda({
       userRepository: this.userRepository,
+    });
+
+    // HU18 - Servicio de Notificaciones
+    this.servicioNotificacion = new ServicioNotificacion({
+      notificacionRepository: this.notificacionRepository,
+      expoNotificationAdapter: this.expoNotificationAdapter,
+    });
+
+    // HU18 - Servicio de Valoraciones
+    this.servicioValoracion = new ServicioValoracion({
+      valoracionRepository: this.valoracionRepository,
     });
 
     // Adaptador Primario (Controladores de Entrada)
@@ -87,6 +112,16 @@ class Container {
     this.administradorController = new AdministradorController(this.servicioAdministrador);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
 
+    // HU18 - Controlador de Notificaciones
+    this.notificacionController = new NotificacionController(
+    this.servicioNotificacion
+    );
+
+    // HU18 - Controlador de Valoraciones
+    this.valoracionController = new ValoracionController(
+    this.servicioValoracion
+    );
+    
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
   }

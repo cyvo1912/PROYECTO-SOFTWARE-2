@@ -13,6 +13,9 @@ import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
 import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
+import NotificacionesScreen from './src/screens/NotificacionesScreen';
+import ValoracionScreen from './src/screens/ValoracionScreen';
+import { registrarNotificaciones } from './src/services/notificacionesService';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
@@ -24,6 +27,12 @@ export default function App() {
   const [logoutLoading, setLogoutLoading] = useState(false);
   // Hijo seleccionado para editar (null = registrar uno nuevo)
   const [selectedChild, setSelectedChild] = useState(null);
+
+  // HU18 - Reserva seleccionada para valorar
+  const [reservaParaValorar, setReservaParaValorar] = useState(null);
+
+  // HU18 - Pantalla desde la que se accede
+  const [pantallaAnterior, setPantallaAnterior] = useState('familyDashboard');
 
   const navigateToLogin = () => {
     setCurrentScreen('login');
@@ -46,13 +55,50 @@ export default function App() {
     setSelectedChild(child);
     setCurrentScreen('childForm');
   };
+
   const navigateToMultimedia = () => setCurrentScreen('multimedia');
+
   const navigateToSearchNannies = () => setCurrentScreen('searchNannies');
+
+  
+  // HU18 - Abrir notificaciones
+  const abrirNotificaciones = () => {
+    setPantallaAnterior(currentScreen);
+    setCurrentScreen('notificaciones');
+  };
+
+  // HU18 - Abrir pantalla para valorar una reserva
+  const abrirValoracion = (reserva) => {
+    setReservaParaValorar(reserva);
+    setPantallaAnterior(currentScreen);
+    setCurrentScreen('valoracion');
+  };
+
+  // HU18 - Volver a la pantalla anterior
+  const volverPantallaAnterior = () => {
+    setCurrentScreen(pantallaAnterior);
+  };
+
+  // HU18 - Valoración registrada correctamente
+  const valoracionExitosa = () => {
+    setReservaParaValorar(null);
+    setCurrentScreen(pantallaAnterior);
+  };
+
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
     setCurrentUser(user);
     setAuthToken(token);
+     
+    // HU18 - Registrar dispositivo para notificaciones push
+    registrarNotificaciones(token).catch((error) => {
+      console.log(
+        'Error al registrar notificaciones:',
+         error.message
+      );
+    });
+
     cargarFotoPerfil(token);
 
     if (user?.rol === 'ADMIN') {
@@ -105,6 +151,8 @@ export default function App() {
       setCurrentUser(null);
       setAuthToken(null);
       setSelectedChild(null);
+      setReservaParaValorar(null);
+      setPantallaAnterior('familyDashboard');
       setLogoutLoading(false);
       setCurrentScreen('login');
     }
@@ -117,6 +165,27 @@ export default function App() {
       ...updatedUser,
     }));
   };
+
+  
+  if (currentScreen === 'notificaciones' && currentUser) {
+    return (
+      <NotificacionesScreen
+        token={authToken}
+        onBack={volverPantallaAnterior}
+      />
+    );
+  }
+
+  if (currentScreen === 'valoracion' && currentUser && reservaParaValorar) {
+    return (
+      <ValoracionScreen
+        token={authToken}
+        reserva={reservaParaValorar}
+        onBack={volverPantallaAnterior}
+        onSuccess={valoracionExitosa}
+      />
+    );
+  }
 
   if (currentScreen === 'adminDashboard' && currentUser) {
     return (
@@ -136,6 +205,7 @@ export default function App() {
         onNavigateToMultimedia={navigateToMultimedia}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+        onNotificaciones={abrirNotificaciones}
       />
     );
   }
@@ -175,6 +245,8 @@ export default function App() {
         onNavigateToSearch={navigateToSearchNannies}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+        onNotificaciones={abrirNotificaciones}
+        onValorar={abrirValoracion}
       />
     );
   }
