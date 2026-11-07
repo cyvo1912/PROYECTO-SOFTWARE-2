@@ -98,6 +98,7 @@ class PostgresMensajeRepository extends MensajeRepositoryPort {
 
     const result = await this.pool.query(query, [userId]);
     return result.rows.map((r) => ({
+      id: r.id_usuario,
       idContacto: r.id_usuario,
       nombre: `${r.nombre_usuario} ${r.apellido_usuario || ''}`.trim(),
       tipoUsuario: r.tipo_usuario,

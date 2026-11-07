@@ -63,7 +63,8 @@ class MensajeriaController {
    */
   async enviarMensaje(req, res) {
     try {
-      const { idReceptor, contenido } = req.body;
+      const idReceptor = req.body.idReceptor || req.body.id_receptor;
+      const contenido = req.body.contenido || req.body.texto;
       const mensaje = await this.servicioMensajes.enviarMensaje({
         idEmisor: req.user.id,
         idReceptor,
