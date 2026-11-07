@@ -54,6 +54,10 @@ model Ninera {
   descripcion           String?
   verificada            Boolean  @default(false)
   calificacion_promedio Decimal? @default(5.00) @db.Decimal(3, 2)
+  anios_experiencia     Int?
+  habilidades           String[] @default([])
+  idiomas               String[] @default([])
+  distritos             String[] @default([])
 
   usuario      Usuario       @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
   certificados Certificado[]

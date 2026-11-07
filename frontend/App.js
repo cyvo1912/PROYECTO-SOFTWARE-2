@@ -11,17 +11,22 @@ import ChildFormScreen from './src/screens/ChildFormScreen';
 import MultimediaScreen from './src/screens/MultimediaScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
+import EditPublicProfileScreen from './src/screens/EditPublicProfileScreen';
+import NannyPublicProfileScreen from './src/screens/NannyPublicProfileScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
   // | 'familyDashboard' | 'editFamilyProfile' | 'familyChildren' | 'childForm' | 'multimedia'
+  // | 'editPublicProfile' | 'nannyPublicProfile' (HU12)
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   // Hijo seleccionado para editar (null = registrar uno nuevo)
   const [selectedChild, setSelectedChild] = useState(null);
+  // HU12: niñera cuyo perfil público se está viendo y pantalla a la que se vuelve
+  const [perfilVisto, setPerfilVisto] = useState({ idNinera: null, volverA: 'landing' });
 
   const navigateToLogin = () => {
     setCurrentScreen('login');
@@ -45,6 +50,13 @@ export default function App() {
     setCurrentScreen('childForm');
   };
   const navigateToMultimedia = () => setCurrentScreen('multimedia');
+  const navigateToEditPublicProfile = () => setCurrentScreen('editPublicProfile');
+  // HU12: abre el perfil público de una niñera. La búsqueda (HU11) debe llamar a
+  // navigateToNannyPublicProfile(idNinera, 'familyDashboard') al tocar una niñera.
+  const navigateToNannyPublicProfile = (idNinera, volverA) => {
+    setPerfilVisto({ idNinera, volverA });
+    setCurrentScreen('nannyPublicProfile');
+  };
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -131,6 +143,7 @@ export default function App() {
         user={currentUser}
         onNavigateToEditProfile={navigateToEditNannyProfile}
         onNavigateToMultimedia={navigateToMultimedia}
+        onNavigateToPublicProfile={navigateToEditPublicProfile}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
       />
@@ -155,6 +168,28 @@ export default function App() {
         user={currentUser}
         onBack={navigateToNannyDashboard}
         onFotoActualizada={handleFotoActualizada}
+      />
+    );
+  }
+
+  // HU12: la niñera completa su perfil público (formulario de 5 campos)
+  if (currentScreen === 'editPublicProfile' && currentUser) {
+    return (
+      <EditPublicProfileScreen
+        token={authToken}
+        onBack={navigateToNannyDashboard}
+        onVerPerfil={() => navigateToNannyPublicProfile(currentUser.id, 'editPublicProfile')}
+      />
+    );
+  }
+
+  // HU12: perfil público ampliado (lo ve la familia; la niñera lo ve como vista previa)
+  if (currentScreen === 'nannyPublicProfile' && currentUser) {
+    return (
+      <NannyPublicProfileScreen
+        token={authToken}
+        idNinera={perfilVisto.idNinera}
+        onBack={() => setCurrentScreen(perfilVisto.volverA)}
       />
     );
   }

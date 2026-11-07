@@ -36,7 +36,12 @@ CREATE TABLE IF NOT EXISTS ninera (
     tarifa_hora NUMERIC(10, 2) NOT NULL,
     descripcion TEXT,
     verificada BOOLEAN DEFAULT FALSE,
-    calificacion_promedio NUMERIC(3, 2) DEFAULT 5.0
+    calificacion_promedio NUMERIC(3, 2) DEFAULT 5.0,
+    -- HU12: perfil público ampliado (ver migrations/003_hu12_perfil_publico.sql)
+    anios_experiencia INT CHECK (anios_experiencia IS NULL OR (anios_experiencia >= 0 AND anios_experiencia <= 40)),
+    habilidades TEXT[] NOT NULL DEFAULT '{}',
+    idiomas TEXT[] NOT NULL DEFAULT '{}',
+    distritos TEXT[] NOT NULL DEFAULT '{}'
 );
 
 -- Tabla de Hijos asociados a una Familia

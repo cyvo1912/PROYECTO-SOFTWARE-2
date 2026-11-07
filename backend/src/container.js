@@ -19,6 +19,9 @@ const MultimediaController = require('./infrastructure/http/controllers/Multimed
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
+const PostgresPerfilPublicoRepository = require('./infrastructure/adapters/db/PostgresPerfilPublicoRepository');
+const ServicioPerfilPublico = require('./application/services/ServicioPerfilPublico');
+const PerfilPublicoController = require('./infrastructure/http/controllers/PerfilPublicoController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 
@@ -47,6 +50,7 @@ class Container {
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.almacenamiento = new CloudinaryAlmacenamiento();
+    this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -73,6 +77,9 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+    this.servicioPerfilPublico = new ServicioPerfilPublico({
+      perfilRepository: this.perfilPublicoRepository,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
@@ -80,6 +87,7 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.perfilPublicoController = new PerfilPublicoController(this.servicioPerfilPublico);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);

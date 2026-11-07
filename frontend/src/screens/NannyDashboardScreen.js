@@ -26,6 +26,7 @@ export default function NannyDashboardScreen({
   user,
   onNavigateToEditProfile,
   onNavigateToMultimedia,
+  onNavigateToPublicProfile,
   onLogout,
   logoutLoading = false,
 }) {
@@ -134,6 +135,15 @@ export default function NannyDashboardScreen({
                 >
                   <Ionicons name="document-text-outline" size={16} color={colors.primary} />
                   <Text style={styles.mediaBtnText}>Certificados</Text>
+                </TouchableOpacity>
+                {/* HU12: formulario del perfil público que ven las familias */}
+                <TouchableOpacity
+                  style={styles.mediaBtn}
+                  onPress={onNavigateToPublicProfile}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="globe-outline" size={16} color={colors.primary} />
+                  <Text style={styles.mediaBtnText}>Perfil público</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.editProfileBtn}
@@ -435,6 +445,7 @@ const styles = StyleSheet.create({
   profileButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    maxWidth: '100%',
     gap: 8,
   },
   mediaBtn: {
