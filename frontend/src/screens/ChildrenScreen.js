@@ -31,7 +31,9 @@ export default function ChildrenScreen({
   onEditChild,
   onLogout,
   logoutLoading = false,
+  onNavigateToChat,
 }) {
+
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
 
@@ -92,8 +94,21 @@ export default function ChildrenScreen({
             <Text style={styles.userGreetingText}>
               Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
             </Text>
+
+            {onNavigateToChat && (
+              <TouchableOpacity
+                style={styles.chatNavBtn}
+                onPress={onNavigateToChat}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
+                {!isMobile && <Text style={styles.chatNavBtnText}>Mensajes</Text>}
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={styles.logoutNavBtn}
+
               onPress={onLogout}
               disabled={logoutLoading}
               activeOpacity={0.7}
@@ -436,4 +451,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#374151',
   },
+  chatNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F3E8FF',
+    gap: 6,
+  },
+  chatNavBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E1B4B',
+  },
 });
+

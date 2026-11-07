@@ -12,14 +12,26 @@ if (!connectionString) {
 }
 
 const isLocalhost = !connectionString || connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+const isNeon = Boolean(connectionString && connectionString.includes('neon.tech'));
 
-const pool = new Pool({
-  connectionString,
-  ssl: isLocalhost ? false : { rejectUnauthorized: false },
-});
+let pool;
+if (isNeon) {
+  // Para bases de datos en Neon.tech (funciona a través de firewalls y redes universitarias en puerto 443)
+  const { Pool: NeonPool, neonConfig } = require('@neondatabase/serverless');
+  const ws = require('ws');
+  neonConfig.webSocketConstructor = ws;
+  pool = new NeonPool({ connectionString });
+} else {
+  const { Pool } = require('pg');
+  pool = new Pool({
+    connectionString,
+    ssl: isLocalhost ? false : { rejectUnauthorized: false },
+  });
+}
 
 pool.on('error', (err) => {
   console.error('Error inesperado en el pool de PostgreSQL:', err.message);
 });
 
 module.exports = pool;
+

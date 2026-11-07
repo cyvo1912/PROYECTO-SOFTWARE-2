@@ -33,7 +33,9 @@ export default function FamilyDashboardScreen({
   onEditChild,
   onLogout,
   logoutLoading = false,
+  onNavigateToChat,
 }) {
+
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
 
@@ -109,6 +111,18 @@ export default function FamilyDashboardScreen({
               <Ionicons name="person-circle-outline" size={18} color="#1E1B4B" />
               <Text style={styles.profileNavBtnText}>Mi Perfil</Text>
             </TouchableOpacity>
+
+            {onNavigateToChat && (
+              <TouchableOpacity
+                style={styles.profileNavBtn}
+                onPress={onNavigateToChat}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
+                <Text style={styles.profileNavBtnText}>Mensajes</Text>
+              </TouchableOpacity>
+            )}
+
 
             <TouchableOpacity
               style={styles.logoutNavBtn}

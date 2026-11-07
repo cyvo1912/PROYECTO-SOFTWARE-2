@@ -21,6 +21,14 @@ const ServicioAdministrador = require('./application/services/ServicioAdministra
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
+// HU17 - Mensajería en Tiempo Real (Gabriel)
+const PostgresMensajeRepository = require('./infrastructure/adapters/db/PostgresMensajeRepository');
+const SocketIoRealtimeNotifier = require('./infrastructure/adapters/realtime/SocketIoRealtimeNotifier');
+const PostgresNotificacionService = require('./infrastructure/adapters/db/PostgresNotificacionService');
+const ServicioMensajes = require('./application/services/ServicioMensajes');
+const MensajeriaController = require('./infrastructure/http/controllers/MensajeriaController');
+const ChatSocketController = require('./infrastructure/http/controllers/ChatSocketController');
+
 
 class Container {
   constructor(options = {}) {
@@ -48,6 +56,11 @@ class Container {
     this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.almacenamiento = new CloudinaryAlmacenamiento();
 
+    // HU17: Adaptadores Secundarios de Mensajería
+    this.mensajeRepository = new PostgresMensajeRepository(pool);
+    this.realtimeNotifier = new SocketIoRealtimeNotifier();
+    this.notificacionService = new PostgresNotificacionService(pool);
+
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
       userRepository: this.userRepository,
@@ -74,15 +87,38 @@ class Container {
       almacenamiento: this.almacenamiento,
     });
 
+    // HU17: Servicio de Aplicación de Mensajes
+    this.servicioMensajes = new ServicioMensajes({
+      mensajeRepository: this.mensajeRepository,
+      realtimeNotifier: this.realtimeNotifier,
+      notificacionService: this.notificacionService,
+      userRepository: this.userRepository,
+    });
+
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
     this.usuarioController = new UsuarioController(this.servicioUsuario);
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
+  }
+
+  /**
+   * Vincula la instancia de Socket.IO con el controlador de WebSockets y el notificador
+   */
+  inicializarSockets(io) {
+    this.realtimeNotifier.setIo(io);
+    this.chatSocketController = new ChatSocketController({
+      io,
+      servicioMensajes: this.servicioMensajes,
+      tokenService: this.tokenService,
+      realtimeNotifier: this.realtimeNotifier,
+    });
+    return this.chatSocketController;
   }
 }
 
