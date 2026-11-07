@@ -14,6 +14,7 @@ const usuarioRoutes = require('./routes/usuario.routes');
 const multimediaRoutes = require('./routes/multimedia.routes');
 const administradorRoutes = require('./routes/administrador.routes');
 const hijoRoutes = require('./routes/hijo.routes');
+const disponibilidadRoutes = require('./routes/disponibilidad.routes');
 
 app.use('/api', landingRoutes);
 app.use('/api/auth', authRoutes);
@@ -21,6 +22,7 @@ app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/multimedia', multimediaRoutes);
 app.use('/api/administracion', administradorRoutes);
 app.use('/api/hijos', hijoRoutes);
+app.use('/api/nineras', disponibilidadRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {

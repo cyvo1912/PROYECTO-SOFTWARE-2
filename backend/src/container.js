@@ -19,6 +19,10 @@ const MultimediaController = require('./infrastructure/http/controllers/Multimed
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
+const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/PostgresDisponibilidadRepository');
+const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
+const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
+const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 
@@ -46,6 +50,8 @@ class Container {
     this.tokenService = new JwtTokenService();
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
+    this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
+    this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
@@ -73,6 +79,10 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+    this.servicioDisponibilidad = new ServicioDisponibilidad({
+      disponibilidadRepository: this.disponibilidadRepository,
+      estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
@@ -80,6 +90,7 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);

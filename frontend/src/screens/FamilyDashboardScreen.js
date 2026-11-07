@@ -29,6 +29,7 @@ export default function FamilyDashboardScreen({
   user,
   onNavigateToEditProfile,
   onNavigateToChildren,
+  onNavigateToNannyAvailability,
   onAddChild,
   onEditChild,
   onLogout,
@@ -259,20 +260,25 @@ export default function FamilyDashboardScreen({
             )}
           </View>
 
-          {/* Tarjeta 2: Buscar niñera (Bloqueada) */}
-          <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>
+          {/* Tarjeta 2: Consultar Disponibilidad de Niñeras (Activa) */}
+          <View style={styles.sectionBlock}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
-                <Ionicons name="search-outline" size={20} color="#9CA3AF" />
-                <Text style={[styles.sectionTitle, styles.sectionTitleDisabled]}>Buscar niñera</Text>
-              </View>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonBadgeText}>Próximamente</Text>
+                <Ionicons name="calendar" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Disponibilidad de Niñeras</Text>
               </View>
             </View>
-            <Text style={styles.disabledCardDesc}>
-              Explora perfiles verificados de niñeras disponibles cerca de tu zona y filtra por experiencia y tarifas.
+            <Text style={styles.activeCardDesc}>
+              Consulta en un calendario interactivo los días y bloques de horarios disponibles en los que una niñera puede prestar servicio.
             </Text>
+            <TouchableOpacity
+              style={styles.calendarActionBtn}
+              onPress={onNavigateToNannyAvailability}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.primaryBtnText}>Consultar calendario de disponibilidad</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Tarjeta 3: Mis reservas (Bloqueada) */}
@@ -587,6 +593,22 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 4,
     lineHeight: 18,
+  },
+  activeCardDesc: {
+    fontSize: 13,
+    color: '#4B5563',
+    marginBottom: 14,
+    lineHeight: 19,
+  },
+  calendarActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
   },
   seeAllText: {
     fontSize: 13,

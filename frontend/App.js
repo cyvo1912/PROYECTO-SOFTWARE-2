@@ -11,6 +11,7 @@ import ChildFormScreen from './src/screens/ChildFormScreen';
 import MultimediaScreen from './src/screens/MultimediaScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
+import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
     setCurrentScreen('childForm');
   };
   const navigateToMultimedia = () => setCurrentScreen('multimedia');
+  const navigateToNannyAvailability = () => setCurrentScreen('nannyAvailability');
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -57,7 +59,7 @@ export default function App() {
     } else if (user?.rol === 'NINERA') {
       setCurrentScreen('nannyDashboard');
     } else if (user?.rol === 'FAMILIA') {
-      setCurrentScreen('familyChildren');
+      setCurrentScreen('familyDashboard');
     } else {
       setCurrentScreen('landing');
     }
@@ -167,10 +169,20 @@ export default function App() {
         user={currentUser}
         onNavigateToEditProfile={navigateToEditFamilyProfile}
         onNavigateToChildren={navigateToFamilyChildren}
+        onNavigateToNannyAvailability={navigateToNannyAvailability}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+      />
+    );
+  }
+
+  if (currentScreen === 'nannyAvailability' && currentUser) {
+    return (
+      <NannyAvailabilityCalendarScreen
+        token={authToken}
+        onBack={navigateToFamilyDashboard}
       />
     );
   }
@@ -192,6 +204,7 @@ export default function App() {
         token={authToken}
         user={currentUser}
         onBack={navigateToFamilyDashboard}
+        onNavigateToNannyAvailability={navigateToNannyAvailability}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
         onLogout={handleLogout}
