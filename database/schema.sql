@@ -36,7 +36,12 @@ CREATE TABLE IF NOT EXISTS ninera (
     tarifa_hora NUMERIC(10, 2) NOT NULL,
     descripcion TEXT,
     verificada BOOLEAN DEFAULT FALSE,
-    calificacion_promedio NUMERIC(3, 2) DEFAULT 5.0
+    calificacion_promedio NUMERIC(3, 2) DEFAULT 5.0,
+    -- HU11: coordenadas para búsqueda por proximidad (Google Maps API) y
+    -- años de experiencia en formato numérico para poder filtrar por ellos.
+    latitud NUMERIC(10, 7),
+    longitud NUMERIC(10, 7),
+    anos_experiencia SMALLINT
 );
 
 -- Tabla de Hijos asociados a una Familia

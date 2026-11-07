@@ -53,6 +53,32 @@ class UsuarioController {
   }
 
   /**
+   * PUT /api/usuarios/perfil/ninera/ubicacion
+   * HU11: guarda la ubicación (GPS) de la niñera autenticada, usada por las
+   * familias para buscar niñeras cercanas.
+   */
+  async actualizarUbicacionNinera(req, res) {
+    try {
+      const idUsuarioAutenticado = req.user.id;
+      const { latitud, longitud } = req.body;
+
+      const ubicacion = await this.servicioUsuario.actualizarUbicacionNinera(
+        idUsuarioAutenticado,
+        idUsuarioAutenticado,
+        { latitud, longitud },
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Ubicación actualizada exitosamente.',
+        data: ubicacion,
+      });
+    } catch (error) {
+      return this._responderError(res, error);
+    }
+  }
+
+  /**
    * GET /api/usuarios/perfil/padre
    * Obtiene los datos del perfil actual de la familia autenticada.
    */
