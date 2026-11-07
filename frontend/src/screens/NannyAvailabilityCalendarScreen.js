@@ -136,11 +136,15 @@ export default function NannyAvailabilityCalendarScreen({
             <View style={styles.legendRow}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
-                <Text style={styles.legendText}>Con horarios disponibles</Text>
+                <Text style={styles.legendText}>Con horarios</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
-                <Text style={styles.legendText}>Día seleccionado</Text>
+                <Text style={styles.legendText}>Seleccionado</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#D1D5DB' }]} />
+                <Text style={styles.legendText}>Sin turnos</Text>
               </View>
             </View>
 
@@ -229,35 +233,45 @@ export default function NannyAvailabilityCalendarScreen({
             ) : (
               /* 5. Visualización de Bloques / Slots de Horarios Disponibles */
               <View style={styles.slotsGrid}>
-                {slotsDelDiaSeleccionado.map((slot) => (
-                  <TouchableOpacity
-                    key={`${selectedDate}-${slot.horaInicio}-${slot.horaFin}`}
-                    style={styles.slotCard}
-                    onPress={() =>
-                      onSelectSlot &&
-                      onSelectSlot({
-                        fecha: selectedDate,
-                        horaInicio: slot.horaInicio,
-                        horaFin: slot.horaFin,
-                        idDisponibilidad: slot.idDisponibilidad,
-                      })
-                    }
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.slotIconWrap}>
-                      <Ionicons name="time-outline" size={20} color={colors.primary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.slotTimeText}>
-                        {slot.horaInicio} hrs – {slot.horaFin} hrs
-                      </Text>
-                      <Text style={styles.slotStatusText}>Turno disponible para servicio</Text>
-                    </View>
-                    <View style={styles.availablePill}>
-                      <Text style={styles.availablePillText}>{slot.estado}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {slotsDelDiaSeleccionado.map((slot) => {
+                  const horaNum = parseInt(slot.horaInicio.split(':')[0], 10) || 0;
+                  const turno =
+                    horaNum < 12
+                      ? { nombre: 'Turno Mañana', icon: 'sunny-outline', color: '#D97706' }
+                      : horaNum < 18
+                      ? { nombre: 'Turno Tarde', icon: 'partly-sunny-outline', color: '#2563EB' }
+                      : { nombre: 'Turno Noche', icon: 'moon-outline', color: '#7C3AED' };
+
+                  return (
+                    <TouchableOpacity
+                      key={`${selectedDate}-${slot.horaInicio}-${slot.horaFin}`}
+                      style={styles.slotCard}
+                      onPress={() =>
+                        onSelectSlot &&
+                        onSelectSlot({
+                          fecha: selectedDate,
+                          horaInicio: slot.horaInicio,
+                          horaFin: slot.horaFin,
+                          idDisponibilidad: slot.idDisponibilidad,
+                        })
+                      }
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.slotIconWrap, { backgroundColor: `${turno.color}15` }]}>
+                        <Ionicons name={turno.icon} size={20} color={turno.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.slotTimeText}>
+                          {slot.horaInicio} hrs – {slot.horaFin} hrs
+                        </Text>
+                        <Text style={styles.slotStatusText}>{turno.nombre} • Disponible</Text>
+                      </View>
+                      <View style={styles.availablePill}>
+                        <Text style={styles.availablePillText}>{slot.estado}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>

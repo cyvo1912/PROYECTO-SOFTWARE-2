@@ -14,6 +14,7 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import io from 'socket.io-client';
 import { colors } from '../theme/colors';
 import { MENSAJERIA_API_URL, SOCKET_URL } from '../config/api';
@@ -252,12 +253,29 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
     try {
       const d = new Date(fechaIso);
       if (isNaN(d.getTime())) return '';
-      return d.toLocaleTimeString('es-PE', {
+      const ahora = new Date();
+      const esMismoDia =
+        d.getDate() === ahora.getDate() &&
+        d.getMonth() === ahora.getMonth() &&
+        d.getFullYear() === ahora.getFullYear();
+
+      const ayer = new Date(ahora);
+      ayer.setDate(ahora.getDate() - 1);
+      const esAyer =
+        d.getDate() === ayer.getDate() &&
+        d.getMonth() === ayer.getMonth() &&
+        d.getFullYear() === ayer.getFullYear();
+
+      const horaStr = d.toLocaleTimeString('es-PE', {
         timeZone: 'America/Lima',
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
       });
+
+      if (esMismoDia) return horaStr;
+      if (esAyer) return `Ayer ${horaStr}`;
+      return `${d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })} ${horaStr}`;
     } catch {
       return '';
     }
@@ -310,10 +328,10 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
       {/* Encabezado Mockup Figura 32 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.botonVolver} onPress={onBack}>
-          <Text style={styles.textoVolver}>← Volver</Text>
+          <Ionicons name="arrow-back" size={18} color="#1E1B4B" style={{ marginRight: 4 }} /><Text style={styles.textoVolver}>Volver</Text>
         </TouchableOpacity>
         <View style={styles.tituloHeaderContenedor}>
-          <Text style={styles.iconoCorazon}>💜</Text>
+          <Ionicons name="chatbubbles" size={20} color={colors.primary} style={{ marginRight: 6 }} />
           <Text style={styles.tituloHeader}>Mensajes</Text>
         </View>
       </View>
@@ -353,9 +371,11 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                       {item.fotoUrl ? (
                         <Image source={{ uri: item.fotoUrl }} style={styles.avatarImagen} />
                       ) : (
-                        <Text style={styles.avatarEmoji}>
-                          {item.tipoUsuario === 'NINERA' ? '👩‍🍼' : '👨‍👩‍👧'}
-                        </Text>
+                        <Ionicons
+                          name={item.tipoUsuario === 'NINERA' ? 'person' : 'people'}
+                          size={22}
+                          color={colors.primary}
+                        />
                       )}
                       {item.enLinea && <View style={styles.indicadorEnLineaBadge} />}
                     </View>
@@ -396,9 +416,11 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                   {contactoActivo.fotoUrl ? (
                     <Image source={{ uri: contactoActivo.fotoUrl }} style={styles.avatarImagenChat} />
                   ) : (
-                    <Text style={styles.avatarEmojiChat}>
-                      {contactoActivo.tipoUsuario === 'NINERA' ? '👩‍🍼' : '👨‍👩‍👧'}
-                    </Text>
+                    <Ionicons
+                      name={contactoActivo.tipoUsuario === 'NINERA' ? 'person' : 'people'}
+                      size={22}
+                      color={colors.primary}
+                    />
                   )}
                 </View>
                 <View>
@@ -419,7 +441,8 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
             {/* Alerta de Error / Regla de Negocio: Reserva no pagada */}
             {errorAlerta && (
               <View style={styles.alertaError}>
-                <Text style={styles.textoAlertaError}>⚠️ {errorAlerta}</Text>
+                <Ionicons name="alert-circle" size={18} color="#DC2626" style={{ marginRight: 6 }} />
+                <Text style={styles.textoAlertaError}>{errorAlerta}</Text>
               </View>
             )}
 
@@ -456,9 +479,15 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                             {formatearHora(item.fechaCreacion)}
                           </Text>
                           {esMio && (
-                            <Text style={styles.dobleCheck}>
-                              {item.enviando ? '🕒' : item.leido ? '✓✓' : '✓'}
-                            </Text>
+                            <View style={styles.checkWrapper}>
+                              {item.enviando ? (
+                                <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.7)" />
+                              ) : item.leido ? (
+                                <Ionicons name="checkmark-done" size={15} color="#A7F3D0" />
+                              ) : (
+                                <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.7)" />
+                              )}
+                            </View>
                           )}
                         </View>
                       </View>
@@ -492,7 +521,7 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                   onPress={enviarMensaje}
                   disabled={!nuevoMensaje.trim()}
                 >
-                  <Text style={styles.iconoEnviar}>➤</Text>
+                  <Ionicons name="send" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
               <Text style={styles.pieAdvertencia}>
@@ -523,7 +552,7 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                 style={styles.modalBotonCerrarIcono}
                 onPress={() => setModalPerfilVisible(false)}
               >
-                <Text style={styles.modalTextoCerrarIcono}>✕</Text>
+                <Ionicons name="close" size={20} color={colors.textTitle} />
               </TouchableOpacity>
             </View>
 
@@ -538,9 +567,11 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                       <Image source={{ uri: perfilDetalle.fotoUrl }} style={styles.perfilFotoGrande} />
                     ) : (
                       <View style={styles.perfilAvatarFallback}>
-                        <Text style={styles.perfilAvatarEmoji}>
-                          {perfilDetalle?.tipoUsuario === 'NINERA' ? '👩‍🍼' : '👨‍👩‍👧'}
-                        </Text>
+                        <Ionicons
+                          name={perfilDetalle?.tipoUsuario === 'NINERA' ? 'person' : 'people'}
+                          size={40}
+                          color={colors.primary}
+                        />
                       </View>
                     )}
                     <Text style={styles.perfilNombreGrande}>{perfilDetalle?.nombre || 'Usuario'}</Text>
@@ -910,6 +941,11 @@ const styles = StyleSheet.create({
   },
   horaAjena: {
     color: colors.textMuted,
+  },
+  checkWrapper: {
+    marginLeft: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
   dobleCheck: {
     fontSize: 10,
