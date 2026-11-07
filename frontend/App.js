@@ -13,6 +13,7 @@ import MultimediaScreen from './src/screens/MultimediaScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
 import PantallaChat from './src/screens/PantallaChat';
+import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 // Constantes para persistencia local de sesión
@@ -114,7 +115,7 @@ const resolverPantallaPermitida = (solicitada, user) => {
   }
 
   // Rutas exclusivas de FAMILIA
-  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm'];
+  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies'];
   if (rutasFamilia.includes(solicitada)) {
     if (rol === 'FAMILIA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'nannyDashboard';
@@ -213,6 +214,7 @@ export default function App() {
   const navigateToFamilyChildren = () => navegar('familyChildren');
   const navigateToChildForm = (child = null) => navegar('childForm', child);
   const navigateToMultimedia = () => navegar('multimedia');
+  const navigateToSearchNannies = () => navegar('searchNannies');
 
   // Callback al iniciar sesión exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -369,11 +371,17 @@ export default function App() {
         onNavigateToChildren={navigateToFamilyChildren}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
+        onNavigateToSearch={navigateToSearchNannies}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
         onNavigateToChat={navigateToChat}
       />
     );
+  }
+
+  // HU11: Búsqueda de niñeras por proximidad, tarifa y experiencia
+  if (currentScreen === 'searchNannies' && currentUser) {
+    return <SearchNanniesScreen token={authToken} onBack={navigateToFamilyDashboard} />;
   }
 
   if (currentScreen === 'editFamilyProfile' && currentUser) {

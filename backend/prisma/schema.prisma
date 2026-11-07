@@ -54,6 +54,11 @@ model Ninera {
   descripcion           String?
   verificada            Boolean  @default(false)
   calificacion_promedio Decimal? @default(5.00) @db.Decimal(3, 2)
+  // HU11: coordenadas para búsqueda por proximidad (Google Maps API) y
+  // años de experiencia en formato numérico para poder filtrar por ellos.
+  latitud               Decimal? @db.Decimal(10, 7)
+  longitud              Decimal? @db.Decimal(10, 7)
+  anos_experiencia      Int?     @db.SmallInt
 
   usuario      Usuario       @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
   certificados Certificado[]

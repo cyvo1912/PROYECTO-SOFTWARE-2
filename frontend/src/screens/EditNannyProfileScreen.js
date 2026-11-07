@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 
@@ -67,10 +68,25 @@ export default function EditNannyProfileScreen({
     initialUser?.detalles?.tarifaHora ? String(initialUser.detalles.tarifaHora) : '15'
   );
   const [zona, setZona] = useState(initialUser?.detalles?.zona || '');
+  // HU11: años de experiencia en número (filtro de búsqueda por proximidad)
+  const [anosExperiencia, setAnosExperiencia] = useState(
+    initialUser?.detalles?.anosExperiencia !== null && initialUser?.detalles?.anosExperiencia !== undefined
+      ? String(initialUser.detalles.anosExperiencia)
+      : ''
+  );
 
   // Estado de la Foto de Perfil (HU8)
   const [fotoUrl, setFotoUrl] = useState(initialUser?.fotoUrl || null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
+
+  // HU11: ubicación (GPS) para que las familias encuentren niñeras cercanas
+  const [ubicacion, setUbicacion] = useState({
+    latitud: initialUser?.detalles?.latitud ?? null,
+    longitud: initialUser?.detalles?.longitud ?? null,
+  });
+  const [actualizandoUbicacion, setActualizandoUbicacion] = useState(false);
+  const [ubicacionMensaje, setUbicacionMensaje] = useState('');
+  const [ubicacionError, setUbicacionError] = useState('');
 
   // Estados de control UI
   const [loadingInitial, setLoadingInitial] = useState(false);
@@ -101,6 +117,15 @@ export default function EditNannyProfileScreen({
           setExperiencia(u.detalles?.experiencia || '');
           setTarifaHora(u.detalles?.tarifaHora ? String(u.detalles.tarifaHora) : '15');
           setZona(u.detalles?.zona || '');
+          setAnosExperiencia(
+            u.detalles?.anosExperiencia !== null && u.detalles?.anosExperiencia !== undefined
+              ? String(u.detalles.anosExperiencia)
+              : ''
+          );
+          setUbicacion({
+            latitud: u.detalles?.latitud ?? null,
+            longitud: u.detalles?.longitud ?? null,
+          });
         }
 
         // Cargar foto de perfil desde /api/multimedia
@@ -168,6 +193,47 @@ export default function EditNannyProfileScreen({
     }
   };
 
+  // HU11: captura la ubicación GPS actual y la guarda en el backend, para que
+  // las familias puedan encontrar a esta niñera al buscar por proximidad.
+  const actualizarUbicacion = async () => {
+    setUbicacionMensaje('');
+    setUbicacionError('');
+    setActualizandoUbicacion(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setUbicacionError('Necesitamos permiso de ubicación para que las familias te encuentren cerca de su zona.');
+        return;
+      }
+
+      const posicion = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const { latitude, longitude } = posicion.coords;
+
+      const response = await fetch(`${API_BASE_URL}/usuarios/perfil/ninera/ubicacion`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ latitud: latitude, longitud: longitude }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setUbicacionError(data.message || 'No se pudo guardar tu ubicación.');
+      } else {
+        setUbicacion({ latitud: data.data.latitud, longitud: data.data.longitud });
+        setUbicacionMensaje('¡Ubicación actualizada! Ahora apareces en las búsquedas cercanas a tu zona.');
+      }
+    } catch (err) {
+      setUbicacionError('No se pudo obtener tu ubicación. Verifica que el GPS esté activado.');
+    } finally {
+      setActualizandoUbicacion(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setSuccessMessage('');
     setErrorMessage('');
@@ -182,6 +248,16 @@ export default function EditNannyProfileScreen({
     const tarifaNum = Number(tarifaHora);
     if (!tarifaHora || isNaN(tarifaNum) || tarifaNum <= 0) {
       errores.tarifaHora = 'Ingresa una tarifa válida mayor a 0.';
+    }
+
+    // HU11: años de experiencia es opcional, pero si se llena debe ser un
+    // número entero válido (se usa para filtrar en la búsqueda por proximidad).
+    let anosExperienciaNum;
+    if (anosExperiencia.trim() !== '') {
+      anosExperienciaNum = Number(anosExperiencia);
+      if (!Number.isInteger(anosExperienciaNum) || anosExperienciaNum < 0 || anosExperienciaNum > 60) {
+        errores.anosExperiencia = 'Ingresa un número entero de años entre 0 y 60.';
+      }
     }
 
     if (Object.keys(errores).length > 0) {
@@ -207,6 +283,7 @@ export default function EditNannyProfileScreen({
           tarifaHora: tarifaNum,
           zona: zona.trim() || null,
           sobreMi: sobreMi.trim() || null,
+          anosExperiencia: anosExperienciaNum !== undefined ? anosExperienciaNum : undefined,
         }),
       });
 
@@ -448,6 +525,77 @@ export default function EditNannyProfileScreen({
                     placeholder="Ej. Santiago de Surco, San Borja"
                   />
                 </View>
+              </View>
+
+              {/* HU11: años de experiencia en número, para que las familias puedan
+                  filtrar la búsqueda por proximidad por experiencia mínima */}
+              <Field
+                label="Años de Experiencia (número)"
+                value={anosExperiencia}
+                onChangeText={(t) => {
+                  setAnosExperiencia(t.replace(/[^0-9]/g, ''));
+                  if (fieldErrors.anosExperiencia) setFieldErrors((p) => ({ ...p, anosExperiencia: undefined }));
+                }}
+                placeholder="Ej. 5"
+                keyboardType="number-pad"
+                error={fieldErrors.anosExperiencia}
+              />
+              <Text style={styles.helperText}>
+                Opcional. Se usa para que las familias puedan filtrar por experiencia mínima al buscar niñeras cerca de su zona.
+              </Text>
+
+              <View style={styles.divider} />
+
+              {/* SECCIÓN 3: UBICACIÓN (HU11 - Búsqueda por proximidad) */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="location-outline" size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Ubicación para Búsquedas Cercanas</Text>
+              </View>
+              <Text style={styles.helperText}>
+                Comparte tu ubicación actual para aparecer cuando una familia busque niñeras cerca de su zona (Google Maps).
+              </Text>
+
+              {ubicacionMensaje ? (
+                <View style={[styles.successBanner, { marginTop: 10 }]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                  <Text style={styles.successBannerText}>{ubicacionMensaje}</Text>
+                </View>
+              ) : null}
+              {ubicacionError ? (
+                <View style={[styles.errorBanner, { marginTop: 10 }]}>
+                  <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                  <Text style={styles.errorBannerText}>{ubicacionError}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.locationRow}>
+                <View style={styles.locationStatus}>
+                  <Ionicons
+                    name={ubicacion.latitud !== null ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+                    size={18}
+                    color={ubicacion.latitud !== null ? colors.success : '#9CA3AF'}
+                  />
+                  <Text style={styles.locationStatusText}>
+                    {ubicacion.latitud !== null
+                      ? `Ubicación guardada (${Number(ubicacion.latitud).toFixed(4)}, ${Number(ubicacion.longitud).toFixed(4)})`
+                      : 'Aún no has compartido tu ubicación'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.locationButton}
+                  onPress={actualizarUbicacion}
+                  disabled={actualizandoUbicacion}
+                  activeOpacity={0.8}
+                >
+                  {actualizandoUbicacion ? (
+                    <ActivityIndicator color={colors.primary} size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+                      <Text style={styles.locationButtonText}>Usar mi ubicación actual</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
 
               {/* Botón Guardar Cambios */}
@@ -760,5 +908,54 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: -8,
+    marginBottom: 16,
+    lineHeight: 16,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  locationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 180,
+  },
+  locationStatusText: {
+    fontSize: 13,
+    color: '#374151',
+    flexShrink: 1,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#F3E8FF',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  locationButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });
