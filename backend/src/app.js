@@ -38,4 +38,14 @@ app.get('/', (req, res) => {
   });
 });
 
+// Manejador 404 para rutas no encontradas en el backend
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    status: 404,
+    message: `La ruta ${req.method} ${req.originalUrl} no fue encontrada en este servidor.`,
+    error: 'NOT_FOUND',
+  });
+});
+
 module.exports = app;

@@ -15,6 +15,7 @@ import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
 import PantallaChat from './src/screens/PantallaChat';
 import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
+import NotFoundScreen from './src/screens/NotFoundScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 // Constantes para persistencia local de sesión
@@ -24,6 +25,24 @@ const STORAGE_SCREEN_KEY = 'minana_screen';
 const STORAGE_CHILD_KEY = 'minana_selected_child';
 
 const RUTAS_PUBLICAS = ['landing', 'login', 'registerFamily', 'registerNanny'];
+const TODAS_LAS_RUTAS_VALIDAS = [
+  'landing',
+  'login',
+  'registerFamily',
+  'registerNanny',
+  'familyDashboard',
+  'nannyDashboard',
+  'adminDashboard',
+  'editFamilyProfile',
+  'editNannyProfile',
+  'familyChildren',
+  'childForm',
+  'multimedia',
+  'searchNannies',
+  'nannyAvailability',
+  'chat',
+  'notFound',
+];
 
 const guardarSesionLocal = (token, user, screen, child = null) => {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
@@ -92,6 +111,17 @@ const obtenerRutaDesdeNavegador = () => {
  * - Si hay usuario, valida roles (FAMILIA, NINERA, ADMIN).
  */
 const resolverPantallaPermitida = (solicitada, user) => {
+  if (!solicitada) return user ? 'familyDashboard' : 'landing';
+
+  // Si la ruta no está registrada en la aplicación, redirigir a 404 Not Found
+  if (!TODAS_LAS_RUTAS_VALIDAS.includes(solicitada)) {
+    return 'notFound';
+  }
+
+  if (solicitada === 'notFound') {
+    return 'notFound';
+  }
+
   if (!user) {
     if (RUTAS_PUBLICAS.includes(solicitada)) {
       return solicitada;
@@ -146,6 +176,7 @@ export default function App() {
   const [authToken, setAuthToken] = useState(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [selectedChild, setSelectedChild] = useState(null);
+  const [unrecognizedPath, setUnrecognizedPath] = useState('');
 
   const sincronizarHash = (pantalla) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -158,10 +189,15 @@ export default function App() {
 
   const navegar = (pantalla, hijo = null) => {
     const permitida = resolverPantallaPermitida(pantalla, currentUser);
+    if (permitida === 'notFound') {
+      setUnrecognizedPath(pantalla);
+    } else {
+      setUnrecognizedPath('');
+    }
     setCurrentScreen(permitida);
     setSelectedChild(hijo);
     guardarSesionLocal(authToken, currentUser, permitida, hijo);
-    sincronizarHash(permitida);
+    sincronizarHash(permitida === 'notFound' ? (pantalla || '404') : permitida);
   };
 
   // Inicialización y manejo de recarga / historial del navegador
@@ -180,8 +216,11 @@ export default function App() {
     const rutaUrl = obtenerRutaDesdeNavegador();
     const pantallaDeseada = rutaUrl || sesion.savedScreen || 'landing';
     const permitida = resolverPantallaPermitida(pantallaDeseada, userActivo);
+    if (permitida === 'notFound') {
+      setUnrecognizedPath(pantallaDeseada);
+    }
     setCurrentScreen(permitida);
-    sincronizarHash(permitida);
+    sincronizarHash(permitida === 'notFound' ? pantallaDeseada : permitida);
 
     // Manejar retroceso y avance en el navegador sin cerrar sesión ni regresar a landing
     const handleUrlChange = () => {
@@ -189,8 +228,13 @@ export default function App() {
       const sesionActual = obtenerSesionInicial();
       const userRef = sesionActual.user || userActivo;
       const destino = resolverPantallaPermitida(nuevaRuta, userRef);
+      if (destino === 'notFound') {
+        setUnrecognizedPath(nuevaRuta);
+      } else {
+        setUnrecognizedPath('');
+      }
       setCurrentScreen(destino);
-      sincronizarHash(destino);
+      sincronizarHash(destino === 'notFound' ? nuevaRuta : destino);
     };
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -217,6 +261,16 @@ export default function App() {
   const navigateToMultimedia = () => navegar('multimedia');
   const navigateToSearchNannies = () => navegar('searchNannies');
   const navigateToNannyAvailability = () => navegar('nannyAvailability');
+  const navigateToHomeOrDashboard = () => {
+    if (!currentUser) {
+      navegar('landing');
+      return;
+    }
+    const rol = currentUser?.rol || currentUser?.tipo_usuario;
+    if (rol === 'ADMIN') navegar('adminDashboard');
+    else if (rol === 'NINERA') navegar('nannyDashboard');
+    else navegar('familyDashboard');
+  };
 
   // Callback al iniciar sesión exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -467,11 +521,34 @@ export default function App() {
     );
   }
 
+  if (currentScreen === 'notFound') {
+    return (
+      <NotFoundScreen
+        requestedPath={unrecognizedPath}
+        user={currentUser}
+        onGoHome={navigateToHomeOrDashboard}
+        onGoBack={navigateToHomeOrDashboard}
+      />
+    );
+  }
+
+  if (currentScreen === 'landing') {
+    return (
+      <LandingScreen
+        onNavigateToLogin={navigateToLogin}
+        onNavigateToRegisterFamily={navigateToRegisterFamily}
+        onNavigateToRegisterNanny={navigateToRegisterNanny}
+      />
+    );
+  }
+
+  // Fallback seguro ante cualquier estado no contemplado
   return (
-    <LandingScreen
-      onNavigateToLogin={navigateToLogin}
-      onNavigateToRegisterFamily={navigateToRegisterFamily}
-      onNavigateToRegisterNanny={navigateToRegisterNanny}
+    <NotFoundScreen
+      requestedPath={unrecognizedPath || currentScreen}
+      user={currentUser}
+      onGoHome={navigateToHomeOrDashboard}
+      onGoBack={navigateToHomeOrDashboard}
     />
   );
 }
