@@ -31,6 +31,7 @@ export default function FamilyDashboardScreen({
   onNavigateToChildren,
   onAddChild,
   onEditChild,
+  onNavigateToSearch,
   onLogout,
   logoutLoading = false,
 }) {
@@ -259,21 +260,23 @@ export default function FamilyDashboardScreen({
             )}
           </View>
 
-          {/* Tarjeta 2: Buscar niñera (Bloqueada) */}
-          <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>
+          {/* Tarjeta 2: Buscar niñera (HU11) */}
+          <TouchableOpacity
+            style={styles.sectionBlock}
+            onPress={onNavigateToSearch}
+            activeOpacity={0.8}
+          >
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
-                <Ionicons name="search-outline" size={20} color="#9CA3AF" />
-                <Text style={[styles.sectionTitle, styles.sectionTitleDisabled]}>Buscar niñera</Text>
+                <Ionicons name="search-outline" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Buscar niñera</Text>
               </View>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonBadgeText}>Próximamente</Text>
-              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
             </View>
             <Text style={styles.disabledCardDesc}>
-              Explora perfiles verificados de niñeras disponibles cerca de tu zona y filtra por experiencia y tarifas.
+              Explora perfiles verificados de niñeras cerca de tu zona y filtra por distancia, tarifa y experiencia.
             </Text>
-          </View>
+          </TouchableOpacity>
 
           {/* Tarjeta 3: Mis reservas (Bloqueada) */}
           <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>

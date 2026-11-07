@@ -11,11 +11,13 @@ import ChildFormScreen from './src/screens/ChildFormScreen';
 import MultimediaScreen from './src/screens/MultimediaScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
+import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
   // | 'familyDashboard' | 'editFamilyProfile' | 'familyChildren' | 'childForm' | 'multimedia'
+  // | 'searchNannies' (HU11)
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
@@ -45,6 +47,7 @@ export default function App() {
     setCurrentScreen('childForm');
   };
   const navigateToMultimedia = () => setCurrentScreen('multimedia');
+  const navigateToSearchNannies = () => setCurrentScreen('searchNannies');
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -169,10 +172,16 @@ export default function App() {
         onNavigateToChildren={navigateToFamilyChildren}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
+        onNavigateToSearch={navigateToSearchNannies}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
       />
     );
+  }
+
+  // HU11: Búsqueda de niñeras por proximidad, tarifa y experiencia
+  if (currentScreen === 'searchNannies' && currentUser) {
+    return <SearchNanniesScreen token={authToken} onBack={navigateToFamilyDashboard} />;
   }
 
   if (currentScreen === 'editFamilyProfile' && currentUser) {

@@ -17,6 +17,11 @@ router.put('/perfil/ninera', autenticar, soloNinera, (req, res) =>
   container.usuarioController.actualizarPerfilNinera(req, res)
 );
 
+// Actualizar ubicación (GPS) de la niñera, usada en la búsqueda por proximidad (HU11)
+router.put('/perfil/ninera/ubicacion', autenticar, soloNinera, (req, res) =>
+  container.usuarioController.actualizarUbicacionNinera(req, res)
+);
+
 // Consultar datos actuales del perfil de familia
 router.get('/perfil/padre', autenticar, soloFamilia, (req, res) =>
   container.usuarioController.obtenerPerfilPadre(req, res)

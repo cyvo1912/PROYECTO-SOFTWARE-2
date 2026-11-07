@@ -21,7 +21,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mi Nana usa tu ubicación para mostrarte las niñeras verificadas más cercanas a tu zona."
+        }
+      ]
     ]
   }
 }

@@ -12,10 +12,12 @@ const ServicioRegistro = require('./application/services/ServicioRegistro');
 const ServicioUsuario = require('./application/services/ServicioUsuario');
 const ServicioHijo = require('./application/services/ServicioHijo');
 const ServicioMultimedia = require('./application/services/ServicioMultimedia');
+const ServicioBusqueda = require('./application/services/ServicioBusqueda');
 const AuthController = require('./infrastructure/http/controllers/AuthController');
 const UsuarioController = require('./infrastructure/http/controllers/UsuarioController');
 const HijoController = require('./infrastructure/http/controllers/HijoController');
 const MultimediaController = require('./infrastructure/http/controllers/MultimediaController');
+const BusquedaController = require('./infrastructure/http/controllers/BusquedaController');
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
@@ -73,6 +75,9 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+    this.servicioBusqueda = new ServicioBusqueda({
+      userRepository: this.userRepository,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
@@ -80,6 +85,7 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.busquedaController = new BusquedaController(this.servicioBusqueda);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
