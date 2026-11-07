@@ -27,6 +27,7 @@ export default function ChildrenScreen({
   token,
   user,
   onBack,
+  onNavigateToNannyAvailability,
   onAddChild,
   onEditChild,
   onLogout,
@@ -135,6 +136,17 @@ export default function ChildrenScreen({
             <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Agregar hijo</Text>
           </TouchableOpacity>
+
+          {onNavigateToNannyAvailability ? (
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: colors.primary, marginTop: -8 }]}
+              onPress={onNavigateToNannyAvailability}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>Consultar disponibilidad de niñeras</Text>
+            </TouchableOpacity>
+          ) : null}
 
           {errorMessage ? (
             <View style={styles.errorBanner}>

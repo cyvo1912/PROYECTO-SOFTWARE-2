@@ -29,6 +29,7 @@ export default function FamilyDashboardScreen({
   user,
   onNavigateToEditProfile,
   onNavigateToChildren,
+  onNavigateToNannyAvailability,
   onAddChild,
   onEditChild,
   onNavigateToSearch,
@@ -291,6 +292,27 @@ export default function FamilyDashboardScreen({
               Explora perfiles verificados de niñeras cerca de tu zona y filtra por distancia, tarifa y experiencia.
             </Text>
           </TouchableOpacity>
+
+          {/* Tarjeta 3: Consultar Disponibilidad de Niñeras (HU13) */}
+          <View style={styles.sectionBlock}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionTitleGroup}>
+                <Ionicons name="calendar" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Disponibilidad de Niñeras</Text>
+              </View>
+            </View>
+            <Text style={styles.activeCardDesc}>
+              Consulta en un calendario interactivo los días y bloques de horarios disponibles en los que una niñera puede prestar servicio.
+            </Text>
+            <TouchableOpacity
+              style={styles.calendarActionBtn}
+              onPress={onNavigateToNannyAvailability}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.primaryBtnText}>Consultar calendario de disponibilidad</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Tarjeta 3: Mis reservas (Bloqueada) */}
           <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>
@@ -604,6 +626,22 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 4,
     lineHeight: 18,
+  },
+  activeCardDesc: {
+    fontSize: 13,
+    color: '#4B5563',
+    marginBottom: 14,
+    lineHeight: 19,
+  },
+  calendarActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
   },
   seeAllText: {
     fontSize: 13,
