@@ -12,7 +12,9 @@ class AuthController {
   }
 
   async login(req, res) {
-    const { email, password, role } = req.body;
+    const email = req.body.email || req.body.correo;
+    const password = req.body.password || req.body.contrasena;
+    const role = req.body.role || req.body.rol;
 
     try {
       const resultado = await this.servicioAuth.iniciarSesion(email, password, role);
@@ -22,6 +24,7 @@ class AuthController {
         message: 'Inicio de sesión exitoso',
         token: resultado.token,
         user: resultado.usuario,
+        usuario: resultado.usuario,
       });
     } catch (error) {
       return this._responderError(res, error);
@@ -38,6 +41,7 @@ class AuthController {
         message: 'Cuenta creada correctamente.',
         token: resultado.token,
         user: resultado.usuario,
+        usuario: resultado.usuario,
       });
     } catch (error) {
       return this._responderError(res, error);
@@ -53,6 +57,7 @@ class AuthController {
         success: true,
         message: 'Registro recibido. Un administrador revisará tus datos antes de activar tu cuenta.',
         user: resultado.usuario,
+        usuario: resultado.usuario,
       });
     } catch (error) {
       return this._responderError(res, error);

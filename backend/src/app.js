@@ -15,7 +15,9 @@ const multimediaRoutes = require('./routes/multimedia.routes');
 const administradorRoutes = require('./routes/administrador.routes');
 const hijoRoutes = require('./routes/hijo.routes');
 const perfilPublicoRoutes = require('./routes/perfilPublico.routes');
+const mensajeriaRoutes = require('./routes/mensajeria.routes');
 const busquedaRoutes = require('./routes/busqueda.routes');
+const disponibilidadRoutes = require('./routes/disponibilidad.routes');
 
 app.use('/api', landingRoutes);
 app.use('/api/auth', authRoutes);
@@ -24,7 +26,9 @@ app.use('/api/multimedia', multimediaRoutes);
 app.use('/api/administracion', administradorRoutes);
 app.use('/api/hijos', hijoRoutes);
 app.use('/api/perfil-publico', perfilPublicoRoutes);
+app.use('/api/mensajeria', mensajeriaRoutes);
 app.use('/api/busqueda', busquedaRoutes);
+app.use('/api/nineras', disponibilidadRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -33,6 +37,16 @@ app.get('/', (req, res) => {
     status: 'online',
     version: '1.0.0',
     description: 'Primera version de mi Nana'
+  });
+});
+
+// Manejador 404 para rutas no encontradas en el backend
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    status: 404,
+    message: `La ruta ${req.method} ${req.originalUrl} no fue encontrada en este servidor.`,
+    error: 'NOT_FOUND',
   });
 });
 

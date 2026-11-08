@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS usuario (
     correo VARCHAR(150) UNIQUE NOT NULL,
     dni VARCHAR(20) UNIQUE NOT NULL,
     contrasena_hash VARCHAR(255) NOT NULL,
+    
     celular VARCHAR(20),
     tipo_usuario VARCHAR(30) NOT NULL CHECK (tipo_usuario IN ('FAMILIA', 'NINERA', 'ADMIN')),
     estado_cuenta VARCHAR(30) DEFAULT 'ACTIVA',

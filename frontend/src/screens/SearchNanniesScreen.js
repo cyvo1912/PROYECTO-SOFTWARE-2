@@ -160,6 +160,53 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
               <Text style={styles.sectionTitle}>Filtros de búsqueda</Text>
             </View>
 
+            <View style={styles.quickChipsRow}>
+              <TouchableOpacity
+                style={[styles.quickChip, tarifaMaxima === '30' && styles.quickChipActive]}
+                onPress={() => setTarifaMaxima(tarifaMaxima === '30' ? '' : '30')}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name="pricetag-outline"
+                  size={12}
+                  color={tarifaMaxima === '30' ? '#FFFFFF' : colors.primary}
+                />
+                <Text style={[styles.quickChipText, tarifaMaxima === '30' && styles.quickChipTextActive]}>
+                  ≤ S/ 30/h
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.quickChip, experienciaMinima === '3' && styles.quickChipActive]}
+                onPress={() => setExperienciaMinima(experienciaMinima === '3' ? '' : '3')}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name="ribbon-outline"
+                  size={12}
+                  color={experienciaMinima === '3' ? '#FFFFFF' : colors.primary}
+                />
+                <Text style={[styles.quickChipText, experienciaMinima === '3' && styles.quickChipTextActive]}>
+                  ≥ 3 años
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.quickChip, radioKm === 5 && styles.quickChipActive]}
+                onPress={() => setRadioKm(radioKm === 5 ? 15 : 5)}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name="navigate-outline"
+                  size={12}
+                  color={radioKm === 5 ? '#FFFFFF' : colors.primary}
+                />
+                <Text style={[styles.quickChipText, radioKm === 5 && styles.quickChipTextActive]}>
+                  Radio 5 km
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.label}>Radio de búsqueda</Text>
             <View style={styles.radioChipsRow}>
               {RADIOS_KM.map((km) => (
@@ -263,11 +310,24 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
           {yaBusco && !buscando ? (
             resultados.length === 0 ? (
               <View style={styles.emptyBox}>
-                <Ionicons name="search-outline" size={28} color={colors.primary} />
+                <Ionicons name="search-outline" size={32} color={colors.primary} />
                 <Text style={styles.emptyTitle}>No encontramos niñeras en ese radio</Text>
                 <Text style={styles.emptyText}>
-                  Intenta ampliar el radio de búsqueda o quitar algunos filtros.
+                  Intenta ampliar el radio de búsqueda o restablecer los filtros de tarifa y experiencia.
                 </Text>
+                <TouchableOpacity
+                  style={styles.resetFilterBtn}
+                  onPress={() => {
+                    setRadioKm(25);
+                    setTarifaMaxima('');
+                    setExperienciaMinima('');
+                    buscarNineras(ubicacion);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="refresh-outline" size={15} color={colors.primary} />
+                  <Text style={styles.resetFilterBtnText}>Restablecer filtros</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.resultsHeaderRow}>
@@ -665,6 +725,52 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  resetFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: colors.primaryUltraLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resetFilterBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  quickChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  quickChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  quickChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  quickChipTextActive: {
+    color: '#FFFFFF',
   },
   nannyCard: {
     backgroundColor: '#FFFFFF',

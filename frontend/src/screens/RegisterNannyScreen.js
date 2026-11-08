@@ -133,8 +133,8 @@ export default function RegisterNannyScreen({ onBack, onRegistered, onNavigateTo
               <Text style={styles.sectionLabel}>Tus datos</Text>
               <Field label="Nombre" value={nombre} onChangeText={updateField(setNombre, 'nombre')} error={fieldErrors.nombre} placeholder="María" />
               <Field label="Apellido" value={apellido} onChangeText={updateField(setApellido, 'apellido')} error={fieldErrors.apellido} placeholder="García" />
-              <Field label="DNI" value={dni} onChangeText={updateField(setDni, 'dni')} error={fieldErrors.dni} placeholder="12345678" keyboardType="number-pad" maxLength={8} />
-              <Field label="Teléfono" value={celular} onChangeText={updateField(setCelular, 'celular')} error={fieldErrors.celular} placeholder="987654321" keyboardType="phone-pad" />
+              <Field label="DNI" value={dni} onChangeText={(t) => updateField(setDni, 'dni')(t.replace(/[^0-9]/g, ''))} error={fieldErrors.dni} placeholder="12345678" keyboardType="number-pad" maxLength={8} />
+              <Field label="Teléfono" value={celular} onChangeText={(t) => updateField(setCelular, 'celular')(t.replace(/[^0-9]/g, ''))} error={fieldErrors.celular} placeholder="987654321" keyboardType="phone-pad" maxLength={9} />
               <Field label="Correo Electrónico" value={correo} onChangeText={updateField(setCorreo, 'correo')} error={fieldErrors.correo} placeholder="tu@correo.com" keyboardType="email-address" autoCapitalize="none" />
               <PasswordField
                 value={contrasena}
