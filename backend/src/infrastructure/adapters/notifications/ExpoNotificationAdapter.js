@@ -1,10 +1,11 @@
+
 class ExpoNotificationAdapter {
   constructor() {
     this.url = 'https://exp.host/--/api/v2/push/send';
   }
 
   async enviar(tokens, datos) {
-    if (!tokens || tokens.length === 0) {
+    if (!Array.isArray(tokens) || tokens.length === 0) {
       return [];
     }
 
@@ -21,7 +22,6 @@ class ExpoNotificationAdapter {
       method: 'POST',
       headers: {
         Accept: 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(mensajes),
@@ -32,11 +32,23 @@ class ExpoNotificationAdapter {
     if (!respuesta.ok) {
       throw new Error(
         resultado.errors?.[0]?.message ||
-        'No se pudieron enviar las notificaciones de Expo.',
+        'No se pudieron enviar las notificaciones de Expo.'
       );
     }
 
-    return resultado.data || [];
+    const resultados = resultado.data || [];
+
+    for (const item of resultados) {
+      if (item.status === 'error') {
+        console.error(
+          'Error al enviar notificación push:',
+          item.message,
+          item.details
+        );
+      }
+    }
+
+    return resultados;
   }
 }
 

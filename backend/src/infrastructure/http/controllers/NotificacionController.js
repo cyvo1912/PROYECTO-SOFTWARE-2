@@ -1,3 +1,4 @@
+
 const responderError = require('../responderError');
 
 class NotificacionController {
@@ -11,16 +12,18 @@ class NotificacionController {
 
   async registrarToken(req, res) {
     try {
+      const { token, plataforma } = req.body || {};
+
       const data = await this.servicioNotificacion.registrarToken(
         req.user,
-        req.body.token,
-        req.body.plataforma,
+        token,
+        plataforma
       );
 
       return res.status(200).json({
         success: true,
         message: 'Token registrado correctamente.',
-        data,
+        data
       });
     } catch (error) {
       return responderError(res, error);
@@ -30,14 +33,15 @@ class NotificacionController {
   async listar(req, res) {
     try {
       const data = await this.servicioNotificacion.listarNotificaciones(
-        req.user,
+        req.user
       );
 
       return res.status(200).json({
         success: true,
-        data,
+        data
       });
     } catch (error) {
+      console.error('ERROR HU18 - LISTAR NOTIFICACIONES:', error);
       return responderError(res, error);
     }
   }
@@ -46,13 +50,13 @@ class NotificacionController {
     try {
       const data = await this.servicioNotificacion.marcarComoLeida(
         req.user,
-        req.params.id,
+        req.params.id
       );
 
       return res.status(200).json({
         success: true,
         message: 'Notificación marcada como leída.',
-        data,
+        data
       });
     } catch (error) {
       return responderError(res, error);

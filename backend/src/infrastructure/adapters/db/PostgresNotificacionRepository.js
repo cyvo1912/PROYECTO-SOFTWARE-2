@@ -1,3 +1,4 @@
+
 const NotificacionRepositoryPort = require('../../../application/ports/NotificacionRepositoryPort');
 
 class PostgresNotificacionRepository extends NotificacionRepositoryPort {
@@ -23,7 +24,7 @@ class PostgresNotificacionRepository extends NotificacionRepositoryPort {
         activo = TRUE
       RETURNING *;
       `,
-      [idUsuario, token, plataforma],
+      [idUsuario, token, plataforma]
     );
 
     return result.rows[0];
@@ -37,14 +38,14 @@ class PostgresNotificacionRepository extends NotificacionRepositoryPort {
         id_reserva,
         titulo,
         mensaje,
-        tipo,
-        leida,
-        fecha_creacion
+        tipo_notificacion AS tipo,
+        leido AS leida,
+        fecha_envio AS fecha_creacion
       FROM notificacion
       WHERE id_usuario = $1
-      ORDER BY fecha_creacion DESC;
+      ORDER BY fecha_envio DESC, id_notificacion DESC;
       `,
-      [idUsuario],
+      [idUsuario]
     );
 
     return result.rows;
@@ -54,12 +55,19 @@ class PostgresNotificacionRepository extends NotificacionRepositoryPort {
     const result = await this.pool.query(
       `
       UPDATE notificacion
-      SET leida = TRUE
+      SET leido = TRUE
       WHERE id_notificacion = $1
         AND id_usuario = $2
-      RETURNING *;
+      RETURNING
+        id_notificacion,
+        id_reserva,
+        titulo,
+        mensaje,
+        tipo_notificacion AS tipo,
+        leido AS leida,
+        fecha_envio AS fecha_creacion;
       `,
-      [idNotificacion, idUsuario],
+      [idNotificacion, idUsuario]
     );
 
     return result.rows[0] || null;
@@ -73,18 +81,26 @@ class PostgresNotificacionRepository extends NotificacionRepositoryPort {
         id_reserva,
         titulo,
         mensaje,
-        tipo
+        tipo_notificacion,
+        leido
       )
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *;
+      VALUES ($1, $2, $3, $4, $5, FALSE)
+      RETURNING
+        id_notificacion,
+        id_reserva,
+        titulo,
+        mensaje,
+        tipo_notificacion AS tipo,
+        leido AS leida,
+        fecha_envio AS fecha_creacion;
       `,
       [
         datos.idUsuario,
-        datos.idReserva,
+        datos.idReserva ?? null,
         datos.titulo,
         datos.mensaje,
-        datos.tipo,
-      ],
+        datos.tipo
+      ]
     );
 
     return result.rows[0];
@@ -98,10 +114,12 @@ class PostgresNotificacionRepository extends NotificacionRepositoryPort {
       WHERE id_usuario = $1
         AND activo = TRUE;
       `,
-      [idUsuario],
+      [idUsuario]
     );
 
-    return result.rows.map((row) => row.expo_push_token);
+    return result.rows.map(
+      (row) => row.expo_push_token
+    );
   }
 }
 

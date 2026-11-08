@@ -1,3 +1,4 @@
+
 const {
   ValidationError,
   NotFoundError,
@@ -6,7 +7,9 @@ const {
 class ServicioNotificacion {
   constructor({ notificacionRepository, expoNotificationAdapter }) {
     if (!notificacionRepository || !expoNotificationAdapter) {
-      throw new Error('Las dependencias de notificaciones son requeridas');
+      throw new Error(
+        'Las dependencias de notificaciones son requeridas'
+      );
     }
 
     this.notificacionRepository = notificacionRepository;
@@ -20,7 +23,7 @@ class ServicioNotificacion {
 
     if (
       typeof token !== 'string' ||
-      !/^ExponentPushToken\[.+\]$/.test(token)
+      !/^(ExponentPushToken|ExpoPushToken)\[[^\]]+\]$/.test(token)
     ) {
       throw new ValidationError('El token de Expo no es válido.');
     }
@@ -28,7 +31,7 @@ class ServicioNotificacion {
     return this.notificacionRepository.registrarToken(
       usuario.id,
       token,
-      plataforma || 'desconocida',
+      plataforma || 'desconocida'
     );
   }
 
@@ -37,55 +40,106 @@ class ServicioNotificacion {
       throw new ValidationError('Usuario no autenticado.');
     }
 
-    return this.notificacionRepository.listarPorUsuario(usuario.id);
+    return this.notificacionRepository.listarPorUsuario(
+      usuario.id
+    );
   }
 
   async marcarComoLeida(usuario, idNotificacion) {
+    if (!usuario || !usuario.id) {
+      throw new ValidationError('Usuario no autenticado.');
+    }
+
     const id = Number(idNotificacion);
 
     if (!Number.isInteger(id) || id <= 0) {
-      throw new ValidationError('El identificador no es válido.');
+      throw new ValidationError(
+        'El identificador no es válido.'
+      );
     }
 
-    const resultado = await this.notificacionRepository.marcarComoLeida(
-      id,
-      usuario.id,
-    );
+    const resultado =
+      await this.notificacionRepository.marcarComoLeida(
+        id,
+        usuario.id
+      );
 
     if (!resultado) {
-      throw new NotFoundError('Notificación no encontrada.');
+      throw new NotFoundError(
+        'Notificación no encontrada.'
+      );
     }
 
     return resultado;
   }
 
-  async enviarNotificacion({ idUsuario, idReserva, titulo, mensaje, tipo }) {
-    if (!idUsuario || !titulo || !mensaje || !tipo) {
-      throw new ValidationError('Faltan datos de la notificación.');
+  async enviarNotificacion({
+    idUsuario,
+    idReserva,
+    titulo,
+    mensaje,
+    tipo,
+  }) {
+    const usuarioId = Number(idUsuario);
+
+    if (
+      !Number.isInteger(usuarioId) ||
+      usuarioId <= 0 ||
+      typeof titulo !== 'string' ||
+      !titulo.trim() ||
+      typeof mensaje !== 'string' ||
+      !mensaje.trim() ||
+      typeof tipo !== 'string' ||
+      !tipo.trim()
+    ) {
+      throw new ValidationError(
+        'Faltan datos válidos de la notificación.'
+      );
     }
 
-    const notificacion = await this.notificacionRepository.crearNotificacion({
-      idUsuario,
-      idReserva: idReserva || null,
-      titulo,
-      mensaje,
-      tipo,
-    });
+    let reservaId = null;
 
-    const tokens = await this.notificacionRepository.obtenerTokensActivos(
-      idUsuario,
-    );
+    if (idReserva !== null && idReserva !== undefined) {
+      reservaId = Number(idReserva);
 
-    if (tokens.length > 0) {
-      await this.expoNotificationAdapter.enviar(tokens, {
-        title: titulo,
-        body: mensaje,
-        data: {
-          tipo,
-          idReserva: idReserva || null,
-          idNotificacion: notificacion.id_notificacion,
-        },
+      if (!Number.isInteger(reservaId) || reservaId <= 0) {
+        throw new ValidationError(
+          'El identificador de reserva no es válido.'
+        );
+      }
+    }
+
+    const notificacion =
+      await this.notificacionRepository.crearNotificacion({
+        idUsuario: usuarioId,
+        idReserva: reservaId,
+        titulo: titulo.trim(),
+        mensaje: mensaje.trim(),
+        tipo: tipo.trim(),
       });
+
+    try {
+      const tokens =
+        await this.notificacionRepository.obtenerTokensActivos(
+          usuarioId
+        );
+
+      if (tokens.length > 0) {
+        await this.expoNotificationAdapter.enviar(tokens, {
+          title: titulo,
+          body: mensaje,
+          data: {
+            tipo,
+            idReserva: reservaId,
+            idNotificacion: notificacion.id_notificacion,
+          },
+        });
+      }
+    } catch (error) {
+      console.error(
+        'La notificación se guardó, pero falló el envío push:',
+        error
+      );
     }
 
     return notificacion;
