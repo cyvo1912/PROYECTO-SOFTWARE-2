@@ -1,3 +1,4 @@
+
 const ValoracionRepositoryPort = require('../../../application/ports/ValoracionRepositoryPort');
 
 class PostgresValoracionRepository extends ValoracionRepositoryPort {
@@ -24,7 +25,7 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
           AND UPPER(estado_reserva) = 'FINALIZADA'
         FOR UPDATE;
         `,
-        [datos.idReserva, datos.idPadre],
+        [datos.idReserva, datos.idPadre]
       );
 
       if (reservaResult.rows.length === 0) {
@@ -53,7 +54,7 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
           reserva.id_ninera,
           datos.calificacion,
           datos.comentario,
-        ],
+        ]
       );
 
       if (valoracionResult.rows.length === 0) {
@@ -71,7 +72,7 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
         )
         WHERE id_ninera = $1;
         `,
-        [reserva.id_ninera],
+        [reserva.id_ninera]
       );
 
       await client.query('COMMIT');
@@ -95,16 +96,16 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
         v.id_ninera,
         v.calificacion,
         v.comentario,
-        v.fecha_valoracion,
+        v.fecha_creacion AS fecha_valoracion,
         u.nombre_usuario,
         u.apellido_usuario
       FROM valoracion v
       INNER JOIN usuario u
         ON u.id_usuario = v.id_padre
       WHERE v.id_ninera = $1
-      ORDER BY v.fecha_valoracion DESC;
+      ORDER BY v.fecha_creacion DESC, v.id_valoracion DESC;
       `,
-      [idNinera],
+      [idNinera]
     );
 
     return result.rows;
@@ -117,7 +118,7 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
       FROM valoracion
       WHERE id_reserva = $1;
       `,
-      [idReserva],
+      [idReserva]
     );
 
     return result.rows[0] || null;

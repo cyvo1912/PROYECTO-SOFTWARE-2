@@ -64,6 +64,11 @@ class ServicioValoracion {
   }
 
   async obtenerPorReserva(usuario, idReserva) {
+    
+    if (!usuario || !usuario.id || !usuario.tipo_usuario) {
+      throw new ForbiddenError('Usuario no autorizado.');
+    }
+
     const id = Number(idReserva);
 
     if (!Number.isInteger(id) || id <= 0) {

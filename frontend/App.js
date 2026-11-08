@@ -245,7 +245,7 @@ export default function App() {
         onNavigateToSearch={navigateToSearchNannies}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
-        onNotificaciones={abrirNotificaciones}
+        onNavigateToNotifications={abrirNotificaciones}
         onValorar={abrirValoracion}
       />
     );
