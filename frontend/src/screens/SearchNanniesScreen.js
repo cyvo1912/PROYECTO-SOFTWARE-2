@@ -36,7 +36,7 @@ const MAX_MARCADORES_MAPA = 10;
  *   una clave configurada (EXPO_PUBLIC_GOOGLE_MAPS_API_KEY), la búsqueda
  *   sigue funcionando en modo lista, sin la imagen del mapa.
  */
-export default function SearchNanniesScreen({ token, onBack }) {
+export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
 
@@ -339,7 +339,7 @@ export default function SearchNanniesScreen({ token, onBack }) {
           ) : null}
 
           {resultados.map((ninera) => (
-            <NannyCard key={ninera.id} ninera={ninera} />
+            <NannyCard key={ninera.id} ninera={ninera} onVerPerfil={onVerPerfil} />
           ))}
         </View>
       </ScrollView>
@@ -347,7 +347,7 @@ export default function SearchNanniesScreen({ token, onBack }) {
   );
 }
 
-function NannyCard({ ninera }) {
+function NannyCard({ ninera, onVerPerfil }) {
   return (
     <View style={styles.nannyCard}>
       <View style={styles.nannyCardTop}>
@@ -395,6 +395,14 @@ function NannyCard({ ninera }) {
       </View>
 
       {ninera.experiencia ? <Text style={styles.nannyDesc}>{ninera.experiencia}</Text> : null}
+
+      {/* HU12: abre el perfil público ampliado de la niñera */}
+      {onVerPerfil ? (
+        <TouchableOpacity style={styles.verPerfilBtn} onPress={() => onVerPerfil(ninera.id)} activeOpacity={0.8}>
+          <Ionicons name="person-circle-outline" size={16} color={colors.primary} />
+          <Text style={styles.verPerfilBtnText}>Ver perfil</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -442,6 +450,18 @@ function construirUrlMapa(ubicacion, resultados) {
 }
 
 const styles = StyleSheet.create({
+  verPerfilBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  verPerfilBtnText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
   safeArea: {
     flex: 1,
     backgroundColor: '#FAF8FF',

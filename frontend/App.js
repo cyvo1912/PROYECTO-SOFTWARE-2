@@ -13,6 +13,8 @@ import MultimediaScreen from './src/screens/MultimediaScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
 import PantallaChat from './src/screens/PantallaChat';
+import EditPublicProfileScreen from './src/screens/EditPublicProfileScreen';
+import NannyPublicProfileScreen from './src/screens/NannyPublicProfileScreen';
 import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
@@ -41,6 +43,8 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'searchNannies',
   'nannyAvailability',
   'chat',
+  'editPublicProfile', // HU12
+  'nannyPublicProfile', // HU12
   'notFound',
 ];
 
@@ -140,9 +144,9 @@ const resolverPantallaPermitida = (solicitada, user) => {
     return 'familyDashboard';
   }
 
-  // Chat accesible por usuarios autenticados
-  if (solicitada === 'chat') {
-    return 'chat';
+  // Chat y perfil público (HU12) accesibles por usuarios autenticados
+  if (solicitada === 'chat' || solicitada === 'nannyPublicProfile') {
+    return solicitada;
   }
 
   // Rutas exclusivas de FAMILIA
@@ -153,7 +157,7 @@ const resolverPantallaPermitida = (solicitada, user) => {
   }
 
   // Rutas exclusivas de NINERA
-  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia'];
+  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile'];
   if (rutasNinera.includes(solicitada)) {
     if (rol === 'NINERA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'familyDashboard';
@@ -177,6 +181,8 @@ export default function App() {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [selectedChild, setSelectedChild] = useState(null);
   const [unrecognizedPath, setUnrecognizedPath] = useState('');
+  // HU12: niñera cuyo perfil público se está viendo y pantalla a la que se vuelve
+  const [perfilVisto, setPerfilVisto] = useState({ idNinera: null, volverA: 'landing' });
 
   const sincronizarHash = (pantalla) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -215,7 +221,11 @@ export default function App() {
 
     const rutaUrl = obtenerRutaDesdeNavegador();
     const pantallaDeseada = rutaUrl || sesion.savedScreen || 'landing';
-    const permitida = resolverPantallaPermitida(pantallaDeseada, userActivo);
+    let permitida = resolverPantallaPermitida(pantallaDeseada, userActivo);
+    // HU12: al recargar se pierde qué perfil se veía, así que se vuelve al panel
+    if (permitida === 'nannyPublicProfile') {
+      permitida = resolverPantallaPermitida('landing', userActivo);
+    }
     if (permitida === 'notFound') {
       setUnrecognizedPath(pantallaDeseada);
     }
@@ -261,6 +271,12 @@ export default function App() {
   const navigateToMultimedia = () => navegar('multimedia');
   const navigateToSearchNannies = () => navegar('searchNannies');
   const navigateToNannyAvailability = () => navegar('nannyAvailability');
+  const navigateToEditPublicProfile = () => navegar('editPublicProfile');
+  // HU12: abre el perfil público de una niñera (desde la búsqueda HU11 o como vista previa).
+  const navigateToNannyPublicProfile = (idNinera, volverA) => {
+    setPerfilVisto({ idNinera, volverA });
+    navegar('nannyPublicProfile');
+  };
   const navigateToHomeOrDashboard = () => {
     if (!currentUser) {
       navegar('landing');
@@ -367,6 +383,7 @@ export default function App() {
         user={currentUser}
         onNavigateToEditProfile={navigateToEditNannyProfile}
         onNavigateToMultimedia={navigateToMultimedia}
+        onNavigateToPublicProfile={navigateToEditPublicProfile}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
         onNavigateToChat={navigateToChat}
@@ -417,6 +434,28 @@ export default function App() {
     );
   }
 
+  // HU12: la niñera completa su perfil público (formulario de 5 campos)
+  if (currentScreen === 'editPublicProfile' && currentUser) {
+    return (
+      <EditPublicProfileScreen
+        token={authToken}
+        onBack={navigateToNannyDashboard}
+        onVerPerfil={() => navigateToNannyPublicProfile(currentUser.id, 'editPublicProfile')}
+      />
+    );
+  }
+
+  // HU12: perfil público ampliado (lo ve la familia; la niñera lo ve como vista previa)
+  if (currentScreen === 'nannyPublicProfile' && currentUser && perfilVisto.idNinera) {
+    return (
+      <NannyPublicProfileScreen
+        token={authToken}
+        idNinera={perfilVisto.idNinera}
+        onBack={() => navegar(perfilVisto.volverA)}
+      />
+    );
+  }
+
   // HU6: Panel principal de la familia
   if (currentScreen === 'familyDashboard' && currentUser) {
     return (
@@ -438,7 +477,13 @@ export default function App() {
 
   // HU11: Búsqueda de niñeras por proximidad, tarifa y experiencia
   if (currentScreen === 'searchNannies' && currentUser) {
-    return <SearchNanniesScreen token={authToken} onBack={navigateToFamilyDashboard} />;
+    return (
+      <SearchNanniesScreen
+        token={authToken}
+        onBack={navigateToFamilyDashboard}
+        onVerPerfil={(idNinera) => navigateToNannyPublicProfile(idNinera, 'searchNannies')}
+      />
+    );
   }
 
   // HU13: Consultar disponibilidad de niñera

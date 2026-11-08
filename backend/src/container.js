@@ -21,6 +21,9 @@ const BusquedaController = require('./infrastructure/http/controllers/BusquedaCo
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
+const PostgresPerfilPublicoRepository = require('./infrastructure/adapters/db/PostgresPerfilPublicoRepository');
+const ServicioPerfilPublico = require('./application/services/ServicioPerfilPublico');
+const PerfilPublicoController = require('./infrastructure/http/controllers/PerfilPublicoController');
 const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/PostgresDisponibilidadRepository');
 const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
 const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
@@ -63,6 +66,7 @@ class Container {
     this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
     this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
+    this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
 
     // HU17: Adaptadores Secundarios de Mensajería
     this.mensajeRepository = new PostgresMensajeRepository(pool);
@@ -94,6 +98,9 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+    this.servicioPerfilPublico = new ServicioPerfilPublico({
+      perfilRepository: this.perfilPublicoRepository,
+    });
     this.servicioBusqueda = new ServicioBusqueda({
       userRepository: this.userRepository,
     });
@@ -116,6 +123,7 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.perfilPublicoController = new PerfilPublicoController(this.servicioPerfilPublico);
     this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
