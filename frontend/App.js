@@ -13,12 +13,14 @@ import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
 import EditPublicProfileScreen from './src/screens/EditPublicProfileScreen';
 import NannyPublicProfileScreen from './src/screens/NannyPublicProfileScreen';
+import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 export default function App() {
   // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
   // | 'familyDashboard' | 'editFamilyProfile' | 'familyChildren' | 'childForm' | 'multimedia'
   // | 'editPublicProfile' | 'nannyPublicProfile' (HU12)
+  // | 'searchNannies' (HU11)
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
@@ -51,12 +53,12 @@ export default function App() {
   };
   const navigateToMultimedia = () => setCurrentScreen('multimedia');
   const navigateToEditPublicProfile = () => setCurrentScreen('editPublicProfile');
-  // HU12: abre el perfil público de una niñera. La búsqueda (HU11) debe llamar a
-  // navigateToNannyPublicProfile(idNinera, 'familyDashboard') al tocar una niñera.
+  // HU12: abre el perfil público de una niñera (desde la búsqueda HU11 o como vista previa).
   const navigateToNannyPublicProfile = (idNinera, volverA) => {
     setPerfilVisto({ idNinera, volverA });
     setCurrentScreen('nannyPublicProfile');
   };
+  const navigateToSearchNannies = () => setCurrentScreen('searchNannies');
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -204,8 +206,20 @@ export default function App() {
         onNavigateToChildren={navigateToFamilyChildren}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
+        onNavigateToSearch={navigateToSearchNannies}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+      />
+    );
+  }
+
+  // HU11: Búsqueda de niñeras por proximidad, tarifa y experiencia
+  if (currentScreen === 'searchNannies' && currentUser) {
+    return (
+      <SearchNanniesScreen
+        token={authToken}
+        onBack={navigateToFamilyDashboard}
+        onVerPerfil={(idNinera) => navigateToNannyPublicProfile(idNinera, 'searchNannies')}
       />
     );
   }

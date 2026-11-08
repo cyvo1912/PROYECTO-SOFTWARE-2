@@ -137,7 +137,7 @@ describe('ServicioPerfilPublico.actualizarMiPerfilPublico', () => {
 
   test('U2: datos inválidos -> ValidationError con el error de cada campo y no guarda nada', async () => {
     const { servicio, perfilRepository } = crearServicio();
-    const invalido = { biografia: 'corta', aniosExperiencia: 50, habilidades: [], idiomas: ['Alemán'], distritos: [] };
+    const invalido = { biografia: 'corta', aniosExperiencia: 70, habilidades: [], idiomas: ['Alemán'], distritos: [] };
 
     const error = await servicio.actualizarMiPerfilPublico(NINERA_SESION, invalido).catch((e) => e);
 

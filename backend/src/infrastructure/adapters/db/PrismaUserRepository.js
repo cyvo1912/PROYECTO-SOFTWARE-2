@@ -46,6 +46,60 @@ class PrismaUserRepository extends UserRepositoryPort {
     });
   }
 
+  /** HU11: guarda las coordenadas capturadas por GPS en el panel de la niñera. */
+  async actualizarUbicacionNinera(idUsuario, latitud, longitud) {
+    if (!this.prisma) return null;
+    return await this.prisma.ninera.update({
+      where: { id_ninera: idUsuario },
+      data: { latitud, longitud },
+    });
+  }
+
+  /**
+   * HU11: búsqueda de niñeras por proximidad. Prisma no expresa la fórmula
+   * de Haversine con su query builder, así que se usa SQL parametrizado
+   * ($queryRaw) equivalente al de PostgresUserRepository.
+   */
+  async buscarNinerasCercanas(filtros) {
+    if (!this.prisma) return [];
+    const { latitud, longitud, radioKm, tarifaMaxima, experienciaMinima } = filtros;
+
+    return await this.prisma.$queryRaw`
+      WITH candidatas AS (
+        SELECT
+          u.id_usuario, u.nombre_usuario, u.apellido_usuario, u.correo, u.celular,
+          u.foto_url,
+          n.id_ninera, n.zona, n.experiencia, n.anos_experiencia, n.tarifa_hora,
+          n.descripcion, n.verificada, n.calificacion_promedio, n.latitud, n.longitud,
+          (
+            6371 * acos(
+              LEAST(1.0, GREATEST(-1.0,
+                cos(radians(${latitud})) * cos(radians(n.latitud)) *
+                cos(radians(n.longitud) - radians(${longitud})) +
+                sin(radians(${latitud})) * sin(radians(n.latitud))
+              ))
+            )
+          ) AS distancia_km
+        FROM ninera n
+        INNER JOIN usuario u ON u.id_usuario = n.id_ninera
+        WHERE u.tipo_usuario = 'NINERA'
+          AND u.estado_cuenta = 'ACTIVA'
+          AND n.verificada = TRUE
+          AND n.latitud IS NOT NULL
+          AND n.longitud IS NOT NULL
+          AND (${tarifaMaxima ?? null}::numeric IS NULL OR n.tarifa_hora <= ${tarifaMaxima ?? null})
+          AND (
+            ${experienciaMinima ?? null}::int IS NULL
+            OR (n.anos_experiencia IS NOT NULL AND n.anos_experiencia >= ${experienciaMinima ?? null})
+          )
+      )
+      SELECT *
+      FROM candidatas
+      WHERE distancia_km <= ${radioKm}
+      ORDER BY distancia_km ASC;
+    `;
+  }
+
   async crearPadre(datosUsuario, datosPadre) {
     try {
       const result = await this.prisma.usuario.create({
@@ -156,13 +210,17 @@ class PrismaUserRepository extends UserRepositoryPort {
             experiencia: datosNinera.experiencia,
             tarifa_hora: datosNinera.tarifaHora,
             descripcion: datosNinera.descripcion || null,
+            // HU11: opcional; si no se envía, Prisma no toca la columna.
+            ...(datosNinera.anosExperiencia !== undefined
+              ? { anos_experiencia: datosNinera.anosExperiencia }
+              : {}),
           },
         },
       },
       include: { ninera: true },
     });
 
-    return new Ninera(
+    const nineraActualizada = new Ninera(
       filaAUsuario(updated),
       {
         idNinera: updated.id_usuario,
@@ -172,6 +230,10 @@ class PrismaUserRepository extends UserRepositoryPort {
         descripcion: updated.ninera?.descripcion,
       }
     );
+    nineraActualizada.latitud = updated.ninera?.latitud ?? null;
+    nineraActualizada.longitud = updated.ninera?.longitud ?? null;
+    nineraActualizada.anosExperiencia = updated.ninera?.anos_experiencia ?? null;
+    return nineraActualizada;
   }
 
   async actualizarPerfilPadre(idUsuario, datosUsuario, datosPadre) {

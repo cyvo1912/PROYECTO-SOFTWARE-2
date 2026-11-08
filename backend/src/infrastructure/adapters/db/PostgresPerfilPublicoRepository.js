@@ -2,7 +2,8 @@ const PerfilPublicoRepositoryPort = require('../../../application/ports/PerfilPu
 
 /**
  * Adaptador Secundario: perfil público de la niñera en PostgreSQL (Neon) (HU12)
- * Requiere la migración database/migrations/003_hu12_perfil_publico.sql
+ * Requiere las migraciones 003_hu11_geolocalizacion.sql (columna anos_experiencia)
+ * y 004_hu12_perfil_publico.sql
  *
  * Importante: las consultas NO traen DNI, correo ni celular (datos privados).
  */
@@ -15,7 +16,7 @@ class PostgresPerfilPublicoRepository extends PerfilPublicoRepositoryPort {
   async buscarNinera(idNinera) {
     const result = await this.pool.query(
       `SELECT u.id_usuario, u.nombre_usuario, u.apellido_usuario, u.foto_url, u.estado_cuenta,
-              n.descripcion, n.anios_experiencia, n.habilidades, n.idiomas, n.distritos,
+              n.descripcion, n.anos_experiencia, n.habilidades, n.idiomas, n.distritos,
               n.tarifa_hora, n.zona, n.verificada
          FROM usuario u
          JOIN ninera n ON n.id_ninera = u.id_usuario
@@ -32,7 +33,7 @@ class PostgresPerfilPublicoRepository extends PerfilPublicoRepositoryPort {
       fotoUrl: row.foto_url,
       estadoCuenta: row.estado_cuenta,
       biografia: row.descripcion,
-      aniosExperiencia: row.anios_experiencia,
+      aniosExperiencia: row.anos_experiencia,
       habilidades: row.habilidades || [],
       idiomas: row.idiomas || [],
       distritos: row.distritos || [],
@@ -45,7 +46,7 @@ class PostgresPerfilPublicoRepository extends PerfilPublicoRepositoryPort {
   async actualizarPerfil(idNinera, datos) {
     await this.pool.query(
       `UPDATE ninera
-          SET descripcion = $2, anios_experiencia = $3, habilidades = $4, idiomas = $5, distritos = $6
+          SET descripcion = $2, anos_experiencia = $3, habilidades = $4, idiomas = $5, distritos = $6
         WHERE id_ninera = $1;`,
       [idNinera, datos.biografia, datos.aniosExperiencia, datos.habilidades, datos.idiomas, datos.distritos],
     );

@@ -30,8 +30,8 @@ describe('validarPerfilPublico - casos por campo', () => {
     ['CN-06', 'aniosExperiencia', '', false],                  // vacío
     ['CN-07', 'aniosExperiencia', 0, true],                    // límite inferior
     ['CN-08', 'aniosExperiencia', -1, false],                  // negativo
-    ['CN-09', 'aniosExperiencia', 40, true],                   // límite superior
-    ['CN-10', 'aniosExperiencia', 41, false],                  // límite superior + 1
+    ['CN-09', 'aniosExperiencia', 60, true],                   // límite superior
+    ['CN-10', 'aniosExperiencia', 61, false],                  // límite superior + 1
     ['CN-11', 'aniosExperiencia', 2.5, false],                 // decimal
     ['CN-12', 'aniosExperiencia', 'cinco', false],             // texto
     ['CN-13', 'habilidades', [], false],                       // ninguna

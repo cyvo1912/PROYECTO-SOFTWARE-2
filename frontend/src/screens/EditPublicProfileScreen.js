@@ -21,7 +21,7 @@ const MAX_BIOGRAFIA = 500;
  * Pantalla: Formulario de perfil público de la niñera (HU12)
  * 5 campos (prueba de caja negra):
  *   1. Biografía            (texto, 30 a 500 caracteres)
- *   2. Años de experiencia  (número entero, 0 a 40)
+ *   2. Años de experiencia  (número entero, 0 a 60)
  *   3. Habilidades          (chips, 1 a 6)
  *   4. Idiomas              (chips, 1 a 4)
  *   5. Distritos            (chips, 1 a 5)

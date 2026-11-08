@@ -4,7 +4,7 @@
  *
  * Campos del formulario (caja negra):
  *   1. biografia          texto de 30 a 500 caracteres
- *   2. aniosExperiencia   número entero de 0 a 40
+ *   2. aniosExperiencia   número entero de 0 a 60
  *   3. habilidades        de 1 a 6 opciones del catálogo
  *   4. idiomas            de 1 a 4 opciones del catálogo
  *   5. distritos          de 1 a 5 opciones del catálogo
@@ -46,7 +46,7 @@ const OPCIONES = {
 
 const LIMITES = {
   biografia: { min: 30, max: 500 },
-  aniosExperiencia: { min: 0, max: 40 },
+  aniosExperiencia: { min: 0, max: 60 }, // mismo rango que la HU11 (búsqueda)
   habilidades: { min: 1, max: 6 },
   idiomas: { min: 1, max: 4 },
   distritos: { min: 1, max: 5 },
