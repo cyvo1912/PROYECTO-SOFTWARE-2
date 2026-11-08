@@ -21,7 +21,19 @@ const BusquedaController = require('./infrastructure/http/controllers/BusquedaCo
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
+const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/PostgresDisponibilidadRepository');
+const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
+const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
+const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
+
+// HU17 - Mensajería en Tiempo Real (Gabriel)
+const PostgresMensajeRepository = require('./infrastructure/adapters/db/PostgresMensajeRepository');
+const SocketIoRealtimeNotifier = require('./infrastructure/adapters/realtime/SocketIoRealtimeNotifier');
+const PostgresNotificacionService = require('./infrastructure/adapters/db/PostgresNotificacionService');
+const ServicioMensajes = require('./application/services/ServicioMensajes');
+const MensajeriaController = require('./infrastructure/http/controllers/MensajeriaController');
+const ChatSocketController = require('./infrastructure/http/controllers/ChatSocketController');
 
 
 class Container {
@@ -48,7 +60,14 @@ class Container {
     this.tokenService = new JwtTokenService();
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
+    this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
+    this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
+
+    // HU17: Adaptadores Secundarios de Mensajería
+    this.mensajeRepository = new PostgresMensajeRepository(pool);
+    this.realtimeNotifier = new SocketIoRealtimeNotifier();
+    this.notificacionService = new PostgresNotificacionService(pool);
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -78,6 +97,18 @@ class Container {
     this.servicioBusqueda = new ServicioBusqueda({
       userRepository: this.userRepository,
     });
+    this.servicioDisponibilidad = new ServicioDisponibilidad({
+      disponibilidadRepository: this.disponibilidadRepository,
+      estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
+    });
+
+    // HU17: Servicio de Aplicación de Mensajes
+    this.servicioMensajes = new ServicioMensajes({
+      mensajeRepository: this.mensajeRepository,
+      realtimeNotifier: this.realtimeNotifier,
+      notificacionService: this.notificacionService,
+      userRepository: this.userRepository,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
@@ -85,10 +116,26 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
+    this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
+  }
+
+  /**
+   * Vincula la instancia de Socket.IO con el controlador de WebSockets y el notificador
+   */
+  inicializarSockets(io) {
+    this.realtimeNotifier.setIo(io);
+    this.chatSocketController = new ChatSocketController({
+      io,
+      servicioMensajes: this.servicioMensajes,
+      tokenService: this.tokenService,
+      realtimeNotifier: this.realtimeNotifier,
+    });
+    return this.chatSocketController;
   }
 }
 

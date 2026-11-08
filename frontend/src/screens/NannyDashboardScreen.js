@@ -28,6 +28,7 @@ export default function NannyDashboardScreen({
   onNavigateToMultimedia,
   onLogout,
   logoutLoading = false,
+  onNavigateToChat,
 }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
@@ -66,6 +67,18 @@ export default function NannyDashboardScreen({
               <Ionicons name="person-circle-outline" size={18} color="#1E1B4B" />
               <Text style={styles.profileNavBtnText}>Mi Perfil</Text>
             </TouchableOpacity>
+
+            {onNavigateToChat && (
+              <TouchableOpacity
+                style={styles.profileNavBtn}
+                onPress={onNavigateToChat}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
+                <Text style={styles.profileNavBtnText}>Mensajes</Text>
+              </TouchableOpacity>
+            )}
+
 
             <TouchableOpacity
               style={styles.logoutNavBtn}
@@ -157,13 +170,19 @@ export default function NannyDashboardScreen({
               <Text style={styles.metricLabel}>Ofertas Nuevas</Text>
             </View>
 
-            <View style={styles.metricCard}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={onNavigateToChat}
+              disabled={!onNavigateToChat}
+              activeOpacity={0.7}
+            >
               <View style={[styles.metricIconWrap, { backgroundColor: '#E0F2FE' }]}>
                 <Ionicons name="chatbubble-ellipses-outline" size={22} color="#0284C7" />
               </View>
-              <Text style={styles.metricValue}>8</Text>
+              <Text style={styles.metricValue}>Chat</Text>
               <Text style={styles.metricLabel}>Mensajes</Text>
-            </View>
+            </TouchableOpacity>
+
 
             <View style={styles.metricCard}>
               <View style={[styles.metricIconWrap, { backgroundColor: '#FCE7F3' }]}>

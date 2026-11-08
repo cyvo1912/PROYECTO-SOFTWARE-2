@@ -46,7 +46,7 @@ class AdministradorController {
       const data = await this.servicioAdministrador.actualizarEstadoCuenta(
         req.user,
         req.params.id,
-        req.body?.estado,
+        req.body?.estado || req.body?.nuevoEstado,
       );
 
       return res.status(200).json({
