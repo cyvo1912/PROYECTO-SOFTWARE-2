@@ -328,7 +328,8 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
       {/* Encabezado Mockup Figura 32 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.botonVolver} onPress={onBack}>
-          <Ionicons name="arrow-back" size={18} color="#1E1B4B" style={{ marginRight: 4 }} /><Text style={styles.textoVolver}>Volver</Text>
+          <Ionicons name="arrow-back" size={18} color="#1E1B4B" />
+          <Text style={styles.textoVolver}>Volver</Text>
         </TouchableOpacity>
         <View style={styles.tituloHeaderContenedor}>
           <Ionicons name="chatbubbles" size={20} color={colors.primary} style={{ marginRight: 6 }} />
@@ -687,13 +688,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   botonVolver: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
   textoVolver: {
     fontSize: 15,
-    fontWeight: '600',
-    color: colors.primary,
+    fontWeight: '700',
+    color: '#1E1B4B',
   },
   tituloHeaderContenedor: {
     flexDirection: 'row',
