@@ -54,6 +54,9 @@ model Ninera {
   descripcion           String?
   verificada            Boolean  @default(false)
   calificacion_promedio Decimal? @default(5.00) @db.Decimal(3, 2)
+  habilidades           String[] @default([])
+  idiomas               String[] @default([])
+  distritos             String[] @default([])
   // HU11: coordenadas para búsqueda por proximidad (Google Maps API) y
   // años de experiencia en formato numérico para poder filtrar por ellos.
   latitud               Decimal? @db.Decimal(10, 7)

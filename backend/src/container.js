@@ -21,6 +21,13 @@ const BusquedaController = require('./infrastructure/http/controllers/BusquedaCo
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
+const PostgresPerfilPublicoRepository = require('./infrastructure/adapters/db/PostgresPerfilPublicoRepository');
+const ServicioPerfilPublico = require('./application/services/ServicioPerfilPublico');
+const PerfilPublicoController = require('./infrastructure/http/controllers/PerfilPublicoController');
+const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/PostgresDisponibilidadRepository');
+const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
+const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
+const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 const PostgresNotificacionRepository = require('./infrastructure/adapters/db/PostgresNotificacionRepository');
 const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
@@ -29,6 +36,14 @@ const ServicioNotificacion = require('./application/services/ServicioNotificacio
 const ServicioValoracion = require('./application/services/ServicioValoracion');
 const NotificacionController = require('./infrastructure/http/controllers/NotificacionController');
 const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
+
+// HU17 - Mensajería en Tiempo Real (Gabriel)
+const PostgresMensajeRepository = require('./infrastructure/adapters/db/PostgresMensajeRepository');
+const SocketIoRealtimeNotifier = require('./infrastructure/adapters/realtime/SocketIoRealtimeNotifier');
+const PostgresNotificacionService = require('./infrastructure/adapters/db/PostgresNotificacionService');
+const ServicioMensajes = require('./application/services/ServicioMensajes');
+const MensajeriaController = require('./infrastructure/http/controllers/MensajeriaController');
+const ChatSocketController = require('./infrastructure/http/controllers/ChatSocketController');
 
 
 class Container {
@@ -55,12 +70,26 @@ class Container {
     this.tokenService = new JwtTokenService();
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
+    this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
+    this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
     this.notificacionRepository = new PostgresNotificacionRepository(pool);
     this.valoracionRepository = new PostgresValoracionRepository(pool);
 
     // HU18 - Adaptador de notificaciones push
     this.expoNotificationAdapter = new ExpoNotificationAdapter();
+    this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
+
+    // HU17: Adaptadores Secundarios de Mensajería
+    this.mensajeRepository = new PostgresMensajeRepository(pool);
+    this.realtimeNotifier = new SocketIoRealtimeNotifier();
+    this.notificacionService = new PostgresNotificacionService(pool);
+
+    // HU18 - Servicio de Notificaciones
+    this.servicioNotificacion = new ServicioNotificacion({
+      notificacionRepository: this.notificacionRepository,
+      expoNotificationAdapter: this.expoNotificationAdapter,
+    });
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -72,6 +101,7 @@ class Container {
       userRepository: this.userRepository,
       passwordHasher: this.passwordHasher,
       tokenService: this.tokenService,
+      servicioNotificacion: this.servicioNotificacion,
     });
     this.servicioUsuario = new ServicioUsuario({
       userRepository: this.userRepository,
@@ -89,14 +119,23 @@ class Container {
     });
 
     // Servicio de búsqueda
+    this.servicioPerfilPublico = new ServicioPerfilPublico({
+      perfilRepository: this.perfilPublicoRepository,
+    });
     this.servicioBusqueda = new ServicioBusqueda({
       userRepository: this.userRepository,
     });
+    this.servicioDisponibilidad = new ServicioDisponibilidad({
+      disponibilidadRepository: this.disponibilidadRepository,
+      estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
+    });
 
-    // HU18 - Servicio de Notificaciones
-    this.servicioNotificacion = new ServicioNotificacion({
-      notificacionRepository: this.notificacionRepository,
-      expoNotificationAdapter: this.expoNotificationAdapter,
+    // HU17: Servicio de Aplicación de Mensajes
+    this.servicioMensajes = new ServicioMensajes({
+      mensajeRepository: this.mensajeRepository,
+      realtimeNotifier: this.realtimeNotifier,
+      notificacionService: this.notificacionService,
+      userRepository: this.userRepository,
     });
 
     // HU18 - Servicio de Valoraciones
@@ -110,20 +149,37 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.perfilPublicoController = new PerfilPublicoController(this.servicioPerfilPublico);
+    this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
+    this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
 
     // HU18 - Controlador de Notificaciones
     this.notificacionController = new NotificacionController(
-    this.servicioNotificacion
+      this.servicioNotificacion
     );
 
     // HU18 - Controlador de Valoraciones
     this.valoracionController = new ValoracionController(
-    this.servicioValoracion
+      this.servicioValoracion
     );
-    
+
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
+  }
+
+  /**
+   * Vincula la instancia de Socket.IO con el controlador de WebSockets y el notificador
+   */
+  inicializarSockets(io) {
+    this.realtimeNotifier.setIo(io);
+    this.chatSocketController = new ChatSocketController({
+      io,
+      servicioMensajes: this.servicioMensajes,
+      tokenService: this.tokenService,
+      realtimeNotifier: this.realtimeNotifier,
+    });
+    return this.chatSocketController;
   }
 }
 

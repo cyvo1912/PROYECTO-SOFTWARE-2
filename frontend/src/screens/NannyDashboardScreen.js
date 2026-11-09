@@ -26,8 +26,11 @@ export default function NannyDashboardScreen({
   user,
   onNavigateToEditProfile,
   onNavigateToMultimedia,
+  onNavigateToPublicProfile,
   onLogout,
   logoutLoading = false,
+  onNotificaciones,
+  onNavigateToChat,
 }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
@@ -59,6 +62,20 @@ export default function NannyDashboardScreen({
             </View>
 
             <TouchableOpacity
+              style={styles.notificationNavBtn}
+              onPress={onNotificaciones}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir notificaciones"
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.profileNavBtn}
               onPress={onNavigateToEditProfile}
               activeOpacity={0.7}
@@ -66,6 +83,18 @@ export default function NannyDashboardScreen({
               <Ionicons name="person-circle-outline" size={18} color="#1E1B4B" />
               <Text style={styles.profileNavBtnText}>Mi Perfil</Text>
             </TouchableOpacity>
+
+            {onNavigateToChat && (
+              <TouchableOpacity
+                style={styles.profileNavBtn}
+                onPress={onNavigateToChat}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
+                <Text style={styles.profileNavBtnText}>Mensajes</Text>
+              </TouchableOpacity>
+            )}
+
 
             <TouchableOpacity
               style={styles.logoutNavBtn}
@@ -135,6 +164,15 @@ export default function NannyDashboardScreen({
                   <Ionicons name="document-text-outline" size={16} color={colors.primary} />
                   <Text style={styles.mediaBtnText}>Certificados</Text>
                 </TouchableOpacity>
+                {/* HU12: formulario del perfil público que ven las familias */}
+                <TouchableOpacity
+                  style={styles.mediaBtn}
+                  onPress={onNavigateToPublicProfile}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="globe-outline" size={16} color={colors.primary} />
+                  <Text style={styles.mediaBtnText}>Perfil público</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.editProfileBtn}
                   onPress={onNavigateToEditProfile}
@@ -157,13 +195,19 @@ export default function NannyDashboardScreen({
               <Text style={styles.metricLabel}>Ofertas Nuevas</Text>
             </View>
 
-            <View style={styles.metricCard}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={onNavigateToChat}
+              disabled={!onNavigateToChat}
+              activeOpacity={0.7}
+            >
               <View style={[styles.metricIconWrap, { backgroundColor: '#E0F2FE' }]}>
                 <Ionicons name="chatbubble-ellipses-outline" size={22} color="#0284C7" />
               </View>
-              <Text style={styles.metricValue}>8</Text>
+              <Text style={styles.metricValue}>Chat</Text>
               <Text style={styles.metricLabel}>Mensajes</Text>
-            </View>
+            </TouchableOpacity>
+
 
             <View style={styles.metricCard}>
               <View style={[styles.metricIconWrap, { backgroundColor: '#FCE7F3' }]}>
@@ -265,6 +309,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  notificationNavBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
   },
   userGreeting: {
     marginRight: 4,
@@ -435,6 +489,7 @@ const styles = StyleSheet.create({
   profileButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    maxWidth: '100%',
     gap: 8,
   },
   mediaBtn: {

@@ -16,6 +16,9 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL
 
 export const AUTH_API_URL = `${API_BASE_URL}/auth`;
 export const USER_API_URL = `${API_BASE_URL}/usuarios`;
+export const MENSAJERIA_API_URL = `${API_BASE_URL}/mensajeria`;
+export const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+
 // HU11: búsqueda de niñeras por proximidad, tarifa y experiencia.
 export const BUSQUEDA_API_URL = `${API_BASE_URL}/busqueda`;
 

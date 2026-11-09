@@ -96,6 +96,14 @@ class ServiceUnavailableError extends Error {
   }
 }
 
+class ReservaNoPagadaError extends Error {
+  constructor(message = 'No se puede iniciar la conversación: se requiere una reserva confirmada y pagada con la niñera.') {
+    super(message);
+    this.name = 'ReservaNoPagadaError';
+    this.statusCode = 403;
+  }
+}
+
 module.exports = {
   InvalidCredentialsError,
   AccountPendingError,
@@ -109,4 +117,5 @@ module.exports = {
   ForbiddenError,
   NotFoundError,
   ServiceUnavailableError,
+  ReservaNoPagadaError,
 };

@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS usuario (
     correo VARCHAR(150) UNIQUE NOT NULL,
     dni VARCHAR(20) UNIQUE NOT NULL,
     contrasena_hash VARCHAR(255) NOT NULL,
+    
     celular VARCHAR(20),
     tipo_usuario VARCHAR(30) NOT NULL CHECK (tipo_usuario IN ('FAMILIA', 'NINERA', 'ADMIN')),
     estado_cuenta VARCHAR(30) DEFAULT 'ACTIVA',
@@ -37,11 +38,15 @@ CREATE TABLE IF NOT EXISTS ninera (
     descripcion TEXT,
     verificada BOOLEAN DEFAULT FALSE,
     calificacion_promedio NUMERIC(3, 2) DEFAULT 5.0,
+    -- HU12: perfil público ampliado (ver migrations/004_hu12_perfil_publico.sql)
+    habilidades TEXT[] NOT NULL DEFAULT '{}',
+    idiomas TEXT[] NOT NULL DEFAULT '{}',
+    distritos TEXT[] NOT NULL DEFAULT '{}',
     -- HU11: coordenadas para búsqueda por proximidad (Google Maps API) y
     -- años de experiencia en formato numérico para poder filtrar por ellos.
     latitud NUMERIC(10, 7),
     longitud NUMERIC(10, 7),
-    anos_experiencia SMALLINT
+    anos_experiencia SMALLINT -- también lo usa el perfil público (HU12)
 );
 
 -- Tabla de Hijos asociados a una Familia
