@@ -116,6 +116,14 @@ class ConflictError extends Error {
   }
 }
 
+class ConflictoHorarioError extends Error {
+  constructor(message = 'El horario elegido se cruza con otra reserva.') {
+    super(message);
+    this.name = 'ConflictoHorarioError';
+    this.statusCode = 409;
+  }
+}
+
 module.exports = {
   InvalidCredentialsError,
   AccountPendingError,
@@ -131,4 +139,5 @@ module.exports = {
   ServiceUnavailableError,
   ReservaNoPagadaError,
   ConflictError,
+  ConflictoHorarioError,
 };

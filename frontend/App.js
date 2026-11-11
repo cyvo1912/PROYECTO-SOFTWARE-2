@@ -17,6 +17,7 @@ import EditPublicProfileScreen from './src/screens/EditPublicProfileScreen';
 import NannyPublicProfileScreen from './src/screens/NannyPublicProfileScreen';
 import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
+import ReservationRequestScreen from './src/screens/ReservationRequestScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
 import JobBoardScreen from './src/screens/JobBoardScreen';
 import PublishJobOfferScreen from './src/screens/PublishJobOfferScreen';
@@ -44,6 +45,7 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'multimedia',
   'searchNannies',
   'nannyAvailability',
+  'requestReservation', // HU Reservas
   'chat',
   'editPublicProfile', // HU12
   'nannyPublicProfile', // HU12
@@ -154,7 +156,7 @@ const resolverPantallaPermitida = (solicitada, user) => {
   }
 
   // Rutas exclusivas de FAMILIA
-  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'publishJobOffer'];
+  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer'];
   if (rutasFamilia.includes(solicitada)) {
     if (rol === 'FAMILIA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'nannyDashboard';
@@ -187,6 +189,8 @@ export default function App() {
   const [unrecognizedPath, setUnrecognizedPath] = useState('');
   // HU12: niñera cuyo perfil público se está viendo y pantalla a la que se vuelve
   const [perfilVisto, setPerfilVisto] = useState({ idNinera: null, volverA: 'landing' });
+  // HU Reservas: bloque elegido en el calendario de disponibilidad
+  const [slotReserva, setSlotReserva] = useState(null);
 
   const sincronizarHash = (pantalla) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -275,6 +279,10 @@ export default function App() {
   const navigateToMultimedia = () => navegar('multimedia');
   const navigateToSearchNannies = () => navegar('searchNannies');
   const navigateToNannyAvailability = () => navegar('nannyAvailability');
+  const navigateToRequestReservation = (slot) => {
+    setSlotReserva(slot);
+    navegar('requestReservation');
+  };
   const navigateToEditPublicProfile = () => navegar('editPublicProfile');
   const navigateToJobBoard = () => navegar('jobBoard'); // HU14
   const navigateToPublishJobOffer = () => navegar('publishJobOffer'); // HU14
@@ -522,6 +530,29 @@ export default function App() {
       <NannyAvailabilityCalendarScreen
         token={authToken}
         onBack={navigateToFamilyDashboard}
+        onSelectSlot={navigateToRequestReservation}
+      />
+    );
+  }
+
+  // HU Reservas: solicitar reserva con cálculo de tarifa
+  if (currentScreen === 'requestReservation' && currentUser) {
+    if (!slotReserva) {
+      // Si se recargó la página se pierde el bloque elegido: volver al calendario
+      return (
+        <NannyAvailabilityCalendarScreen
+          token={authToken}
+          onBack={navigateToFamilyDashboard}
+          onSelectSlot={navigateToRequestReservation}
+        />
+      );
+    }
+    return (
+      <ReservationRequestScreen
+        token={authToken}
+        slot={slotReserva}
+        onBack={navigateToNannyAvailability}
+        onReservaCreada={navigateToFamilyDashboard}
       />
     );
   }

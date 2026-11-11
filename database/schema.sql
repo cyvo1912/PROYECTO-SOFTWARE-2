@@ -82,7 +82,14 @@ CREATE TABLE IF NOT EXISTS reserva (
     hora_fin TIME NOT NULL,
     direccion VARCHAR(255) NOT NULL,
     estado_reserva VARCHAR(30) DEFAULT 'Pendiente',
-    comentario TEXT
+    comentario TEXT,
+    -- HU Reservas: cálculo de tarifa (ver migrations/005_hu_reservas.sql)
+    tarifa_hora NUMERIC(10, 2),
+    horas NUMERIC(5, 2),
+    monto_total NUMERIC(10, 2),
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expira_en TIMESTAMPTZ, -- fin de los 10 min para pagar una reserva "Pendiente"
+    CONSTRAINT chk_reserva_horario_valido CHECK (hora_fin > hora_inicio)
 );
 
 -- Valoraciones y reseñas

@@ -103,6 +103,12 @@ class PostgresDisponibilidadRepository extends DisponibilidadRepositoryPort {
       WHERE id_ninera = $1
         AND fecha_reserva BETWEEN $2::date AND $3::date
         AND LOWER(COALESCE(estado_reserva, 'pendiente')) NOT IN ('cancelada', 'rechazada')
+        -- Reservas pendientes que pasaron sus 10 min sin pago ya no ocupan el horario
+        AND NOT (
+          LOWER(COALESCE(estado_reserva, 'pendiente')) = 'pendiente'
+          AND expira_en IS NOT NULL
+          AND expira_en <= NOW()
+        )
       ORDER BY fecha_reserva ASC, hora_inicio ASC;
     `;
     const result = await this.pool.query(query, [idNinera, fechaDesde, fechaHasta]);
