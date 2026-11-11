@@ -31,6 +31,7 @@ class ServicioReserva {
     reservaRepository,
     disponibilidadRepository,
     hijoRepository,
+    servicioNotificacion = null,
     estrategiaTarifa = new TarifaPorHora(),
     estrategiaDisponibilidad = new EstrategiaDisponibilidadRangoFechas(),
     reloj = () => new Date(),
@@ -41,6 +42,7 @@ class ServicioReserva {
     this.reservaRepository = reservaRepository;
     this.disponibilidadRepository = disponibilidadRepository;
     this.hijoRepository = hijoRepository;
+    this.servicioNotificacion = servicioNotificacion;
     this.estrategiaTarifa = estrategiaTarifa;
     this.estrategiaDisponibilidad = estrategiaDisponibilidad;
     this.reloj = reloj;
@@ -134,6 +136,8 @@ class ServicioReserva {
       0,
       Math.round((guardada.expiraEn.getTime() - this.reloj().getTime()) / 1000),
     );
+    // HU18 - Notificaciones automáticas de nueva reserva
+    await this._notificarNuevaReserva(guardada);
     return guardada;
   }
 
@@ -145,6 +149,59 @@ class ServicioReserva {
     return reservas.map((r) => {
       if (r.estaExpirada(ahora)) r.estadoReserva = 'Expirada';
       return r;
+    });
+  }
+
+  /**
+   * HU18 - Notifica a la familia y a la niñera
+   * cuando se registra una nueva solicitud de reserva.
+   */
+  async _notificarNuevaReserva(reserva) {
+    if (!this.servicioNotificacion) {
+      console.warn(
+        'HU18: servicioNotificacion no configurado en ServicioReserva.'
+      );
+      return;
+    }
+
+    const datosReserva =
+      `${reserva.fechaReserva}, ` +
+      `de ${reserva.horaInicio} a ${reserva.horaFin}`;
+
+    const notificaciones = [
+      {
+        idUsuario: reserva.idPadre,
+        idReserva: reserva.id,
+        titulo: 'Solicitud de reserva registrada',
+        mensaje:
+          `Tu solicitud para el ${datosReserva} fue registrada. ` +
+          'Tienes 10 minutos para completar el pago.',
+        tipo: 'RESERVA',
+      },
+      {
+        idUsuario: reserva.idNinera,
+        idReserva: reserva.id,
+        titulo: 'Nueva solicitud de reserva',
+        mensaje:
+          `Recibiste una solicitud de reserva para el ${datosReserva}. ` +
+          'Está pendiente de pago.',
+        tipo: 'RESERVA',
+      },
+    ];
+
+    const resultados = await Promise.allSettled(
+      notificaciones.map((notificacion) =>
+        this.servicioNotificacion.enviarNotificacion(notificacion)
+      )
+    );
+
+    resultados.forEach((resultado, indice) => {
+      if (resultado.status === 'rejected') {
+        console.error(
+          `HU18: error al notificar al usuario ${notificaciones[indice].idUsuario}:`,
+          resultado.reason
+        );
+      }
     });
   }
 

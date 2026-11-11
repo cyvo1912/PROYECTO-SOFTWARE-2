@@ -139,6 +139,7 @@ class Container {
       disponibilidadRepository: this.disponibilidadRepository,
       hijoRepository: this.hijoRepository,
       estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,
+      servicioNotificacion: this.servicioNotificacion,
     });
 
     // HU17: Servicio de Aplicación de Mensajes
