@@ -33,6 +33,7 @@ export default function FamilyDashboardScreen({
   onAddChild,
   onEditChild,
   onNavigateToSearch,
+  onNavigateToPublishOffer,
   onLogout,
   logoutLoading = false,
   onNavigateToChat,
@@ -292,6 +293,26 @@ export default function FamilyDashboardScreen({
               Explora perfiles verificados de niñeras cerca de tu zona y filtra por distancia, tarifa y experiencia.
             </Text>
           </TouchableOpacity>
+
+          {/* Bolsa de trabajo (HU14): la familia publica ofertas para las niñeras */}
+          {onNavigateToPublishOffer ? (
+            <TouchableOpacity
+              style={styles.sectionBlock}
+              onPress={onNavigateToPublishOffer}
+              activeOpacity={0.8}
+            >
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleGroup}>
+                  <Ionicons name="megaphone-outline" size={20} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>Publicar oferta de trabajo</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </View>
+              <Text style={styles.disabledCardDesc}>
+                Publica el servicio que necesitas en la bolsa de trabajo y revisa cuántas niñeras se postularon.
+              </Text>
+            </TouchableOpacity>
+          ) : null}
 
           {/* Tarjeta 3: Consultar Disponibilidad de Niñeras (HU13) */}
           <View style={styles.sectionBlock}>

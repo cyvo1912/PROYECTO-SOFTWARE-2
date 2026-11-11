@@ -18,6 +18,8 @@ import NannyPublicProfileScreen from './src/screens/NannyPublicProfileScreen';
 import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
+import JobBoardScreen from './src/screens/JobBoardScreen';
+import PublishJobOfferScreen from './src/screens/PublishJobOfferScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 // Constantes para persistencia local de sesión
@@ -45,6 +47,8 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'chat',
   'editPublicProfile', // HU12
   'nannyPublicProfile', // HU12
+  'jobBoard', // HU14
+  'publishJobOffer', // HU14
   'notFound',
 ];
 
@@ -150,14 +154,14 @@ const resolverPantallaPermitida = (solicitada, user) => {
   }
 
   // Rutas exclusivas de FAMILIA
-  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability'];
+  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'publishJobOffer'];
   if (rutasFamilia.includes(solicitada)) {
     if (rol === 'FAMILIA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'nannyDashboard';
   }
 
   // Rutas exclusivas de NINERA
-  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile'];
+  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile', 'jobBoard'];
   if (rutasNinera.includes(solicitada)) {
     if (rol === 'NINERA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'familyDashboard';
@@ -272,6 +276,8 @@ export default function App() {
   const navigateToSearchNannies = () => navegar('searchNannies');
   const navigateToNannyAvailability = () => navegar('nannyAvailability');
   const navigateToEditPublicProfile = () => navegar('editPublicProfile');
+  const navigateToJobBoard = () => navegar('jobBoard'); // HU14
+  const navigateToPublishJobOffer = () => navegar('publishJobOffer'); // HU14
   // HU12: abre el perfil público de una niñera (desde la búsqueda HU11 o como vista previa).
   const navigateToNannyPublicProfile = (idNinera, volverA) => {
     setPerfilVisto({ idNinera, volverA });
@@ -381,6 +387,8 @@ export default function App() {
     return (
       <NannyDashboardScreen
         user={currentUser}
+        token={authToken}
+        onNavigateToJobBoard={navigateToJobBoard}
         onNavigateToEditProfile={navigateToEditNannyProfile}
         onNavigateToMultimedia={navigateToMultimedia}
         onNavigateToPublicProfile={navigateToEditPublicProfile}
@@ -434,6 +442,27 @@ export default function App() {
     );
   }
 
+  // HU14: la niñera explora la bolsa de trabajo y se postula
+  if (currentScreen === 'jobBoard' && currentUser) {
+    return (
+      <JobBoardScreen
+        token={authToken}
+        onBack={navigateToNannyDashboard}
+      />
+    );
+  }
+
+  // HU14: la familia publica ofertas en la bolsa de trabajo
+  if (currentScreen === 'publishJobOffer' && currentUser) {
+    return (
+      <PublishJobOfferScreen
+        token={authToken}
+        user={currentUser}
+        onBack={navigateToFamilyDashboard}
+      />
+    );
+  }
+
   // HU12: la niñera completa su perfil público (formulario de 5 campos)
   if (currentScreen === 'editPublicProfile' && currentUser) {
     return (
@@ -468,6 +497,7 @@ export default function App() {
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
         onNavigateToSearch={navigateToSearchNannies}
+        onNavigateToPublishOffer={navigateToPublishJobOffer}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
         onNavigateToChat={navigateToChat}

@@ -104,6 +104,18 @@ class ReservaNoPagadaError extends Error {
   }
 }
 
+/**
+ * HU14: el recurso ya existe o su estado no permite la operación
+ * (ej. postularse dos veces a la misma oferta o a una oferta cerrada).
+ */
+class ConflictError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ConflictError';
+    this.statusCode = 409;
+  }
+}
+
 module.exports = {
   InvalidCredentialsError,
   AccountPendingError,
@@ -118,4 +130,5 @@ module.exports = {
   NotFoundError,
   ServiceUnavailableError,
   ReservaNoPagadaError,
+  ConflictError,
 };

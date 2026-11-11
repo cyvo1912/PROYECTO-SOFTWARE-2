@@ -28,6 +28,9 @@ const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/P
 const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
 const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
 const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
+const PostgresOfertaTrabajoRepository = require('./infrastructure/adapters/db/PostgresOfertaTrabajoRepository');
+const ServicioBolsaTrabajo = require('./application/services/ServicioBolsaTrabajo');
+const BolsaTrabajoController = require('./infrastructure/http/controllers/BolsaTrabajoController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 // HU17 - Mensajería en Tiempo Real (Gabriel)
@@ -64,6 +67,8 @@ class Container {
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
+    // HU14: Bolsa de Trabajo
+    this.ofertaTrabajoRepository = new PostgresOfertaTrabajoRepository(pool);
     this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
     this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
@@ -108,6 +113,9 @@ class Container {
       disponibilidadRepository: this.disponibilidadRepository,
       estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
     });
+    this.servicioBolsaTrabajo = new ServicioBolsaTrabajo({
+      ofertaTrabajoRepository: this.ofertaTrabajoRepository,
+    });
 
     // HU17: Servicio de Aplicación de Mensajes
     this.servicioMensajes = new ServicioMensajes({
@@ -127,6 +135,7 @@ class Container {
     this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
+    this.bolsaTrabajoController = new BolsaTrabajoController(this.servicioBolsaTrabajo);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
