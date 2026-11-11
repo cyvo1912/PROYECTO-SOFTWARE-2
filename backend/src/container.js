@@ -28,6 +28,9 @@ const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/P
 const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
 const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
 const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
+const PostgresOfertaTrabajoRepository = require('./infrastructure/adapters/db/PostgresOfertaTrabajoRepository');
+const ServicioBolsaTrabajo = require('./application/services/ServicioBolsaTrabajo');
+const BolsaTrabajoController = require('./infrastructure/http/controllers/BolsaTrabajoController');
 // HU Reservas
 const PostgresReservaRepository = require('./infrastructure/adapters/db/PostgresReservaRepository');
 const ServicioReserva = require('./application/services/ServicioReserva');
@@ -68,6 +71,8 @@ class Container {
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
+    // HU14: Bolsa de Trabajo
+    this.ofertaTrabajoRepository = new PostgresOfertaTrabajoRepository(pool);
     this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
     this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
@@ -113,6 +118,9 @@ class Container {
       disponibilidadRepository: this.disponibilidadRepository,
       estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
     });
+    this.servicioBolsaTrabajo = new ServicioBolsaTrabajo({
+      ofertaTrabajoRepository: this.ofertaTrabajoRepository,
+    });
     this.servicioReserva = new ServicioReserva({
       reservaRepository: this.reservaRepository,
       disponibilidadRepository: this.disponibilidadRepository,
@@ -138,6 +146,7 @@ class Container {
     this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
+    this.bolsaTrabajoController = new BolsaTrabajoController(this.servicioBolsaTrabajo);
     this.reservaController = new ReservaController(this.servicioReserva);
 
     // Middleware de Autenticación

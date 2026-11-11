@@ -18,6 +18,7 @@ const perfilPublicoRoutes = require('./routes/perfilPublico.routes');
 const mensajeriaRoutes = require('./routes/mensajeria.routes');
 const busquedaRoutes = require('./routes/busqueda.routes');
 const disponibilidadRoutes = require('./routes/disponibilidad.routes');
+const bolsaTrabajoRoutes = require('./routes/bolsaTrabajo.routes');
 const reservaRoutes = require('./routes/reserva.routes');
 
 app.use('/api', landingRoutes);
@@ -30,6 +31,7 @@ app.use('/api/perfil-publico', perfilPublicoRoutes);
 app.use('/api/mensajeria', mensajeriaRoutes);
 app.use('/api/busqueda', busquedaRoutes);
 app.use('/api/nineras', disponibilidadRoutes);
+app.use('/api/ofertas', bolsaTrabajoRoutes); // HU14
 app.use('/api/reservas', reservaRoutes);
 
 // Health check endpoint
