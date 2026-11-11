@@ -253,6 +253,9 @@ export default function NannyAvailabilityCalendarScreen({
                           horaInicio: slot.horaInicio,
                           horaFin: slot.horaFin,
                           idDisponibilidad: slot.idDisponibilidad,
+                          idNinera: idNineraSeleccionada,
+                          nombreNinera: nineraInfo?.nombreCompleto,
+                          tarifaHora: nineraInfo?.tarifaHora,
                         })
                       }
                       activeOpacity={0.8}

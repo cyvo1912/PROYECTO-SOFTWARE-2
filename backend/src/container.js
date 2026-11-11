@@ -28,6 +28,10 @@ const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/P
 const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
 const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
 const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
+// HU Reservas
+const PostgresReservaRepository = require('./infrastructure/adapters/db/PostgresReservaRepository');
+const ServicioReserva = require('./application/services/ServicioReserva');
+const ReservaController = require('./infrastructure/http/controllers/ReservaController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 const PostgresNotificacionRepository = require('./infrastructure/adapters/db/PostgresNotificacionRepository');
 const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
@@ -79,6 +83,7 @@ class Container {
     // HU18 - Adaptador de notificaciones push
     this.expoNotificationAdapter = new ExpoNotificationAdapter();
     this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
+    this.reservaRepository = new PostgresReservaRepository(pool); // HU Reservas
 
     // HU17: Adaptadores Secundarios de Mensajería
     this.mensajeRepository = new PostgresMensajeRepository(pool);
@@ -129,6 +134,12 @@ class Container {
       disponibilidadRepository: this.disponibilidadRepository,
       estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
     });
+    this.servicioReserva = new ServicioReserva({
+      reservaRepository: this.reservaRepository,
+      disponibilidadRepository: this.disponibilidadRepository,
+      hijoRepository: this.hijoRepository,
+      estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,
+    });
 
     // HU17: Servicio de Aplicación de Mensajes
     this.servicioMensajes = new ServicioMensajes({
@@ -153,6 +164,7 @@ class Container {
     this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
+    this.reservaController = new ReservaController(this.servicioReserva);
 
     // HU18 - Controlador de Notificaciones
     this.notificacionController = new NotificacionController(
