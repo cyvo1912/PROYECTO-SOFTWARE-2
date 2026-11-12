@@ -11,6 +11,7 @@ const {
   ValidationError,
   ForbiddenError,
   NotFoundError,
+  ConflictError,
   ConflictoHorarioError,
 } = require('../src/domain/errors/DomainErrors');
 
@@ -21,6 +22,7 @@ class ReservaRepositoryEnMemoria extends ReservaRepositoryPort {
     this.reservas = [];
     this.siguienteId = 1;
     this.reloj = relojDePrueba; // simula el NOW() de PostgreSQL
+    this.rechazarSiguienteCambioDeEstado = false;
   }
   async listarActivasDeNineraEnFecha(idNinera, fecha) {
     return this.reservas.filter((r) => r.idNinera === idNinera && r.fechaReserva === fecha && r.estaActiva(this.reloj()));
@@ -39,6 +41,24 @@ class ReservaRepositoryEnMemoria extends ReservaRepositoryPort {
   }
   async listarPorPadre(idPadre) {
     return this.reservas.filter((r) => r.idPadre === idPadre);
+  }
+  async listarPorNinera(idNinera) {
+    return this.reservas.filter((r) => r.idNinera === idNinera);
+  }
+  async buscarPorId(idReserva) {
+    return this.reservas.find((r) => r.id === Number(idReserva)) || null;
+  }
+  async actualizarEstado(idReserva, estadoReserva, estadosEsperados) {
+    const reserva = await this.buscarPorId(idReserva);
+    if (this.rechazarSiguienteCambioDeEstado) {
+      this.rechazarSiguienteCambioDeEstado = false;
+      return null;
+    }
+    if (!reserva || !estadosEsperados.map((estado) => estado.toLowerCase()).includes(reserva.estadoReserva.toLowerCase())) {
+      return null;
+    }
+    reserva.estadoReserva = estadoReserva;
+    return reserva;
   }
 }
 
@@ -220,5 +240,27 @@ describe('ServicioReserva', () => {
       horaInicio: '10:00', horaFin: '11:00', direccion: 'x',
     }));
     await assert.rejects(() => servicio.solicitar(FAMILIA, solicitudBase({ idHijo: null })), ConflictoHorarioError);
+  });
+
+  test('HU16: la niñera acepta y completa; la familia puede consultar su historial', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    const ninera = { id: ID_NINERA, tipo_usuario: 'NINERA' };
+    assert.equal((await servicio.cambiarEstado(ninera, creada.id, 'ACEPTADA')).estadoReserva, 'Aceptada');
+    assert.equal((await servicio.cambiarEstado(ninera, creada.id, 'COMPLETADA')).estadoReserva, 'Completada');
+    assert.equal((await servicio.listarMisReservas(FAMILIA))[0].estadoReserva, 'Completada');
+  });
+
+  test('HU16: una familia solo puede cancelar su propia reserva', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    await assert.rejects(() => servicio.cambiarEstado(OTRA_FAMILIA, creada.id, 'CANCELADA'), ForbiddenError);
+    assert.equal((await servicio.cambiarEstado(FAMILIA, creada.id, 'CANCELADA')).estadoReserva, 'Cancelada');
+  });
+
+  test('HU16: rechaza una transición si otra acción cambió la reserva antes de guardarla', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    reservas.rechazarSiguienteCambioDeEstado = true;
+    const ninera = { id: ID_NINERA, tipo_usuario: 'NINERA' };
+
+    await assert.rejects(() => servicio.cambiarEstado(ninera, creada.id, 'ACEPTADA'), ConflictError);
   });
 });

@@ -35,6 +35,9 @@ const BolsaTrabajoController = require('./infrastructure/http/controllers/BolsaT
 const PostgresReservaRepository = require('./infrastructure/adapters/db/PostgresReservaRepository');
 const ServicioReserva = require('./application/services/ServicioReserva');
 const ReservaController = require('./infrastructure/http/controllers/ReservaController');
+const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
+const ServicioValoraciones = require('./application/services/ServicioValoraciones');
+const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 // HU17 - Mensajería en Tiempo Real (Gabriel)
@@ -50,14 +53,17 @@ class Container {
   constructor(options = {}) {
     // Selección de estrategia de persistencia (SOLID DIP)
     const usePrisma = options.usePrisma || process.env.USE_PRISMA === 'true';
+    let prismaClient = null;
     if (usePrisma) {
-      let prismaClient = null;
       try {
         const { PrismaClient } = require('@prisma/client');
         prismaClient = new PrismaClient();
-      } catch (e) {
-        // Fallback seguro si la librería del cliente aún no se ha generado
+      } catch (_error) {
+        // El cliente Prisma es opcional; se usa PostgreSQL si no está disponible.
       }
+    }
+
+    if (prismaClient) {
       this.userRepository = new PrismaUserRepository(prismaClient);
       this.hijoRepository = new PrismaHijoRepository(prismaClient);
     } else {
@@ -77,6 +83,7 @@ class Container {
     this.almacenamiento = new CloudinaryAlmacenamiento();
     this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
     this.reservaRepository = new PostgresReservaRepository(pool); // HU Reservas
+    this.valoracionRepository = new PostgresValoracionRepository(pool); // HU18
 
     // HU17: Adaptadores Secundarios de Mensajería
     this.mensajeRepository = new PostgresMensajeRepository(pool);
@@ -126,6 +133,11 @@ class Container {
       disponibilidadRepository: this.disponibilidadRepository,
       hijoRepository: this.hijoRepository,
       estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,
+      notificacionService: this.notificacionService,
+    });
+    this.servicioValoraciones = new ServicioValoraciones({
+      reservaRepository: this.reservaRepository,
+      valoracionRepository: this.valoracionRepository,
     });
 
     // HU17: Servicio de Aplicación de Mensajes
@@ -148,6 +160,7 @@ class Container {
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
     this.bolsaTrabajoController = new BolsaTrabajoController(this.servicioBolsaTrabajo);
     this.reservaController = new ReservaController(this.servicioReserva);
+    this.valoracionController = new ValoracionController(this.servicioValoraciones);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);

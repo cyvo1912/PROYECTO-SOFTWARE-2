@@ -20,6 +20,7 @@ const busquedaRoutes = require('./routes/busqueda.routes');
 const disponibilidadRoutes = require('./routes/disponibilidad.routes');
 const bolsaTrabajoRoutes = require('./routes/bolsaTrabajo.routes');
 const reservaRoutes = require('./routes/reserva.routes');
+const valoracionRoutes = require('./routes/valoracion.routes');
 
 app.use('/api', landingRoutes);
 app.use('/api/auth', authRoutes);
@@ -33,6 +34,7 @@ app.use('/api/busqueda', busquedaRoutes);
 app.use('/api/nineras', disponibilidadRoutes);
 app.use('/api/ofertas', bolsaTrabajoRoutes); // HU14
 app.use('/api/reservas', reservaRoutes);
+app.use('/api/valoraciones', valoracionRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {

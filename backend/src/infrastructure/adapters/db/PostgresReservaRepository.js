@@ -106,6 +106,35 @@ class PostgresReservaRepository extends ReservaRepositoryPort {
     );
     return result.rows.map(filaAReserva);
   }
+
+  async listarPorNinera(idNinera) {
+    const result = await this.pool.query(
+      `SELECT ${COLUMNAS} FROM reserva
+       WHERE id_ninera = $1
+       ORDER BY fecha_reserva DESC, hora_inicio DESC;`,
+      [idNinera],
+    );
+    return result.rows.map(filaAReserva);
+  }
+
+  async buscarPorId(idReserva) {
+    const result = await this.pool.query(
+      `SELECT ${COLUMNAS} FROM reserva WHERE id_reserva = $1;`,
+      [idReserva],
+    );
+    return result.rows[0] ? filaAReserva(result.rows[0]) : null;
+  }
+
+  async actualizarEstado(idReserva, estadoReserva, estadosEsperados) {
+    const result = await this.pool.query(
+      `UPDATE reserva SET estado_reserva = $2
+       WHERE id_reserva = $1
+         AND LOWER(COALESCE(estado_reserva, 'pendiente')) = ANY($3::text[])
+       RETURNING ${COLUMNAS};`,
+      [idReserva, estadoReserva, estadosEsperados.map((estado) => String(estado).toLowerCase())],
+    );
+    return result.rows[0] ? filaAReserva(result.rows[0]) : null;
+  }
 }
 
 function filaAReserva(row) {

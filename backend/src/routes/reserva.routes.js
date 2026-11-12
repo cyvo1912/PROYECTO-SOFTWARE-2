@@ -18,8 +18,12 @@ router.post('/', autenticar, soloFamilia, (req, res) =>
 );
 
 // GET /api/reservas - Reservas de la familia autenticada
-router.get('/', autenticar, soloFamilia, (req, res) =>
+router.get('/', autenticar, (req, res) =>
   container.reservaController.listarMias(req, res),
+);
+
+router.patch('/:id/estado', autenticar, (req, res) =>
+  container.reservaController.cambiarEstado(req, res),
 );
 
 module.exports = router;

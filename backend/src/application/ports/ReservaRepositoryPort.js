@@ -41,6 +41,19 @@ class ReservaRepositoryPort {
   async listarPorPadre(idPadre) {
     throw new Error('Método listarPorPadre no implementado');
   }
+
+  async listarPorNinera(idNinera) {
+    throw new Error('Método listarPorNinera no implementado');
+  }
+
+  async buscarPorId(idReserva) {
+    throw new Error('Método buscarPorId no implementado');
+  }
+
+  /** Actualiza solo si el estado actual sigue siendo uno de los esperados. */
+  async actualizarEstado(idReserva, estadoReserva, estadosEsperados) {
+    throw new Error('Método actualizarEstado no implementado');
+  }
 }
 
 module.exports = ReservaRepositoryPort;

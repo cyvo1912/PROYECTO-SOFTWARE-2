@@ -21,6 +21,7 @@ import ReservationRequestScreen from './src/screens/ReservationRequestScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
 import JobBoardScreen from './src/screens/JobBoardScreen';
 import PublishJobOfferScreen from './src/screens/PublishJobOfferScreen';
+import ReservationHistoryScreen from './src/screens/ReservationHistoryScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 // Constantes para persistencia local de sesión
@@ -51,6 +52,7 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'nannyPublicProfile', // HU12
   'jobBoard', // HU14
   'publishJobOffer', // HU14
+  'reservationHistory', // HU16 y HU18
   'notFound',
 ];
 
@@ -156,14 +158,14 @@ const resolverPantallaPermitida = (solicitada, user) => {
   }
 
   // Rutas exclusivas de FAMILIA
-  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer'];
+  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer', 'reservationHistory'];
   if (rutasFamilia.includes(solicitada)) {
     if (rol === 'FAMILIA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'nannyDashboard';
   }
 
   // Rutas exclusivas de NINERA
-  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile', 'jobBoard'];
+  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile', 'jobBoard', 'reservationHistory'];
   if (rutasNinera.includes(solicitada)) {
     if (rol === 'NINERA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'familyDashboard';
@@ -286,6 +288,7 @@ export default function App() {
   const navigateToEditPublicProfile = () => navegar('editPublicProfile');
   const navigateToJobBoard = () => navegar('jobBoard'); // HU14
   const navigateToPublishJobOffer = () => navegar('publishJobOffer'); // HU14
+  const navigateToReservationHistory = () => navegar('reservationHistory'); // HU16/HU18
   // HU12: abre el perfil público de una niñera (desde la búsqueda HU11 o como vista previa).
   const navigateToNannyPublicProfile = (idNinera, volverA) => {
     setPerfilVisto({ idNinera, volverA });
@@ -397,6 +400,7 @@ export default function App() {
         user={currentUser}
         token={authToken}
         onNavigateToJobBoard={navigateToJobBoard}
+        onNavigateToReservations={navigateToReservationHistory}
         onNavigateToEditProfile={navigateToEditNannyProfile}
         onNavigateToMultimedia={navigateToMultimedia}
         onNavigateToPublicProfile={navigateToEditPublicProfile}
@@ -420,9 +424,6 @@ export default function App() {
           } else {
             navigateToFamilyDashboard();
           }
-        }}
-        onVerPerfil={(contacto) => {
-          console.log('Ver perfil de:', contacto?.nombre);
         }}
       />
     );
@@ -471,6 +472,10 @@ export default function App() {
     );
   }
 
+  if (currentScreen === 'reservationHistory' && currentUser) {
+    return <ReservationHistoryScreen token={authToken} user={currentUser} onBack={navigateToHomeOrDashboard} />;
+  }
+
   // HU12: la niñera completa su perfil público (formulario de 5 campos)
   if (currentScreen === 'editPublicProfile' && currentUser) {
     return (
@@ -506,6 +511,7 @@ export default function App() {
         onEditChild={navigateToChildForm}
         onNavigateToSearch={navigateToSearchNannies}
         onNavigateToPublishOffer={navigateToPublishJobOffer}
+        onNavigateToReservations={navigateToReservationHistory}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
         onNavigateToChat={navigateToChat}

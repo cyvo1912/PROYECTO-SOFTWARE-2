@@ -23,6 +23,18 @@ class PostgresNotificacionService extends NotificacionServicePort {
       console.warn('PostgresNotificacionService warning:', err.message);
     }
   }
+
+  async crearNotificacionReserva(idReceptor, texto) {
+    try {
+      await this.pool.query(
+        `INSERT INTO notificacion (id_usuario, tipo_notificacion, titulo, mensaje, leido, fecha_envio)
+         VALUES ($1, 'Reserva', 'Actualización de reserva', $2, false, (NOW() AT TIME ZONE 'America/Lima'))`,
+        [Number(idReceptor), String(texto).slice(0, 500)],
+      );
+    } catch (err) {
+      console.warn('PostgresNotificacionService warning:', err.message);
+    }
+  }
 }
 
 module.exports = PostgresNotificacionService;

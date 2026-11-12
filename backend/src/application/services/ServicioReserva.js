@@ -4,6 +4,7 @@ const {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
+  ConflictError,
   ConflictoHorarioError,
 } = require('../../domain/errors/DomainErrors');
 const { TarifaPorHora } = require('../../domain/strategies/EstrategiaCalculoTarifa');
@@ -33,6 +34,7 @@ class ServicioReserva {
     hijoRepository,
     estrategiaTarifa = new TarifaPorHora(),
     estrategiaDisponibilidad = new EstrategiaDisponibilidadRangoFechas(),
+    notificacionService = null,
     reloj = () => new Date(),
   }) {
     if (!reservaRepository) throw new Error('reservaRepository es requerido en ServicioReserva');
@@ -43,6 +45,7 @@ class ServicioReserva {
     this.hijoRepository = hijoRepository;
     this.estrategiaTarifa = estrategiaTarifa;
     this.estrategiaDisponibilidad = estrategiaDisponibilidad;
+    this.notificacionService = notificacionService;
     this.reloj = reloj;
   }
 
@@ -138,9 +141,12 @@ class ServicioReserva {
   }
 
   async listarMisReservas(usuario) {
-    this._exigirFamilia(usuario);
+    if (!usuario || !usuario.id) throw new UnauthorizedError('Debes iniciar sesión para consultar reservas.');
     const ahora = this.reloj();
-    const reservas = await this.reservaRepository.listarPorPadre(Number(usuario.id));
+    const esNinera = usuario.tipo_usuario === 'NINERA';
+    const reservas = esNinera
+      ? await this.reservaRepository.listarPorNinera(Number(usuario.id))
+      : await this.reservaRepository.listarPorPadre(Number(usuario.id));
     // Las pendientes que vencieron sin pago se muestran como "Expirada"
     return reservas.map((r) => {
       if (r.estaExpirada(ahora)) r.estadoReserva = 'Expirada';
@@ -148,7 +154,46 @@ class ServicioReserva {
     });
   }
 
+  /** HU16: familia cancela; niñera acepta, rechaza o marca el servicio completado. */
+  async cambiarEstado(usuario, idReservaParam, nuevoEstado) {
+    if (!usuario || !usuario.id) throw new UnauthorizedError('Debes iniciar sesión para actualizar una reserva.');
+    const idReserva = Number(idReservaParam);
+    if (!Number.isInteger(idReserva) || idReserva <= 0) throw new NotFoundError('La reserva no existe.');
+    const reserva = await this.reservaRepository.buscarPorId(idReserva);
+    if (!reserva) throw new NotFoundError('La reserva no existe.');
+
+    const estado = String(nuevoEstado || '').trim().toUpperCase();
+    const actual = String(reserva.estadoReserva || 'Pendiente').toUpperCase();
+    const esFamiliaPropietaria = usuario.tipo_usuario === 'FAMILIA' && Number(reserva.idPadre) === Number(usuario.id);
+    const esNineraAsignada = usuario.tipo_usuario === 'NINERA' && Number(reserva.idNinera) === Number(usuario.id);
+
+    if (esFamiliaPropietaria && estado === 'CANCELADA' && ['PENDIENTE', 'ACEPTADA'].includes(actual)) {
+      const actualizada = await this._actualizarEstadoSiVigente(idReserva, 'Cancelada', [actual]);
+      await this._notificarCambio(actualizada, actualizada.idNinera);
+      return actualizada;
+    }
+    if (esNineraAsignada && ['PENDIENTE'].includes(actual) && ['ACEPTADA', 'RECHAZADA'].includes(estado)) {
+      const actualizada = await this._actualizarEstadoSiVigente(idReserva, estado === 'ACEPTADA' ? 'Aceptada' : 'Rechazada', [actual]);
+      await this._notificarCambio(actualizada, actualizada.idPadre);
+      return actualizada;
+    }
+    if (esNineraAsignada && actual === 'ACEPTADA' && estado === 'COMPLETADA') {
+      const actualizada = await this._actualizarEstadoSiVigente(idReserva, 'Completada', [actual]);
+      await this._notificarCambio(actualizada, actualizada.idPadre);
+      return actualizada;
+    }
+    throw new ForbiddenError('No tienes permiso para realizar este cambio de estado.');
+  }
+
   // ---------- Reglas internas ----------
+
+  async _actualizarEstadoSiVigente(idReserva, estadoNuevo, estadosEsperados) {
+    const actualizada = await this.reservaRepository.actualizarEstado(idReserva, estadoNuevo, estadosEsperados);
+    if (!actualizada) {
+      throw new ConflictError('La reserva fue actualizada por otra acción. Recarga el historial e inténtalo nuevamente.');
+    }
+    return actualizada;
+  }
 
   _exigirFamilia(usuario) {
     if (!usuario || !usuario.id) {
@@ -257,6 +302,12 @@ class ServicioReserva {
   _calcularTarifa(tarifaHora, horaInicio, horaFin) {
     const minutos = aMinutos(horaFin) - aMinutos(horaInicio);
     return this.estrategiaTarifa.calcular({ tarifaHora, minutos });
+  }
+
+  async _notificarCambio(reserva, idReceptor) {
+    if (this.notificacionService?.crearNotificacionReserva) {
+      await this.notificacionService.crearNotificacionReserva(idReceptor, `La reserva #${reserva.id} ahora está ${reserva.estadoReserva}.`);
+    }
   }
 
   _ahoraEnLima() {
