@@ -7,6 +7,7 @@ const Postulacion = require('../src/domain/entities/Postulacion');
 const {
   ValidationError,
   UnauthorizedError,
+  ForbiddenError,
   NotFoundError,
   ConflictError,
 } = require('../src/domain/errors/DomainErrors');
@@ -210,6 +211,17 @@ describe('ServicioBolsaTrabajo', () => {
     await assert.rejects(() => servicio.publicarOferta({}, datosOferta()), UnauthorizedError);
   });
 
+  test('aplica los roles también en el servicio, no solo en la ruta HTTP', async () => {
+    await assert.rejects(
+      () => servicio.explorarOfertas({ id: 10, tipo_usuario: 'FAMILIA' }),
+      ForbiddenError,
+    );
+    await assert.rejects(
+      () => servicio.publicarOferta({ id: 7, tipo_usuario: 'NINERA' }, {}),
+      ForbiddenError,
+    );
+  });
+
   test('lista las postulaciones de la niñera y las ofertas de la familia', async () => {
     const oferta = await servicio.publicarOferta(familia, datosOferta());
     await servicio.postular(ninera, oferta.id);
@@ -219,6 +231,6 @@ describe('ServicioBolsaTrabajo', () => {
 
     const ofertas = await servicio.listarMisOfertas(familia);
     assert.equal(ofertas.length, 1);
-    assert.equal((await servicio.listarMisOfertas({ id: 50 })).length, 0);
+    assert.equal((await servicio.listarMisOfertas({ id: 50, tipo_usuario: 'FAMILIA' })).length, 0);
   });
 });

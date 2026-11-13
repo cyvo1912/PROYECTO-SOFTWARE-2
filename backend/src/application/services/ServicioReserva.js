@@ -178,6 +178,12 @@ class ServicioReserva {
     }
 
     if (esFamiliaPropietaria && estado === 'CANCELADA' && ['PENDIENTE', 'ACEPTADA'].includes(actual)) {
+      if (!reserva.puedeCancelarse(this.reloj())) {
+        throw new ValidationError(
+          'Una reserva solo puede cancelarse hasta una hora antes del inicio programado.',
+          { estado: 'El plazo de cancelación ya venció.' },
+        );
+      }
       const actualizada = await this._actualizarEstadoSiVigente(idReserva, 'Cancelada', [actual]);
       await this._notificarCambio(actualizada, actualizada.idNinera);
       return actualizada;

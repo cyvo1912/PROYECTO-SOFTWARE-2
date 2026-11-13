@@ -270,6 +270,17 @@ describe('ServicioReserva', () => {
     assert.equal((await servicio.cambiarEstado(FAMILIA, creada.id, 'CANCELADA')).estadoReserva, 'Cancelada');
   });
 
+  test('solo permite cancelar hasta una hora antes de iniciar el servicio', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    creada.estadoReserva = 'Aceptada';
+    minutosTranscurridos = (5 * 24 * 60) + (22 * 60); // 08:00 del lunes en Lima
+
+    await assert.rejects(
+      () => servicio.cambiarEstado(FAMILIA, creada.id, 'CANCELADA'),
+      ValidationError,
+    );
+  });
+
   test('HU16: no permite aceptar una reserva vencida por falta de pago', async () => {
     const creada = await servicio.solicitar(FAMILIA, solicitudBase());
     minutosTranscurridos = 11;

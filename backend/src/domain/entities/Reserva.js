@@ -60,6 +60,15 @@ class Reserva {
   }
 
   /**
+   * La familia puede cancelar únicamente antes de la última hora previa al inicio.
+   * La fecha y hora de la reserva se interpretan siempre en la zona de Lima.
+   */
+  puedeCancelarse(ahora = new Date()) {
+    const inicio = new Date(`${this.fechaReserva}T${this.horaInicio}:00-05:00`);
+    return Number.isFinite(inicio.getTime()) && ahora.getTime() < inicio.getTime() - (60 * 60 * 1000);
+  }
+
+  /**
    * Dos rangos [A, B) y [C, D) se solapan si A < D y C < B.
    * Que una termine justo cuando empieza la otra (12:00 y 12:00) NO es solape.
    */

@@ -96,8 +96,6 @@ function aResultadoBusqueda(fila) {
     nombre: `${fila.nombre_usuario} ${fila.apellido_usuario}`.trim(),
     nombreUsuario: fila.nombre_usuario,
     apellidoUsuario: fila.apellido_usuario,
-    correo: fila.correo,
-    celular: fila.celular,
     fotoUrl: fila.foto_url || null,
     zona: fila.zona,
     experiencia: fila.experiencia,

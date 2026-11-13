@@ -7,6 +7,7 @@ const Disponibilidad = require('../src/domain/entities/Disponibilidad');
 const {
   ValidationError,
   UnauthorizedError,
+  ForbiddenError,
   NotFoundError,
 } = require('../src/domain/errors/DomainErrors');
 
@@ -107,6 +108,14 @@ describe('ServicioDisponibilidad', () => {
   });
 
   test('exige usuario autenticado y rechaza rangos o identificadores inválidos', async () => {
+    await assert.rejects(
+      servicio.consultarDisponibilidad({ id: ID_NINERA, tipo_usuario: 'NINERA' }, ID_NINERA, {
+        desde: '2026-11-01',
+        hasta: '2026-11-10',
+      }),
+      ForbiddenError,
+    );
+
     await assert.rejects(
       servicio.consultarDisponibilidad(null, ID_NINERA, {
         desde: '2026-11-01',

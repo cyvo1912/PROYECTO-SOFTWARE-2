@@ -1,6 +1,7 @@
 const {
   ValidationError,
   UnauthorizedError,
+  ForbiddenError,
   NotFoundError,
   ConflictError,
 } = require('../../domain/errors/DomainErrors');
@@ -34,7 +35,7 @@ class ServicioBolsaTrabajo {
    * @param {Object} filtros - { q?, distrito?, tarifaMin?, soloCompatibles? }
    */
   async explorarOfertas(usuario, filtros = {}) {
-    const idNinera = exigirSesion(usuario, 'explorar la bolsa de trabajo');
+    const idNinera = exigirSesion(usuario, 'explorar la bolsa de trabajo', 'NINERA');
     const perfil = await this._obtenerPerfil(idNinera);
     const criterios = normalizarFiltros(filtros);
 
@@ -73,7 +74,7 @@ class ServicioBolsaTrabajo {
    * Detalle de una oferta para la niñera.
    */
   async obtenerOferta(usuario, idOfertaParam) {
-    const idNinera = exigirSesion(usuario, 'ver la oferta');
+    const idNinera = exigirSesion(usuario, 'ver la oferta', 'NINERA');
     const idOferta = validarId(idOfertaParam);
     const perfil = await this._obtenerPerfil(idNinera);
 
@@ -89,7 +90,7 @@ class ServicioBolsaTrabajo {
    * La niñera se postula a una oferta abierta (una sola vez por oferta).
    */
   async postular(usuario, idOfertaParam, datos = {}) {
-    const idNinera = exigirSesion(usuario, 'postularte');
+    const idNinera = exigirSesion(usuario, 'postularte', 'NINERA');
     const idOferta = validarId(idOfertaParam);
 
     const mensaje = textoOpcional(datos.mensaje);
@@ -121,7 +122,7 @@ class ServicioBolsaTrabajo {
    * Postulaciones realizadas por la niñera autenticada.
    */
   async listarMisPostulaciones(usuario) {
-    const idNinera = exigirSesion(usuario, 'ver tus postulaciones');
+    const idNinera = exigirSesion(usuario, 'ver tus postulaciones', 'NINERA');
     return this.ofertaTrabajoRepository.listarPostulacionesPorNinera(idNinera);
   }
 
@@ -129,7 +130,7 @@ class ServicioBolsaTrabajo {
    * La familia publica una oferta de trabajo en la bolsa.
    */
   async publicarOferta(usuario, datos = {}) {
-    const idPadre = exigirSesion(usuario, 'publicar una oferta');
+    const idPadre = exigirSesion(usuario, 'publicar una oferta', 'FAMILIA');
     const oferta = this._validarOferta(datos);
     return this.ofertaTrabajoRepository.crearOferta(idPadre, oferta);
   }
@@ -138,7 +139,7 @@ class ServicioBolsaTrabajo {
    * Ofertas publicadas por la familia autenticada (con su número de postulaciones).
    */
   async listarMisOfertas(usuario) {
-    const idPadre = exigirSesion(usuario, 'ver tus ofertas');
+    const idPadre = exigirSesion(usuario, 'ver tus ofertas', 'FAMILIA');
     return this.ofertaTrabajoRepository.listarPorPadre(idPadre);
   }
 
@@ -289,9 +290,12 @@ function normalizarFiltros({ q, distrito, tarifaMin, soloCompatibles } = {}) {
   return criterios;
 }
 
-function exigirSesion(usuario, accion) {
+function exigirSesion(usuario, accion, rolRequerido) {
   if (!usuario || !usuario.id) {
     throw new UnauthorizedError(`Debes iniciar sesión para ${accion}.`);
+  }
+  if (usuario.tipo_usuario !== rolRequerido) {
+    throw new ForbiddenError(`No tienes permiso para ${accion}.`);
   }
   return Number(usuario.id);
 }

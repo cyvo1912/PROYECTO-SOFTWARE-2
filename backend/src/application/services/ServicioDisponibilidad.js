@@ -1,6 +1,7 @@
 const {
   ValidationError,
   UnauthorizedError,
+  ForbiddenError,
   NotFoundError,
 } = require('../../domain/errors/DomainErrors');
 const {
@@ -36,6 +37,9 @@ class ServicioDisponibilidad {
     if (!usuarioSolicitante || !usuarioSolicitante.id) {
       throw new UnauthorizedError('Debes iniciar sesión para consultar las niñeras disponibles.');
     }
+    if (usuarioSolicitante.tipo_usuario !== 'FAMILIA') {
+      throw new ForbiddenError('Solo las familias pueden consultar la disponibilidad de niñeras.');
+    }
     const nineras = await this.disponibilidadRepository.listarNinerasActivas();
     return nineras.map((n) => ({
       id: n.idNinera,
@@ -55,6 +59,9 @@ class ServicioDisponibilidad {
   async consultarDisponibilidad(usuarioSolicitante, idNineraParam, filtros = {}) {
     if (!usuarioSolicitante || !usuarioSolicitante.id) {
       throw new UnauthorizedError('Debes iniciar sesión para consultar la disponibilidad.');
+    }
+    if (usuarioSolicitante.tipo_usuario !== 'FAMILIA') {
+      throw new ForbiddenError('Solo las familias pueden consultar la disponibilidad de niñeras.');
     }
 
     const idNinera = Number(idNineraParam);
