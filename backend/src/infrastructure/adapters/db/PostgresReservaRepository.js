@@ -1,98 +1,160 @@
 const ReservaRepositoryPort = require('../../../application/ports/ReservaRepositoryPort');
+const Reserva = require('../../../domain/entities/Reserva');
 
-const SELECT_RESERVAS = `
-  SELECT
-    r.id_reserva,
-    r.id_padre,
-    r.id_ninera,
-    r.id_hijo,
-    r.fecha_reserva,
-    r.hora_inicio,
-    r.hora_fin,
-    r.direccion,
-    r.estado_reserva,
-    r.comentario,
-    p.nombre_familia,
-    padre.nombre_usuario AS nombre_padre,
-    padre.apellido_usuario AS apellido_padre,
-    ninera.nombre_usuario AS nombre_ninera,
-    ninera.apellido_usuario AS apellido_ninera,
-    h.nombre_hijo
-  FROM reserva r
-  JOIN padre p ON p.id_padre = r.id_padre
-  JOIN usuario padre ON padre.id_usuario = r.id_padre
-  JOIN usuario ninera ON ninera.id_usuario = r.id_ninera
-  LEFT JOIN hijo h ON h.id_hijo = r.id_hijo
+const COLUMNAS = `
+  id_reserva,
+  id_padre,
+  id_ninera,
+  id_hijo,
+  TO_CHAR(fecha_reserva, 'YYYY-MM-DD') AS fecha_reserva,
+  TO_CHAR(hora_inicio, 'HH24:MI') AS hora_inicio,
+  TO_CHAR(hora_fin, 'HH24:MI') AS hora_fin,
+  direccion,
+  estado_reserva,
+  comentario,
+  tarifa_hora,
+  horas,
+  monto_total,
+  fecha_creacion,
+  expira_en
 `;
 
+// Activa = no cancelada/rechazada y, si está pendiente, todavía dentro de sus 10 min para pagar.
+const FILTRO_ACTIVA = `LOWER(COALESCE(estado_reserva, 'pendiente')) NOT IN ('cancelada', 'rechazada')
+  AND NOT (
+    LOWER(COALESCE(estado_reserva, 'pendiente')) = 'pendiente'
+    AND expira_en IS NOT NULL
+    AND expira_en <= NOW()
+  )`;
+
+/**
+ * Adaptador Secundario (DAO PostgreSQL): PostgresReservaRepository
+ */
 class PostgresReservaRepository extends ReservaRepositoryPort {
   constructor(pool) {
     super();
+    if (!pool) throw new Error('pool de PostgreSQL es requerido en PostgresReservaRepository');
     this.pool = pool;
   }
 
-  async listarPorUsuario(idUsuario, rol) {
-    const columna = columnaUsuario(rol);
+  async listarActivasDeNineraEnFecha(idNinera, fecha) {
     const result = await this.pool.query(
-      `${SELECT_RESERVAS}
-       WHERE r.${columna} = $1
-       ORDER BY r.fecha_reserva DESC, r.hora_inicio DESC, r.id_reserva DESC;`,
-      [idUsuario],
+      `SELECT ${COLUMNAS} FROM reserva
+       WHERE id_ninera = $1 AND fecha_reserva = $2::date AND ${FILTRO_ACTIVA}
+       ORDER BY hora_inicio ASC;`,
+      [idNinera, fecha],
     );
     return result.rows.map(filaAReserva);
   }
 
-  async findById(idReserva) {
+  async listarActivasDeHijoEnFecha(idHijo, fecha) {
     const result = await this.pool.query(
-      `${SELECT_RESERVAS}
-       WHERE r.id_reserva = $1
-       LIMIT 1;`,
+      `SELECT ${COLUMNAS} FROM reserva
+       WHERE id_hijo = $1 AND fecha_reserva = $2::date AND ${FILTRO_ACTIVA}
+       ORDER BY hora_inicio ASC;`,
+      [idHijo, fecha],
+    );
+    return result.rows.map(filaAReserva);
+  }
+
+  /**
+   * INSERT ... SELECT ... WHERE NOT EXISTS: el chequeo y el guardado van en
+   * UNA sola sentencia. Si entre la validación del servicio y este INSERT otra
+   * familia tomó el horario, no se inserta nada y se devuelve null.
+   */
+  async crearSiNoHaySolapamiento(reserva) {
+    const result = await this.pool.query(
+      `INSERT INTO reserva (
+         id_padre, id_ninera, id_hijo, fecha_reserva, hora_inicio, hora_fin,
+         direccion, estado_reserva, comentario, tarifa_hora, horas, monto_total, expira_en
+       )
+       SELECT $1, $2, $3, $4::date, $5::time, $6::time, $7, 'Pendiente', $8, $9, $10, $11, $12::timestamptz
+       WHERE NOT EXISTS (
+         SELECT 1 FROM reserva
+         WHERE id_ninera = $2
+           AND fecha_reserva = $4::date
+           AND ${FILTRO_ACTIVA}
+           AND hora_inicio < $6::time
+           AND $5::time < hora_fin
+       )
+       RETURNING ${COLUMNAS};`,
+      [
+        reserva.idPadre,
+        reserva.idNinera,
+        reserva.idHijo,
+        reserva.fechaReserva,
+        reserva.horaInicio,
+        reserva.horaFin,
+        reserva.direccion,
+        reserva.comentario,
+        reserva.tarifaHora,
+        reserva.horas,
+        reserva.montoTotal,
+        reserva.expiraEn,
+      ],
+    );
+    if (result.rows.length === 0) return null;
+    return filaAReserva(result.rows[0]);
+  }
+
+  async listarPorPadre(idPadre) {
+    const result = await this.pool.query(
+      `SELECT ${COLUMNAS} FROM reserva
+       WHERE id_padre = $1
+       ORDER BY fecha_reserva DESC, hora_inicio DESC;`,
+      [idPadre],
+    );
+    return result.rows.map(filaAReserva);
+  }
+
+  async listarPorNinera(idNinera) {
+    const result = await this.pool.query(
+      `SELECT ${COLUMNAS} FROM reserva
+       WHERE id_ninera = $1
+       ORDER BY fecha_reserva DESC, hora_inicio DESC;`,
+      [idNinera],
+    );
+    return result.rows.map(filaAReserva);
+  }
+
+  async buscarPorId(idReserva) {
+    const result = await this.pool.query(
+      `SELECT ${COLUMNAS} FROM reserva WHERE id_reserva = $1;`,
       [idReserva],
     );
-    return result.rows.length ? filaAReserva(result.rows[0]) : null;
+    return result.rows[0] ? filaAReserva(result.rows[0]) : null;
   }
 
-  async actualizarEstado(idReserva, idUsuario, rol, estado, estadosActuales) {
-    const columna = columnaUsuario(rol);
+  async actualizarEstado(idReserva, estadoReserva, estadosEsperados) {
     const result = await this.pool.query(
-      `UPDATE reserva
-       SET estado_reserva = $2
+      `UPDATE reserva SET estado_reserva = $2
        WHERE id_reserva = $1
-         AND ${columna} = $3
-         AND LOWER(estado_reserva) = ANY($4::text[])
-       RETURNING id_reserva;`,
-      [idReserva, estado, idUsuario, estadosActuales],
+         AND LOWER(COALESCE(estado_reserva, 'pendiente')) = ANY($3::text[])
+       RETURNING ${COLUMNAS};`,
+      [idReserva, estadoReserva, estadosEsperados.map((estado) => String(estado).toLowerCase())],
     );
-    if (!result.rows.length) return null;
-    return this.findById(idReserva);
+    return result.rows[0] ? filaAReserva(result.rows[0]) : null;
   }
-}
-
-function columnaUsuario(rol) {
-  if (rol === 'FAMILIA') return 'id_padre';
-  if (rol === 'NINERA') return 'id_ninera';
-  throw new Error('Rol no válido para consultar reservas.');
 }
 
 function filaAReserva(row) {
-  return {
+  return new Reserva({
     id: row.id_reserva,
     idPadre: row.id_padre,
     idNinera: row.id_ninera,
     idHijo: row.id_hijo,
-    fecha: typeof row.fecha_reserva === 'string'
-      ? row.fecha_reserva.slice(0, 10)
-      : row.fecha_reserva?.toISOString?.().slice(0, 10) || null,
+    fechaReserva: row.fecha_reserva,
     horaInicio: row.hora_inicio,
     horaFin: row.hora_fin,
     direccion: row.direccion,
-    estado: row.estado_reserva,
+    estadoReserva: row.estado_reserva,
     comentario: row.comentario,
-    nombreFamilia: row.nombre_familia,
-    nombrePadre: [row.nombre_padre, row.apellido_padre].filter(Boolean).join(' '),
-    nombreNinera: [row.nombre_ninera, row.apellido_ninera].filter(Boolean).join(' '),
-    nombreHijo: row.nombre_hijo,
-  };
+    tarifaHora: row.tarifa_hora !== null ? Number(row.tarifa_hora) : null,
+    horas: row.horas !== null ? Number(row.horas) : null,
+    montoTotal: row.monto_total !== null ? Number(row.monto_total) : null,
+    fechaCreacion: row.fecha_creacion,
+    expiraEn: row.expira_en,
+  });
 }
 
 module.exports = PostgresReservaRepository;

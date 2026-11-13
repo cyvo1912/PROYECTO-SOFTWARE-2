@@ -42,6 +42,7 @@ model Padre {
 
   usuario Usuario @relation(fields: [id_padre], references: [id_usuario], onDelete: Cascade)
   hijos   Hijo[]
+  ofertas OfertaTrabajo[]
 
   @@map("padre")
 }
@@ -54,9 +55,18 @@ model Ninera {
   descripcion           String?
   verificada            Boolean  @default(false)
   calificacion_promedio Decimal? @default(5.00) @db.Decimal(3, 2)
+  habilidades           String[] @default([])
+  idiomas               String[] @default([])
+  distritos             String[] @default([])
+  // HU11: coordenadas para búsqueda por proximidad (Google Maps API) y
+  // años de experiencia en formato numérico para poder filtrar por ellos.
+  latitud               Decimal? @db.Decimal(10, 7)
+  longitud              Decimal? @db.Decimal(10, 7)
+  anos_experiencia      Int?     @db.SmallInt
 
-  usuario      Usuario       @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
-  certificados Certificado[]
+  usuario       Usuario       @relation(fields: [id_ninera], references: [id_usuario], onDelete: Cascade)
+  certificados  Certificado[]
+  postulaciones Postulacion[]
 
   @@map("ninera")
 }
@@ -96,3 +106,43 @@ model Certificado {
   @@map("certificado")
 }
 
+// HU14: Bolsa de Trabajo (los CHECK están en database/migrations/005_hu14_bolsa_trabajo.sql)
+model OfertaTrabajo {
+  id_oferta         Int       @id @default(autoincrement())
+  id_padre          Int
+  titulo            String    @db.VarChar(120)
+  descripcion       String
+  distrito          String    @db.VarChar(100)
+  fecha_inicio      DateTime  @db.Date
+  hora_inicio       DateTime  @db.Time(6)
+  hora_fin          DateTime  @db.Time(6)
+  tarifa_hora       Decimal   @db.Decimal(10, 2)
+  numero_ninos      Int       @default(1)
+  edades_ninos      String?   @db.VarChar(100)
+  requisitos        String?
+  estado            String    @default("ABIERTA") @db.VarChar(20)
+  fecha_publicacion DateTime? @default(now()) @db.Timestamp(6)
+
+  padre         Padre         @relation(fields: [id_padre], references: [id_padre], onDelete: Cascade)
+  postulaciones Postulacion[]
+
+  @@index([estado, fecha_inicio], map: "idx_oferta_trabajo_estado_fecha")
+  @@index([id_padre], map: "idx_oferta_trabajo_padre")
+  @@map("oferta_trabajo")
+}
+
+model Postulacion {
+  id_postulacion    Int       @id @default(autoincrement())
+  id_oferta         Int
+  id_ninera         Int
+  mensaje           String?
+  estado            String    @default("PENDIENTE") @db.VarChar(20)
+  fecha_postulacion DateTime? @default(now()) @db.Timestamp(6)
+
+  oferta OfertaTrabajo @relation(fields: [id_oferta], references: [id_oferta], onDelete: Cascade)
+  ninera Ninera        @relation(fields: [id_ninera], references: [id_ninera], onDelete: Cascade)
+
+  @@unique([id_oferta, id_ninera])
+  @@index([id_ninera], map: "idx_postulacion_ninera")
+  @@map("postulacion")
+}

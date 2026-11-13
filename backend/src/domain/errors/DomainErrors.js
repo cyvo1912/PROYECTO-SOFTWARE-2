@@ -96,6 +96,34 @@ class ServiceUnavailableError extends Error {
   }
 }
 
+class ReservaNoPagadaError extends Error {
+  constructor(message = 'No se puede iniciar la conversación: se requiere una reserva confirmada y pagada con la niñera.') {
+    super(message);
+    this.name = 'ReservaNoPagadaError';
+    this.statusCode = 403;
+  }
+}
+
+/**
+ * HU14: el recurso ya existe o su estado no permite la operación
+ * (ej. postularse dos veces a la misma oferta o a una oferta cerrada).
+ */
+class ConflictError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ConflictError';
+    this.statusCode = 409;
+  }
+}
+
+class ConflictoHorarioError extends Error {
+  constructor(message = 'El horario elegido se cruza con otra reserva.') {
+    super(message);
+    this.name = 'ConflictoHorarioError';
+    this.statusCode = 409;
+  }
+}
+
 module.exports = {
   InvalidCredentialsError,
   AccountPendingError,
@@ -109,4 +137,7 @@ module.exports = {
   ForbiddenError,
   NotFoundError,
   ServiceUnavailableError,
+  ReservaNoPagadaError,
+  ConflictError,
+  ConflictoHorarioError,
 };

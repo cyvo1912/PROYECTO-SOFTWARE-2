@@ -12,31 +12,58 @@ const ServicioRegistro = require('./application/services/ServicioRegistro');
 const ServicioUsuario = require('./application/services/ServicioUsuario');
 const ServicioHijo = require('./application/services/ServicioHijo');
 const ServicioMultimedia = require('./application/services/ServicioMultimedia');
+const ServicioBusqueda = require('./application/services/ServicioBusqueda');
 const AuthController = require('./infrastructure/http/controllers/AuthController');
 const UsuarioController = require('./infrastructure/http/controllers/UsuarioController');
 const HijoController = require('./infrastructure/http/controllers/HijoController');
 const MultimediaController = require('./infrastructure/http/controllers/MultimediaController');
+const BusquedaController = require('./infrastructure/http/controllers/BusquedaController');
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
-const PostgresReservaRepository = require('./infrastructure/adapters/db/PostgresReservaRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
-const ServicioReserva = require('./application/services/ServicioReserva');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
+const PostgresPerfilPublicoRepository = require('./infrastructure/adapters/db/PostgresPerfilPublicoRepository');
+const ServicioPerfilPublico = require('./application/services/ServicioPerfilPublico');
+const PerfilPublicoController = require('./infrastructure/http/controllers/PerfilPublicoController');
+const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/PostgresDisponibilidadRepository');
+const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
+const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
+const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
+const PostgresOfertaTrabajoRepository = require('./infrastructure/adapters/db/PostgresOfertaTrabajoRepository');
+const ServicioBolsaTrabajo = require('./application/services/ServicioBolsaTrabajo');
+const BolsaTrabajoController = require('./infrastructure/http/controllers/BolsaTrabajoController');
+// HU Reservas
+const PostgresReservaRepository = require('./infrastructure/adapters/db/PostgresReservaRepository');
+const ServicioReserva = require('./application/services/ServicioReserva');
 const ReservaController = require('./infrastructure/http/controllers/ReservaController');
+const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
+const ServicioValoraciones = require('./application/services/ServicioValoraciones');
+const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
+
+// HU17 - Mensajería en Tiempo Real (Gabriel)
+const PostgresMensajeRepository = require('./infrastructure/adapters/db/PostgresMensajeRepository');
+const SocketIoRealtimeNotifier = require('./infrastructure/adapters/realtime/SocketIoRealtimeNotifier');
+const PostgresNotificacionService = require('./infrastructure/adapters/db/PostgresNotificacionService');
+const ServicioMensajes = require('./application/services/ServicioMensajes');
+const MensajeriaController = require('./infrastructure/http/controllers/MensajeriaController');
+const ChatSocketController = require('./infrastructure/http/controllers/ChatSocketController');
 
 
 class Container {
   constructor(options = {}) {
     // Selección de estrategia de persistencia (SOLID DIP)
     const usePrisma = options.usePrisma || process.env.USE_PRISMA === 'true';
+    let prismaClient = null;
     if (usePrisma) {
-      let prismaClient = null;
       try {
         const { PrismaClient } = require('@prisma/client');
         prismaClient = new PrismaClient();
-      } catch (e) {
-        // Fallback seguro si la librería del cliente aún no se ha generado
+      } catch (_error) {
+        // El cliente Prisma es opcional; se usa PostgreSQL si no está disponible.
       }
+    }
+
+    if (prismaClient) {
       this.userRepository = new PrismaUserRepository(prismaClient);
       this.hijoRepository = new PrismaHijoRepository(prismaClient);
     } else {
@@ -49,8 +76,19 @@ class Container {
     this.tokenService = new JwtTokenService();
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
-    this.reservaRepository = new PostgresReservaRepository(pool);
+    this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
+    // HU14: Bolsa de Trabajo
+    this.ofertaTrabajoRepository = new PostgresOfertaTrabajoRepository(pool);
+    this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
+    this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
+    this.reservaRepository = new PostgresReservaRepository(pool); // HU Reservas
+    this.valoracionRepository = new PostgresValoracionRepository(pool); // HU18
+
+    // HU17: Adaptadores Secundarios de Mensajería
+    this.mensajeRepository = new PostgresMensajeRepository(pool);
+    this.realtimeNotifier = new SocketIoRealtimeNotifier();
+    this.notificacionService = new PostgresNotificacionService(pool);
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -77,8 +115,37 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+    this.servicioPerfilPublico = new ServicioPerfilPublico({
+      perfilRepository: this.perfilPublicoRepository,
+    });
+    this.servicioBusqueda = new ServicioBusqueda({
+      userRepository: this.userRepository,
+    });
+    this.servicioDisponibilidad = new ServicioDisponibilidad({
+      disponibilidadRepository: this.disponibilidadRepository,
+      estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
+    });
+    this.servicioBolsaTrabajo = new ServicioBolsaTrabajo({
+      ofertaTrabajoRepository: this.ofertaTrabajoRepository,
+    });
     this.servicioReserva = new ServicioReserva({
       reservaRepository: this.reservaRepository,
+      disponibilidadRepository: this.disponibilidadRepository,
+      hijoRepository: this.hijoRepository,
+      estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,
+      notificacionService: this.notificacionService,
+    });
+    this.servicioValoraciones = new ServicioValoraciones({
+      reservaRepository: this.reservaRepository,
+      valoracionRepository: this.valoracionRepository,
+    });
+
+    // HU17: Servicio de Aplicación de Mensajes
+    this.servicioMensajes = new ServicioMensajes({
+      mensajeRepository: this.mensajeRepository,
+      realtimeNotifier: this.realtimeNotifier,
+      notificacionService: this.notificacionService,
+      userRepository: this.userRepository,
     });
 
     // Adaptador Primario (Controladores de Entrada)
@@ -87,10 +154,30 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.perfilPublicoController = new PerfilPublicoController(this.servicioPerfilPublico);
+    this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
+    this.busquedaController = new BusquedaController(this.servicioBusqueda);
+    this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
+    this.bolsaTrabajoController = new BolsaTrabajoController(this.servicioBolsaTrabajo);
     this.reservaController = new ReservaController(this.servicioReserva);
+    this.valoracionController = new ValoracionController(this.servicioValoraciones);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
+  }
+
+  /**
+   * Vincula la instancia de Socket.IO con el controlador de WebSockets y el notificador
+   */
+  inicializarSockets(io) {
+    this.realtimeNotifier.setIo(io);
+    this.chatSocketController = new ChatSocketController({
+      io,
+      servicioMensajes: this.servicioMensajes,
+      tokenService: this.tokenService,
+      realtimeNotifier: this.realtimeNotifier,
+    });
+    return this.chatSocketController;
   }
 }
 

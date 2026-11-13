@@ -5,6 +5,22 @@ const container = require('../container');
 
 const { autenticar, soloAdmin } = container.authMiddleware;
 
+// HU10: consulta de usuarios y actualización de estados, exclusiva para ADMIN.
+router.get(
+  '/usuarios',
+  autenticar,
+  soloAdmin,
+  (req, res) => container.administradorController.listarUsuarios(req, res),
+);
+
+router.put(
+  '/usuarios/:id/estado',
+  autenticar,
+  soloAdmin,
+  (req, res) =>
+    container.administradorController.actualizarEstadoCuenta(req, res),
+);
+
 /**
  * HU9 - Administración
  *

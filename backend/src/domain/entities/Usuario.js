@@ -20,7 +20,7 @@ class Usuario {
     this.apellido = apellido;
     this.correo = correo;
     this.contrasenaHash = contrasenaHash;
-    this.estadoCuenta = estadoCuenta; // 'ACTIVA' | 'PENDIENTE_VERIFICACION' | 'INACTIVA'
+    this.estadoCuenta = estadoCuenta; // 'ACTIVA' | 'PENDIENTE_VERIFICACION' | 'SUSPENDIDA'
     this.tipoUsuario = tipoUsuario;   // 'FAMILIA' | 'NINERA' | 'ADMIN'
     this.celular = celular;
     this.dni = dni;

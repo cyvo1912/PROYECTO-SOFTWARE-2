@@ -7,6 +7,14 @@ class AdministradorRepositoryPort {
     throw new Error('Método listarNinerasPendientes no implementado');
   }
 
+  async listarUsuarios() {
+    throw new Error('Método listarUsuarios no implementado');
+  }
+
+  async actualizarEstadoCuenta(idUsuario, estado) {
+    throw new Error('Método actualizarEstadoCuenta no implementado');
+  }
+
   async obtenerNinera(idNinera) {
     throw new Error('Método obtenerNinera no implementado');
   }

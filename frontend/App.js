@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterFamilyScreen from './src/screens/RegisterFamilyScreen';
@@ -11,64 +12,318 @@ import ChildFormScreen from './src/screens/ChildFormScreen';
 import MultimediaScreen from './src/screens/MultimediaScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
-import ReservationsScreen from './src/screens/ReservationsScreen';
+import PantallaChat from './src/screens/PantallaChat';
+import EditPublicProfileScreen from './src/screens/EditPublicProfileScreen';
+import NannyPublicProfileScreen from './src/screens/NannyPublicProfileScreen';
+import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
+import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
+import ReservationRequestScreen from './src/screens/ReservationRequestScreen';
+import NotFoundScreen from './src/screens/NotFoundScreen';
+import JobBoardScreen from './src/screens/JobBoardScreen';
+import PublishJobOfferScreen from './src/screens/PublishJobOfferScreen';
+import ReservationHistoryScreen from './src/screens/ReservationHistoryScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
+// Constantes para persistencia local de sesión
+const STORAGE_TOKEN_KEY = 'minana_auth_token';
+const STORAGE_USER_KEY = 'minana_user';
+const STORAGE_SCREEN_KEY = 'minana_screen';
+const STORAGE_CHILD_KEY = 'minana_selected_child';
+
+const RUTAS_PUBLICAS = ['landing', 'login', 'registerFamily', 'registerNanny'];
+const TODAS_LAS_RUTAS_VALIDAS = [
+  'landing',
+  'login',
+  'registerFamily',
+  'registerNanny',
+  'familyDashboard',
+  'nannyDashboard',
+  'adminDashboard',
+  'editFamilyProfile',
+  'editNannyProfile',
+  'familyChildren',
+  'childForm',
+  'multimedia',
+  'searchNannies',
+  'nannyAvailability',
+  'requestReservation', // HU Reservas
+  'chat',
+  'editPublicProfile', // HU12
+  'nannyPublicProfile', // HU12
+  'jobBoard', // HU14
+  'publishJobOffer', // HU14
+  'reservationHistory', // HU16 y HU18
+  'notFound',
+];
+
+const guardarSesionLocal = (token, user, screen, child = null) => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      if (token) window.localStorage.setItem(STORAGE_TOKEN_KEY, token);
+      else window.localStorage.removeItem(STORAGE_TOKEN_KEY);
+
+      if (user) window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+      else window.localStorage.removeItem(STORAGE_USER_KEY);
+
+      if (screen) window.localStorage.setItem(STORAGE_SCREEN_KEY, screen);
+      else window.localStorage.removeItem(STORAGE_SCREEN_KEY);
+
+      if (child) window.localStorage.setItem(STORAGE_CHILD_KEY, JSON.stringify(child));
+      else window.localStorage.removeItem(STORAGE_CHILD_KEY);
+    } catch (e) {
+      console.warn('Error al guardar sesión local:', e);
+    }
+  }
+};
+
+const limpiarSesionLocal = () => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.removeItem(STORAGE_TOKEN_KEY);
+      window.localStorage.removeItem(STORAGE_USER_KEY);
+      window.localStorage.removeItem(STORAGE_SCREEN_KEY);
+      window.localStorage.removeItem(STORAGE_CHILD_KEY);
+    } catch (e) {
+      console.warn('Error al limpiar sesión local:', e);
+    }
+  }
+};
+
+const obtenerSesionInicial = () => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const token = window.localStorage.getItem(STORAGE_TOKEN_KEY);
+      const userStr = window.localStorage.getItem(STORAGE_USER_KEY);
+      const user = userStr ? JSON.parse(userStr) : null;
+      const savedScreen = window.localStorage.getItem(STORAGE_SCREEN_KEY);
+      const childStr = window.localStorage.getItem(STORAGE_CHILD_KEY);
+      const child = childStr ? JSON.parse(childStr) : null;
+      return { token, user, savedScreen, child };
+    } catch (e) {
+      return { token: null, user: null, savedScreen: null, child: null };
+    }
+  }
+  return { token: null, user: null, savedScreen: null, child: null };
+};
+
+const obtenerRutaDesdeNavegador = () => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const hash = window.location.hash.replace(/^#[/]?/, '').trim();
+    if (hash) return hash;
+
+    const path = window.location.pathname.replace(/^\//, '').trim();
+    if (path) return path;
+  }
+  return null;
+};
+
+/**
+ * Protección de rutas y control de acceso (Guards)
+ * - Si no hay usuario registrado/autenticado, bloquea rutas privadas y manda a landing.
+ * - Si hay usuario, valida roles (FAMILIA, NINERA, ADMIN).
+ */
+const resolverPantallaPermitida = (solicitada, user) => {
+  if (!solicitada) return user ? 'familyDashboard' : 'landing';
+
+  // Si la ruta no está registrada en la aplicación, redirigir a 404 Not Found
+  if (!TODAS_LAS_RUTAS_VALIDAS.includes(solicitada)) {
+    return 'notFound';
+  }
+
+  if (solicitada === 'notFound') {
+    return 'notFound';
+  }
+
+  if (!user) {
+    if (RUTAS_PUBLICAS.includes(solicitada)) {
+      return solicitada;
+    }
+    // Protección de ruta: Si se intenta forzar una URL protegida sin estar autenticado,
+    // se bloquea el acceso y permanece en el inicio (landing)
+    return 'landing';
+  }
+
+  const rol = user?.rol || user?.tipo_usuario;
+
+  // Redirigir fuera de vistas públicas si ya tiene sesión
+  if (solicitada === 'login' || solicitada === 'registerFamily' || solicitada === 'registerNanny' || solicitada === 'landing') {
+    if (rol === 'ADMIN') return 'adminDashboard';
+    if (rol === 'NINERA') return 'nannyDashboard';
+    return 'familyDashboard';
+  }
+
+  // Chat y perfil público (HU12) accesibles por usuarios autenticados
+  if (solicitada === 'chat' || solicitada === 'nannyPublicProfile') {
+    return solicitada;
+  }
+
+  // Rutas exclusivas de FAMILIA
+  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer', 'reservationHistory'];
+  if (rutasFamilia.includes(solicitada)) {
+    if (rol === 'FAMILIA') return solicitada;
+    return rol === 'ADMIN' ? 'adminDashboard' : 'nannyDashboard';
+  }
+
+  // Rutas exclusivas de NINERA
+  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile', 'jobBoard', 'reservationHistory'];
+  if (rutasNinera.includes(solicitada)) {
+    if (rol === 'NINERA') return solicitada;
+    return rol === 'ADMIN' ? 'adminDashboard' : 'familyDashboard';
+  }
+
+  // Rutas de ADMIN
+  if (solicitada === 'adminDashboard') {
+    if (rol === 'ADMIN') return 'adminDashboard';
+    return rol === 'NINERA' ? 'nannyDashboard' : 'familyDashboard';
+  }
+
+  if (rol === 'ADMIN') return 'adminDashboard';
+  if (rol === 'NINERA') return 'nannyDashboard';
+  return 'familyDashboard';
+};
+
 export default function App() {
-  // 'landing' | 'login' | 'registerFamily' | 'registerNanny' | 'nannyDashboard' | 'editNannyProfile'
-  // | 'familyDashboard' | 'editFamilyProfile' | 'familyChildren' | 'childForm' | 'multimedia'
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
-  // Hijo seleccionado para editar (null = registrar uno nuevo)
   const [selectedChild, setSelectedChild] = useState(null);
+  const [unrecognizedPath, setUnrecognizedPath] = useState('');
+  // HU12: niñera cuyo perfil público se está viendo y pantalla a la que se vuelve
+  const [perfilVisto, setPerfilVisto] = useState({ idNinera: null, volverA: 'landing' });
+  // HU Reservas: bloque elegido en el calendario de disponibilidad
+  const [slotReserva, setSlotReserva] = useState(null);
 
-  const navigateToLogin = () => {
-    setCurrentScreen('login');
-  };
-  const navigateToLanding = () => setCurrentScreen('landing');
-  const navigateToRegisterFamily = () => setCurrentScreen('registerFamily');
-  const navigateToRegisterNanny = () => setCurrentScreen('registerNanny');
-  const navigateToNannyDashboard = () => setCurrentScreen('nannyDashboard');
-  const navigateToEditNannyProfile = () => setCurrentScreen('editNannyProfile');
-  const navigateToEditFamilyProfile = () => setCurrentScreen('editFamilyProfile');
-  const navigateToFamilyDashboard = () => {
-    setSelectedChild(null);
-    setCurrentScreen('familyDashboard');
-  };
-  const navigateToFamilyChildren = () => {
-    setSelectedChild(null);
-    setCurrentScreen('familyChildren');
-  };
-  const navigateToChildForm = (child = null) => {
-    setSelectedChild(child);
-    setCurrentScreen('childForm');
-  };
-  const navigateToMultimedia = () => setCurrentScreen('multimedia');
-  const navigateToReservations = () => setCurrentScreen('reservations');
-  const navigateBackFromReservations = () => {
-    setCurrentScreen(currentUser?.rol === 'NINERA' ? 'nannyDashboard' : 'familyDashboard');
+  const sincronizarHash = (pantalla) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const hashActual = window.location.hash.replace(/^#[/]?/, '');
+      if (hashActual !== pantalla) {
+        window.location.hash = '#' + pantalla;
+      }
+    }
   };
 
-  // Callback al iniciar sesión o registrarse exitosamente
+  const navegar = (pantalla, hijo = null) => {
+    const permitida = resolverPantallaPermitida(pantalla, currentUser);
+    if (permitida === 'notFound') {
+      setUnrecognizedPath(pantalla);
+    } else {
+      setUnrecognizedPath('');
+    }
+    setCurrentScreen(permitida);
+    setSelectedChild(hijo);
+    guardarSesionLocal(authToken, currentUser, permitida, hijo);
+    sincronizarHash(permitida === 'notFound' ? (pantalla || '404') : permitida);
+  };
+
+  // Inicialización y manejo de recarga / historial del navegador
+  useEffect(() => {
+    const sesion = obtenerSesionInicial();
+    let userActivo = sesion.user;
+    let tokenActivo = sesion.token;
+
+    if (tokenActivo && userActivo) {
+      setCurrentUser(userActivo);
+      setAuthToken(tokenActivo);
+      if (sesion.child) setSelectedChild(sesion.child);
+      cargarFotoPerfil(tokenActivo);
+    }
+
+    const rutaUrl = obtenerRutaDesdeNavegador();
+    const pantallaDeseada = rutaUrl || sesion.savedScreen || 'landing';
+    let permitida = resolverPantallaPermitida(pantallaDeseada, userActivo);
+    // HU12: al recargar se pierde qué perfil se veía, así que se vuelve al panel
+    if (permitida === 'nannyPublicProfile') {
+      permitida = resolverPantallaPermitida('landing', userActivo);
+    }
+    if (permitida === 'notFound') {
+      setUnrecognizedPath(pantallaDeseada);
+    }
+    setCurrentScreen(permitida);
+    sincronizarHash(permitida === 'notFound' ? pantallaDeseada : permitida);
+
+    // Manejar retroceso y avance en el navegador sin cerrar sesión ni regresar a landing
+    const handleUrlChange = () => {
+      const nuevaRuta = obtenerRutaDesdeNavegador() || 'landing';
+      const sesionActual = obtenerSesionInicial();
+      const userRef = sesionActual.user || userActivo;
+      const destino = resolverPantallaPermitida(nuevaRuta, userRef);
+      if (destino === 'notFound') {
+        setUnrecognizedPath(nuevaRuta);
+      } else {
+        setUnrecognizedPath('');
+      }
+      setCurrentScreen(destino);
+      sincronizarHash(destino === 'notFound' ? nuevaRuta : destino);
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('hashchange', handleUrlChange);
+      window.addEventListener('popstate', handleUrlChange);
+      return () => {
+        window.removeEventListener('hashchange', handleUrlChange);
+        window.removeEventListener('popstate', handleUrlChange);
+      };
+    }
+  }, []);
+
+  const navigateToLogin = () => navegar('login');
+  const navigateToLanding = () => navegar('landing');
+  const navigateToRegisterFamily = () => navegar('registerFamily');
+  const navigateToRegisterNanny = () => navegar('registerNanny');
+  const navigateToNannyDashboard = () => navegar('nannyDashboard');
+  const navigateToEditNannyProfile = () => navegar('editNannyProfile');
+  const navigateToEditFamilyProfile = () => navegar('editFamilyProfile');
+  const navigateToChat = () => navegar('chat');
+  const navigateToFamilyDashboard = () => navegar('familyDashboard');
+  const navigateToFamilyChildren = () => navegar('familyChildren');
+  const navigateToChildForm = (child = null) => navegar('childForm', child);
+  const navigateToMultimedia = () => navegar('multimedia');
+  const navigateToSearchNannies = () => navegar('searchNannies');
+  const navigateToNannyAvailability = () => navegar('nannyAvailability');
+  const navigateToRequestReservation = (slot) => {
+    setSlotReserva(slot);
+    navegar('requestReservation');
+  };
+  const navigateToEditPublicProfile = () => navegar('editPublicProfile');
+  const navigateToJobBoard = () => navegar('jobBoard'); // HU14
+  const navigateToPublishJobOffer = () => navegar('publishJobOffer'); // HU14
+  const navigateToReservationHistory = () => navegar('reservationHistory'); // HU16/HU18
+  // HU12: abre el perfil público de una niñera (desde la búsqueda HU11 o como vista previa).
+  const navigateToNannyPublicProfile = (idNinera, volverA) => {
+    setPerfilVisto({ idNinera, volverA });
+    navegar('nannyPublicProfile');
+  };
+  const navigateToHomeOrDashboard = () => {
+    if (!currentUser) {
+      navegar('landing');
+      return;
+    }
+    const rol = currentUser?.rol || currentUser?.tipo_usuario;
+    if (rol === 'ADMIN') navegar('adminDashboard');
+    else if (rol === 'NINERA') navegar('nannyDashboard');
+    else navegar('familyDashboard');
+  };
+
+  // Callback al iniciar sesión exitosamente
   const handleLoginSuccess = ({ user, token }) => {
     setCurrentUser(user);
     setAuthToken(token);
     cargarFotoPerfil(token);
 
-    if (user?.rol === 'ADMIN') {
-      setCurrentScreen('adminDashboard');
-    } else if (user?.rol === 'NINERA') {
-      setCurrentScreen('nannyDashboard');
-    } else if (user?.rol === 'FAMILIA') {
-      setCurrentScreen('familyChildren');
-    } else {
-      setCurrentScreen('landing');
+    let destino = 'familyDashboard';
+    if (user?.rol === 'ADMIN' || user?.tipo_usuario === 'ADMIN') {
+      destino = 'adminDashboard';
+    } else if (user?.rol === 'NINERA' || user?.tipo_usuario === 'NINERA') {
+      destino = 'nannyDashboard';
     }
+
+    setCurrentScreen(destino);
+    guardarSesionLocal(token, user, destino, null);
+    sincronizarHash(destino);
   };
 
-  // HU8: la foto se guarda aparte del login; se consulta al iniciar sesión
+  // HU8: consulta de foto de perfil
   const cargarFotoPerfil = async (token) => {
     try {
       const response = await fetch(`${API_BASE_URL}/multimedia`, {
@@ -84,10 +339,16 @@ export default function App() {
   };
 
   const handleFotoActualizada = (fotoUrl) => {
-    setCurrentUser((prev) => (prev ? { ...prev, fotoUrl } : prev));
+    setCurrentUser((prev) => {
+      const actualizado = prev ? { ...prev, fotoUrl } : prev;
+      if (actualizado) {
+        guardarSesionLocal(authToken, actualizado, currentScreen, selectedChild);
+      }
+      return actualizado;
+    });
   };
 
-  // Flujo HU4: Cerrar sesión con invalidación en backend
+  // Flujo HU4: Cerrar sesión
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
@@ -102,22 +363,25 @@ export default function App() {
         });
       }
     } catch (error) {
-      // Si el servidor no responde, se procede igualmente con la limpieza local
+      // Proceder con limpieza local
     } finally {
+      limpiarSesionLocal();
       setCurrentUser(null);
       setAuthToken(null);
       setSelectedChild(null);
       setLogoutLoading(false);
-      setCurrentScreen('login');
+      setCurrentScreen('landing');
+      sincronizarHash('landing');
     }
   };
 
   // Callback al actualizar el perfil (HU5 o Familia)
   const handleProfileUpdated = (updatedUser) => {
-    setCurrentUser((prev) => ({
-      ...prev,
-      ...updatedUser,
-    }));
+    setCurrentUser((prev) => {
+      const nuevo = { ...prev, ...updatedUser };
+      guardarSesionLocal(authToken, nuevo, currentScreen, selectedChild);
+      return nuevo;
+    });
   };
 
   if (currentScreen === 'adminDashboard' && currentUser) {
@@ -134,11 +398,33 @@ export default function App() {
     return (
       <NannyDashboardScreen
         user={currentUser}
+        token={authToken}
+        onNavigateToJobBoard={navigateToJobBoard}
+        onNavigateToReservations={navigateToReservationHistory}
         onNavigateToEditProfile={navigateToEditNannyProfile}
         onNavigateToMultimedia={navigateToMultimedia}
-        onNavigateToReservations={navigateToReservations}
+        onNavigateToPublicProfile={navigateToEditPublicProfile}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+        onNavigateToChat={navigateToChat}
+      />
+    );
+  }
+
+  if (currentScreen === 'chat' && currentUser) {
+    return (
+      <PantallaChat
+        token={authToken}
+        user={currentUser}
+        onBack={() => {
+          if (currentUser.rol === 'NINERA' || currentUser.tipo_usuario === 'NINERA') {
+            navigateToNannyDashboard();
+          } else if (currentUser.rol === 'ADMIN' || currentUser.tipo_usuario === 'ADMIN') {
+            navegar('adminDashboard');
+          } else {
+            navigateToFamilyDashboard();
+          }
+        }}
       />
     );
   }
@@ -165,6 +451,53 @@ export default function App() {
     );
   }
 
+  // HU14: la niñera explora la bolsa de trabajo y se postula
+  if (currentScreen === 'jobBoard' && currentUser) {
+    return (
+      <JobBoardScreen
+        token={authToken}
+        onBack={navigateToNannyDashboard}
+      />
+    );
+  }
+
+  // HU14: la familia publica ofertas en la bolsa de trabajo
+  if (currentScreen === 'publishJobOffer' && currentUser) {
+    return (
+      <PublishJobOfferScreen
+        token={authToken}
+        user={currentUser}
+        onBack={navigateToFamilyDashboard}
+      />
+    );
+  }
+
+  if (currentScreen === 'reservationHistory' && currentUser) {
+    return <ReservationHistoryScreen token={authToken} user={currentUser} onBack={navigateToHomeOrDashboard} />;
+  }
+
+  // HU12: la niñera completa su perfil público (formulario de 5 campos)
+  if (currentScreen === 'editPublicProfile' && currentUser) {
+    return (
+      <EditPublicProfileScreen
+        token={authToken}
+        onBack={navigateToNannyDashboard}
+        onVerPerfil={() => navigateToNannyPublicProfile(currentUser.id, 'editPublicProfile')}
+      />
+    );
+  }
+
+  // HU12: perfil público ampliado (lo ve la familia; la niñera lo ve como vista previa)
+  if (currentScreen === 'nannyPublicProfile' && currentUser && perfilVisto.idNinera) {
+    return (
+      <NannyPublicProfileScreen
+        token={authToken}
+        idNinera={perfilVisto.idNinera}
+        onBack={() => navegar(perfilVisto.volverA)}
+      />
+    );
+  }
+
   // HU6: Panel principal de la familia
   if (currentScreen === 'familyDashboard' && currentUser) {
     return (
@@ -173,11 +506,59 @@ export default function App() {
         user={currentUser}
         onNavigateToEditProfile={navigateToEditFamilyProfile}
         onNavigateToChildren={navigateToFamilyChildren}
-        onNavigateToReservations={navigateToReservations}
+        onNavigateToNannyAvailability={navigateToNannyAvailability}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
+        onNavigateToSearch={navigateToSearchNannies}
+        onNavigateToPublishOffer={navigateToPublishJobOffer}
+        onNavigateToReservations={navigateToReservationHistory}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+        onNavigateToChat={navigateToChat}
+      />
+    );
+  }
+
+  // HU11: Búsqueda de niñeras por proximidad, tarifa y experiencia
+  if (currentScreen === 'searchNannies' && currentUser) {
+    return (
+      <SearchNanniesScreen
+        token={authToken}
+        onBack={navigateToFamilyDashboard}
+        onVerPerfil={(idNinera) => navigateToNannyPublicProfile(idNinera, 'searchNannies')}
+      />
+    );
+  }
+
+  // HU13: Consultar disponibilidad de niñera
+  if (currentScreen === 'nannyAvailability' && currentUser) {
+    return (
+      <NannyAvailabilityCalendarScreen
+        token={authToken}
+        onBack={navigateToFamilyDashboard}
+        onSelectSlot={navigateToRequestReservation}
+      />
+    );
+  }
+
+  // HU Reservas: solicitar reserva con cálculo de tarifa
+  if (currentScreen === 'requestReservation' && currentUser) {
+    if (!slotReserva) {
+      // Si se recargó la página se pierde el bloque elegido: volver al calendario
+      return (
+        <NannyAvailabilityCalendarScreen
+          token={authToken}
+          onBack={navigateToFamilyDashboard}
+          onSelectSlot={navigateToRequestReservation}
+        />
+      );
+    }
+    return (
+      <ReservationRequestScreen
+        token={authToken}
+        slot={slotReserva}
+        onBack={navigateToNannyAvailability}
+        onReservaCreada={navigateToFamilyDashboard}
       />
     );
   }
@@ -199,20 +580,12 @@ export default function App() {
         token={authToken}
         user={currentUser}
         onBack={navigateToFamilyDashboard}
+        onNavigateToNannyAvailability={navigateToNannyAvailability}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
-      />
-    );
-  }
-
-  if (currentScreen === 'reservations' && currentUser) {
-    return (
-      <ReservationsScreen
-        token={authToken}
-        user={currentUser}
-        onBack={navigateBackFromReservations}
+        onNavigateToChat={navigateToChat}
       />
     );
   }
@@ -260,11 +633,34 @@ export default function App() {
     );
   }
 
+  if (currentScreen === 'notFound') {
+    return (
+      <NotFoundScreen
+        requestedPath={unrecognizedPath}
+        user={currentUser}
+        onGoHome={navigateToHomeOrDashboard}
+        onGoBack={navigateToHomeOrDashboard}
+      />
+    );
+  }
+
+  if (currentScreen === 'landing') {
+    return (
+      <LandingScreen
+        onNavigateToLogin={navigateToLogin}
+        onNavigateToRegisterFamily={navigateToRegisterFamily}
+        onNavigateToRegisterNanny={navigateToRegisterNanny}
+      />
+    );
+  }
+
+  // Fallback seguro ante cualquier estado no contemplado
   return (
-    <LandingScreen
-      onNavigateToLogin={navigateToLogin}
-      onNavigateToRegisterFamily={navigateToRegisterFamily}
-      onNavigateToRegisterNanny={navigateToRegisterNanny}
+    <NotFoundScreen
+      requestedPath={unrecognizedPath || currentScreen}
+      user={currentUser}
+      onGoHome={navigateToHomeOrDashboard}
+      onGoBack={navigateToHomeOrDashboard}
     />
   );
 }

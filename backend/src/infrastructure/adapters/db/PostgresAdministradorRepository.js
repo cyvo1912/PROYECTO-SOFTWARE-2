@@ -44,6 +44,83 @@ async listarNinerasPendientes() {
   return result.rows;
 }
 
+  async listarUsuarios() {
+    const result = await this.pool.query(`
+      SELECT
+        u.id_usuario,
+        u.nombre_usuario,
+        u.apellido_usuario,
+        u.correo,
+        u.dni,
+        u.celular,
+        u.tipo_usuario,
+        u.estado_cuenta,
+        COALESCE(
+          to_jsonb(u)->>'fecha_registro',
+          to_jsonb(u)->>'fecha_creacion'
+        ) AS fecha_registro
+      FROM usuario u
+      ORDER BY
+        COALESCE(
+          (to_jsonb(u)->>'fecha_registro')::timestamptz,
+          (to_jsonb(u)->>'fecha_creacion')::timestamptz
+        ) DESC NULLS LAST,
+        u.id_usuario ASC;
+    `);
+
+    return result.rows;
+  }
+
+  async actualizarEstadoCuenta(idUsuario, estado) {
+    const result = await this.pool.query(
+      `
+      UPDATE usuario AS u
+      SET estado_cuenta = $2
+      WHERE u.id_usuario = $1
+        AND (
+          u.tipo_usuario <> 'NINERA'
+          OR EXISTS (
+            SELECT 1
+            FROM ninera n
+            WHERE n.id_ninera = u.id_usuario
+              AND n.verificada = TRUE
+          )
+        )
+      RETURNING
+        id_usuario,
+        tipo_usuario,
+        estado_cuenta;
+      `,
+      [idUsuario, estado],
+    );
+
+    if (result.rows.length > 0) {
+      return result.rows[0];
+    }
+
+    const usuarioResult = await this.pool.query(
+      `
+      SELECT u.tipo_usuario, n.verificada
+      FROM usuario u
+      LEFT JOIN ninera n ON n.id_ninera = u.id_usuario
+      WHERE u.id_usuario = $1
+      LIMIT 1;
+      `,
+      [idUsuario],
+    );
+
+    if (usuarioResult.rows.length === 0) {
+      return null;
+    }
+
+    const encontrado = usuarioResult.rows[0];
+    if (encontrado.tipo_usuario === 'NINERA' && encontrado.verificada !== true) {
+      return { bloqueadoPorVerificacion: true };
+    }
+
+    return null;
+  }
+
   async obtenerNinera(idNinera) {
     const usuarioResult = await this.pool.query(
       `

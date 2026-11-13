@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS usuario (
     correo VARCHAR(150) UNIQUE NOT NULL,
     dni VARCHAR(20) UNIQUE NOT NULL,
     contrasena_hash VARCHAR(255) NOT NULL,
+    
     celular VARCHAR(20),
     tipo_usuario VARCHAR(30) NOT NULL CHECK (tipo_usuario IN ('FAMILIA', 'NINERA', 'ADMIN')),
     estado_cuenta VARCHAR(30) DEFAULT 'ACTIVA',
@@ -36,7 +37,16 @@ CREATE TABLE IF NOT EXISTS ninera (
     tarifa_hora NUMERIC(10, 2) NOT NULL,
     descripcion TEXT,
     verificada BOOLEAN DEFAULT FALSE,
-    calificacion_promedio NUMERIC(3, 2) DEFAULT 5.0
+    calificacion_promedio NUMERIC(3, 2) DEFAULT 5.0,
+    -- HU12: perfil público ampliado (ver migrations/004_hu12_perfil_publico.sql)
+    habilidades TEXT[] NOT NULL DEFAULT '{}',
+    idiomas TEXT[] NOT NULL DEFAULT '{}',
+    distritos TEXT[] NOT NULL DEFAULT '{}',
+    -- HU11: coordenadas para búsqueda por proximidad (Google Maps API) y
+    -- años de experiencia en formato numérico para poder filtrar por ellos.
+    latitud NUMERIC(10, 7),
+    longitud NUMERIC(10, 7),
+    anos_experiencia SMALLINT -- también lo usa el perfil público (HU12)
 );
 
 -- Tabla de Hijos asociados a una Familia
@@ -72,7 +82,14 @@ CREATE TABLE IF NOT EXISTS reserva (
     hora_fin TIME NOT NULL,
     direccion VARCHAR(255) NOT NULL,
     estado_reserva VARCHAR(30) DEFAULT 'Pendiente',
-    comentario TEXT
+    comentario TEXT,
+    -- HU Reservas: cálculo de tarifa (ver migrations/005_hu_reservas.sql)
+    tarifa_hora NUMERIC(10, 2),
+    horas NUMERIC(5, 2),
+    monto_total NUMERIC(10, 2),
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expira_en TIMESTAMPTZ, -- fin de los 10 min para pagar una reserva "Pendiente"
+    CONSTRAINT chk_reserva_horario_valido CHECK (hora_fin > hora_inicio)
 );
 
 -- Valoraciones y reseñas
@@ -104,3 +121,38 @@ CREATE TABLE IF NOT EXISTS mensaje (
     asunto VARCHAR(150),
     contenido TEXT NOT NULL
 );
+
+-- HU14: Bolsa de Trabajo (ver migrations/005_hu14_bolsa_trabajo.sql)
+-- Ofertas de trabajo publicadas por familias
+CREATE TABLE IF NOT EXISTS oferta_trabajo (
+    id_oferta SERIAL PRIMARY KEY,
+    id_padre INT NOT NULL REFERENCES padre(id_padre) ON DELETE CASCADE,
+    titulo VARCHAR(120) NOT NULL,
+    descripcion TEXT NOT NULL,
+    distrito VARCHAR(100) NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    tarifa_hora NUMERIC(10, 2) NOT NULL CHECK (tarifa_hora > 0),
+    numero_ninos INT NOT NULL DEFAULT 1 CHECK (numero_ninos > 0),
+    edades_ninos VARCHAR(100),
+    requisitos TEXT,
+    estado VARCHAR(20) NOT NULL DEFAULT 'ABIERTA' CHECK (estado IN ('ABIERTA', 'CERRADA')),
+    fecha_publicacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_oferta_trabajo_estado_fecha ON oferta_trabajo (estado, fecha_inicio);
+CREATE INDEX IF NOT EXISTS idx_oferta_trabajo_padre ON oferta_trabajo (id_padre);
+
+-- Postulaciones de niñeras a las ofertas de trabajo
+CREATE TABLE IF NOT EXISTS postulacion (
+    id_postulacion SERIAL PRIMARY KEY,
+    id_oferta INT NOT NULL REFERENCES oferta_trabajo(id_oferta) ON DELETE CASCADE,
+    id_ninera INT NOT NULL REFERENCES ninera(id_ninera) ON DELETE CASCADE,
+    mensaje TEXT,
+    estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'ACEPTADA', 'RECHAZADA')),
+    fecha_postulacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (id_oferta, id_ninera)
+);
+
+CREATE INDEX IF NOT EXISTS idx_postulacion_ninera ON postulacion (id_ninera);

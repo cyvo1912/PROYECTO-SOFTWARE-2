@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { API_BASE_URL } from '../config/api';
 /**
  * Pantalla: Dashboard / Panel de Niñera (HU6 & HU5)
  * Basada en el Mockup Oficial del Documento (Figura 18 - Sprint 2, Pág. 44).
@@ -24,11 +25,15 @@ import { colors } from '../theme/colors';
  */
 export default function NannyDashboardScreen({
   user,
+  token,
+  onNavigateToJobBoard,
+  onNavigateToReservations,
   onNavigateToEditProfile,
   onNavigateToMultimedia,
-  onNavigateToReservations,
+  onNavigateToPublicProfile,
   onLogout,
   logoutLoading = false,
+  onNavigateToChat,
 }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
@@ -37,6 +42,34 @@ export default function NannyDashboardScreen({
   const tarifa = user?.detalles?.tarifa_hora || user?.detalles?.tarifaHora || 15;
   const zona = user?.detalles?.zona || 'Lima Metropolitana';
   const experiencia = user?.detalles?.experiencia || 'No especificada';
+
+  // HU14: resumen real de la bolsa de trabajo
+  const [ofertas, setOfertas] = useState([]);
+  const [cargandoOfertas, setCargandoOfertas] = useState(Boolean(token));
+
+  useEffect(() => {
+    if (!token) return undefined;
+    let isMounted = true;
+    async function cargarOfertas() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/ofertas`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (isMounted && response.ok && data.success) {
+          setOfertas(data.data.ofertas || []);
+        }
+      } catch (error) {
+        // Sin conexión se muestra la sección vacía
+      } finally {
+        if (isMounted) setCargandoOfertas(false);
+      }
+    }
+    cargarOfertas();
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -74,8 +107,20 @@ export default function NannyDashboardScreen({
               activeOpacity={0.7}
             >
               <Ionicons name="calendar-outline" size={18} color="#1E1B4B" />
-              <Text style={styles.profileNavBtnText}>Mis reservas</Text>
+              <Text style={styles.profileNavBtnText}>Mis servicios</Text>
             </TouchableOpacity>
+
+            {onNavigateToChat && (
+              <TouchableOpacity
+                style={styles.profileNavBtn}
+                onPress={onNavigateToChat}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
+                <Text style={styles.profileNavBtnText}>Mensajes</Text>
+              </TouchableOpacity>
+            )}
+
 
             <TouchableOpacity
               style={styles.logoutNavBtn}
@@ -145,6 +190,15 @@ export default function NannyDashboardScreen({
                   <Ionicons name="document-text-outline" size={16} color={colors.primary} />
                   <Text style={styles.mediaBtnText}>Certificados</Text>
                 </TouchableOpacity>
+                {/* HU12: formulario del perfil público que ven las familias */}
+                <TouchableOpacity
+                  style={styles.mediaBtn}
+                  onPress={onNavigateToPublicProfile}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="globe-outline" size={16} color={colors.primary} />
+                  <Text style={styles.mediaBtnText}>Perfil público</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.editProfileBtn}
                   onPress={onNavigateToEditProfile}
@@ -159,21 +213,32 @@ export default function NannyDashboardScreen({
 
           {/* Métricas del Panel (Figura 18) */}
           <View style={styles.metricsGrid}>
-            <View style={styles.metricCard}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={onNavigateToJobBoard}
+              disabled={!onNavigateToJobBoard}
+              activeOpacity={0.7}
+            >
               <View style={[styles.metricIconWrap, { backgroundColor: '#F3E8FF' }]}>
                 <Ionicons name="briefcase-outline" size={22} color={colors.primary} />
               </View>
-              <Text style={styles.metricValue}>3</Text>
-              <Text style={styles.metricLabel}>Ofertas Nuevas</Text>
-            </View>
+              <Text style={styles.metricValue}>{cargandoOfertas ? '–' : ofertas.length}</Text>
+              <Text style={styles.metricLabel}>Ofertas Disponibles</Text>
+            </TouchableOpacity>
 
-            <View style={styles.metricCard}>
+            <TouchableOpacity
+              style={styles.metricCard}
+              onPress={onNavigateToChat}
+              disabled={!onNavigateToChat}
+              activeOpacity={0.7}
+            >
               <View style={[styles.metricIconWrap, { backgroundColor: '#E0F2FE' }]}>
                 <Ionicons name="chatbubble-ellipses-outline" size={22} color="#0284C7" />
               </View>
-              <Text style={styles.metricValue}>8</Text>
+              <Text style={styles.metricValue}>Chat</Text>
               <Text style={styles.metricLabel}>Mensajes</Text>
-            </View>
+            </TouchableOpacity>
+
 
             <View style={styles.metricCard}>
               <View style={[styles.metricIconWrap, { backgroundColor: '#FCE7F3' }]}>
@@ -192,47 +257,52 @@ export default function NannyDashboardScreen({
             </View>
           </View>
 
-          {/* Sección de Ofertas de Trabajo Recientes */}
+          {/* Sección de Ofertas de Trabajo Recientes (HU14) */}
           <View style={styles.sectionBlock}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Ofertas de Trabajo</Text>
-              <TouchableOpacity activeOpacity={0.7}>
+              <TouchableOpacity onPress={onNavigateToJobBoard} activeOpacity={0.7}>
                 <Text style={styles.seeAllText}>Ver Todas</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.jobItemCard}>
-              <View style={styles.jobItemLeft}>
-                <View style={styles.jobIcon}>
-                  <Ionicons name="home" size={20} color={colors.primary} />
-                </View>
-                <View>
-                  <View style={styles.jobBadgeRow}>
-                    <Text style={styles.jobTitle}>Familia García</Text>
-                    <View style={styles.newBadge}>
-                      <Text style={styles.newBadgeText}>Nuevo</Text>
+            {cargandoOfertas ? (
+              <Text style={styles.jobDesc}>Cargando ofertas...</Text>
+            ) : ofertas.length === 0 ? (
+              <Text style={styles.jobDesc}>
+                Aún no hay ofertas publicadas. Revisa la bolsa de trabajo más tarde.
+              </Text>
+            ) : (
+              ofertas.slice(0, 3).map((oferta) => (
+                <TouchableOpacity
+                  key={oferta.id}
+                  style={styles.jobItemCard}
+                  onPress={onNavigateToJobBoard}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.jobItemLeft}>
+                    <View style={styles.jobIcon}>
+                      <Ionicons name="home" size={20} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.jobBadgeRow}>
+                        <Text style={styles.jobTitle} numberOfLines={1}>{oferta.titulo}</Text>
+                        {oferta.compatibilidad?.esAcorde ? (
+                          <View style={styles.newBadge}>
+                            <Text style={styles.newBadgeText}>Acorde a ti</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.jobDesc}>
+                        {oferta.familia?.nombre || 'Familia'} • {oferta.distrito} • {oferta.numeroNinos}{' '}
+                        {oferta.numeroNinos === 1 ? 'niño' : 'niños'}
+                      </Text>
                     </View>
                   </View>
-                  <Text style={styles.jobDesc}>2 niños (3 y 5 años) • Santiago de Surco</Text>
-                </View>
-              </View>
-              <Text style={styles.jobRate}>S/. 15/hora</Text>
-            </View>
-
-            <View style={styles.jobItemCard}>
-              <View style={styles.jobItemLeft}>
-                <View style={styles.jobIcon}>
-                  <Ionicons name="home" size={20} color={colors.primary} />
-                </View>
-                <View>
-                  <View style={styles.jobBadgeRow}>
-                    <Text style={styles.jobTitle}>Familia Rodríguez</Text>
-                  </View>
-                  <Text style={styles.jobDesc}>1 niña (2 años) • San Borja</Text>
-                </View>
-              </View>
-              <Text style={styles.jobRate}>S/. 18/hora</Text>
-            </View>
+                  <Text style={styles.jobRate}>S/. {Number(oferta.tarifaHora)}/hora</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -445,6 +515,7 @@ const styles = StyleSheet.create({
   profileButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    maxWidth: '100%',
     gap: 8,
   },
   mediaBtn: {

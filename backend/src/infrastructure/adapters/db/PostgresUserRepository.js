@@ -24,7 +24,7 @@ class PostgresUserRepository extends UserRepositoryPort {
       WHERE LOWER(correo) = LOWER($1)
       LIMIT 1;
     `;
-    const result = await this.pool.query(query, [email]);
+    const result = await ejecutarLecturaConReintento(this.pool, query, [email]);
     if (result.rows.length === 0) return null;
     return filaAUsuario(result.rows[0]);
   }
@@ -55,7 +55,8 @@ class PostgresUserRepository extends UserRepositoryPort {
 
   async findNineraDetails(idUsuario) {
     const query = `
-      SELECT id_ninera, zona, experiencia, tarifa_hora, descripcion
+      SELECT id_ninera, zona, experiencia, tarifa_hora, descripcion,
+             latitud, longitud, anos_experiencia
       FROM ninera
       WHERE id_ninera = $1
       LIMIT 1;
@@ -168,17 +169,21 @@ class PostgresUserRepository extends UserRepositoryPort {
       }
 
       // Actualizar datos profesionales en tabla ninera
+      // anos_experiencia (HU11) es opcional: si no se envía, se conserva el valor previo.
       const nineraQuery = `
         UPDATE ninera
-        SET zona = $1, experiencia = $2, tarifa_hora = $3, descripcion = $4
-        WHERE id_ninera = $5
-        RETURNING id_ninera, zona, experiencia, tarifa_hora, descripcion;
+        SET zona = $1, experiencia = $2, tarifa_hora = $3, descripcion = $4,
+            anos_experiencia = COALESCE($5, anos_experiencia)
+        WHERE id_ninera = $6
+        RETURNING id_ninera, zona, experiencia, tarifa_hora, descripcion,
+                  latitud, longitud, anos_experiencia;
       `;
       const resNinera = await client.query(nineraQuery, [
         datosNinera.zona || null,
         datosNinera.experiencia,
         datosNinera.tarifaHora,
         datosNinera.descripcion || null,
+        datosNinera.anosExperiencia !== undefined ? datosNinera.anosExperiencia : null,
         idUsuario,
       ]);
 
@@ -187,7 +192,7 @@ class PostgresUserRepository extends UserRepositoryPort {
       const uRow = resUsuario.rows[0];
       const nRow = resNinera.rows[0] || {};
 
-      return new Ninera(
+      const nineraActualizada = new Ninera(
         filaAUsuario(uRow),
         {
           idNinera: nRow.id_ninera || idUsuario,
@@ -197,12 +202,99 @@ class PostgresUserRepository extends UserRepositoryPort {
           descripcion: nRow.descripcion,
         }
       );
+      nineraActualizada.latitud = nRow.latitud !== undefined ? nRow.latitud : null;
+      nineraActualizada.longitud = nRow.longitud !== undefined ? nRow.longitud : null;
+      nineraActualizada.anosExperiencia = nRow.anos_experiencia !== undefined ? nRow.anos_experiencia : null;
+      return nineraActualizada;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
     }
+  }
+
+  /**
+   * HU11: guarda las coordenadas capturadas por GPS en el panel de la niñera.
+   * Es independiente de actualizarPerfilNinera para no obligar a reenviar
+   * todo el formulario de perfil cada vez que se actualiza la ubicación.
+   */
+  async actualizarUbicacionNinera(idUsuario, latitud, longitud) {
+    const query = `
+      UPDATE ninera
+      SET latitud = $1, longitud = $2
+      WHERE id_ninera = $3
+      RETURNING id_ninera, zona, experiencia, tarifa_hora, descripcion,
+                latitud, longitud, anos_experiencia;
+    `;
+    const result = await this.pool.query(query, [latitud, longitud, idUsuario]);
+    if (result.rows.length === 0) return null;
+    return result.rows[0];
+  }
+
+  /**
+   * HU11: búsqueda de niñeras por proximidad geográfica (fórmula de
+   * Haversine calculada en SQL, sin depender de extensiones PostGIS),
+   * con filtros opcionales de tarifa máxima y años de experiencia mínimos.
+   * Solo se consideran niñeras con cuenta ACTIVA, verificada y con
+   * ubicación registrada. Resultados ordenados por distancia ascendente.
+   */
+  async buscarNinerasCercanas(filtros) {
+    const { latitud, longitud, radioKm, tarifaMaxima, experienciaMinima } = filtros;
+
+    const condiciones = [
+      `u.tipo_usuario = 'NINERA'`,
+      `u.estado_cuenta = 'ACTIVA'`,
+      `n.verificada = TRUE`,
+      `n.latitud IS NOT NULL`,
+      `n.longitud IS NOT NULL`,
+    ];
+    const valores = [latitud, longitud];
+
+    if (tarifaMaxima !== undefined && tarifaMaxima !== null) {
+      valores.push(tarifaMaxima);
+      condiciones.push(`n.tarifa_hora <= $${valores.length}`);
+    }
+
+    if (experienciaMinima !== undefined && experienciaMinima !== null) {
+      valores.push(experienciaMinima);
+      condiciones.push(`n.anos_experiencia IS NOT NULL AND n.anos_experiencia >= $${valores.length}`);
+    }
+
+    valores.push(radioKm);
+    const indiceRadio = valores.length;
+
+    // Haversine: distancia en km entre (latitud, longitud) de la familia ($1, $2)
+    // y la ubicación guardada de cada niñera. Se calcula en un CTE porque el
+    // alias "distancia_km" no puede reutilizarse en el WHERE del mismo SELECT.
+    const query = `
+      WITH candidatas AS (
+        SELECT
+          u.id_usuario, u.nombre_usuario, u.apellido_usuario, u.correo, u.celular,
+          u.foto_url,
+          n.id_ninera, n.zona, n.experiencia, n.anos_experiencia, n.tarifa_hora,
+          n.descripcion, n.verificada, n.calificacion_promedio, n.latitud, n.longitud,
+          (
+            6371 * acos(
+              LEAST(1.0, GREATEST(-1.0,
+                cos(radians($1)) * cos(radians(n.latitud)) *
+                cos(radians(n.longitud) - radians($2)) +
+                sin(radians($1)) * sin(radians(n.latitud))
+              ))
+            )
+          ) AS distancia_km
+        FROM ninera n
+        INNER JOIN usuario u ON u.id_usuario = n.id_ninera
+        WHERE ${condiciones.join(' AND ')}
+      )
+      SELECT *
+      FROM candidatas
+      WHERE distancia_km <= $${indiceRadio}
+      ORDER BY distancia_km ASC;
+    `;
+
+    const result = await this.pool.query(query, valores);
+    return result.rows;
   }
 
   async actualizarPerfilPadre(idUsuario, datosUsuario, datosPadre) {
@@ -264,6 +356,32 @@ class PostgresUserRepository extends UserRepositoryPort {
       client.release();
     }
   }
+}
+
+/**
+ * Reintenta una vez solo consultas SELECT. Así se absorbe una reconexión
+ * transitoria del pool de Neon sin reejecutar operaciones que escriben datos.
+ */
+async function ejecutarLecturaConReintento(pool, query, valores) {
+  try {
+    return await pool.query(query, valores);
+  } catch (errorInicial) {
+    if (!esErrorTransitorioDeConexion(errorInicial)) throw errorInicial;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      return await pool.query(query, valores);
+    } catch (_errorFinal) {
+      throw errorInicial;
+    }
+  }
+}
+
+function esErrorTransitorioDeConexion(error) {
+  const codigosTransitorios = new Set([
+    'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT', 'EAI_AGAIN', '57P01',
+  ]);
+  if (codigosTransitorios.has(error?.code)) return true;
+  return /connection (terminated|reset|refused)|socket hang up|timeout/i.test(error?.message || '');
 }
 
 function filaAUsuario(row) {

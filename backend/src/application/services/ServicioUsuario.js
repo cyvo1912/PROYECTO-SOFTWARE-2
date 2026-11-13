@@ -8,6 +8,10 @@ const {
 
 const CELULAR_REGEX = /^\+?\d{9,15}$/;
 
+function numeroONull(valor) {
+  return valor === undefined || valor === null ? null : Number(valor);
+}
+
 /**
  * Servicio de Aplicación: ServicioUsuario
  * Basado en el Diagrama de Secuencia Oficial (Figura 6 - Sprint 1)
@@ -67,6 +71,15 @@ class ServicioUsuario {
                 ? Number(detalles.tarifaHora)
                 : 0,
             descripcion: detalles.descripcion,
+            // HU11
+            anosExperiencia:
+              detalles.anosExperiencia !== undefined
+                ? detalles.anosExperiencia
+                : detalles.anos_experiencia !== undefined
+                ? detalles.anos_experiencia
+                : null,
+            latitud: detalles.latitud !== undefined ? numeroONull(detalles.latitud) : null,
+            longitud: detalles.longitud !== undefined ? numeroONull(detalles.longitud) : null,
           }
         : {
             zona: null,
@@ -74,6 +87,9 @@ class ServicioUsuario {
             tarifaHora: 0,
             tarifa_hora: 0,
             descripcion: '',
+            anosExperiencia: null,
+            latitud: null,
+            longitud: null,
           },
     };
   }
@@ -123,7 +139,7 @@ class ServicioUsuario {
 
     // 4. Validar campos obligatorios y formato
     const errores = {};
-    const { nombre, apellido, celular, experiencia, tarifaHora, zona, descripcion, sobreMi } = datos;
+    const { nombre, apellido, celular, experiencia, tarifaHora, zona, descripcion, sobreMi, anosExperiencia } = datos;
 
     if (!nombre || !nombre.trim()) {
       errores.nombre = 'El nombre es obligatorio.';
@@ -150,6 +166,18 @@ class ServicioUsuario {
       errores.tarifaHora = 'La tarifa por hora debe ser mayor a 0.';
     }
 
+    // HU11: años de experiencia en formato numérico, opcional (permite filtrar
+    // la búsqueda por proximidad sin obligar a reescribir la experiencia en texto).
+    let anosExperienciaValido;
+    if (anosExperiencia !== undefined && anosExperiencia !== null && anosExperiencia !== '') {
+      const anosNum = Number(anosExperiencia);
+      if (!Number.isInteger(anosNum) || anosNum < 0 || anosNum > 60) {
+        errores.anosExperiencia = 'Ingresa un número entero de años entre 0 y 60.';
+      } else {
+        anosExperienciaValido = anosNum;
+      }
+    }
+
     if (Object.keys(errores).length > 0) {
       throw new ValidationError('Datos incompletos o inválidos.', errores);
     }
@@ -169,6 +197,7 @@ class ServicioUsuario {
       experiencia: experiencia.trim(),
       tarifaHora: tarifa,
       descripcion: descFinal.trim() || null,
+      anosExperiencia: anosExperienciaValido,
     };
 
     // 6. Persistencia mediante el repositorio existente
@@ -195,7 +224,56 @@ class ServicioUsuario {
         tarifaHora: nineraActualizada.tarifaHora,
         tarifa_hora: nineraActualizada.tarifaHora,
         descripcion: nineraActualizada.descripcion,
+        anosExperiencia: nineraActualizada.anosExperiencia ?? null,
+        latitud: numeroONull(nineraActualizada.latitud),
+        longitud: numeroONull(nineraActualizada.longitud),
       },
+    };
+  }
+
+  /**
+   * HU11: guarda la ubicación (GPS) de la niñera autenticada, usada luego
+   * por la familia para buscar niñeras cercanas. Acción independiente del
+   * resto del perfil: se dispara desde un botón "Actualizar mi ubicación".
+   */
+  async actualizarUbicacionNinera(idUsuarioAutenticado, idObjetivo, { latitud, longitud } = {}) {
+    if (!idUsuarioAutenticado) {
+      throw new UnauthorizedError('Debes iniciar sesión para actualizar tu ubicación.');
+    }
+
+    if (Number(idUsuarioAutenticado) !== Number(idObjetivo)) {
+      throw new ForbiddenError('No tienes permisos para modificar la ubicación de otra niñera.');
+    }
+
+    const usuarioExistente = await this.userRepository.findById(idUsuarioAutenticado);
+    if (!usuarioExistente) {
+      throw new NotFoundError('Niñera no encontrada.');
+    }
+    if (usuarioExistente.tipoUsuario !== 'NINERA') {
+      throw new ForbiddenError('Solo usuarios con perfil de Niñera pueden actualizar esta ubicación.');
+    }
+
+    const lat = Number(latitud);
+    const lng = Number(longitud);
+    const errores = {};
+    if (latitud === undefined || latitud === null || latitud === '' || isNaN(lat) || lat < -90 || lat > 90) {
+      errores.latitud = 'La latitud no es válida.';
+    }
+    if (longitud === undefined || longitud === null || longitud === '' || isNaN(lng) || lng < -180 || lng > 180) {
+      errores.longitud = 'La longitud no es válida.';
+    }
+    if (Object.keys(errores).length > 0) {
+      throw new ValidationError('No se pudo guardar tu ubicación.', errores);
+    }
+
+    const actualizado = await this.userRepository.actualizarUbicacionNinera(idUsuarioAutenticado, lat, lng);
+    if (!actualizado) {
+      throw new NotFoundError('Niñera no encontrada.');
+    }
+
+    return {
+      latitud: numeroONull(actualizado.latitud),
+      longitud: numeroONull(actualizado.longitud),
     };
   }
 
