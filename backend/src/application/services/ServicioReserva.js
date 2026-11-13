@@ -4,6 +4,7 @@ const {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
+  ConflictError,
   ConflictoHorarioError,
 } = require('../../domain/errors/DomainErrors');
 const { TarifaPorHora } = require('../../domain/strategies/EstrategiaCalculoTarifa');
@@ -34,6 +35,7 @@ class ServicioReserva {
     servicioNotificacion = null,
     estrategiaTarifa = new TarifaPorHora(),
     estrategiaDisponibilidad = new EstrategiaDisponibilidadRangoFechas(),
+    notificacionService = null,
     reloj = () => new Date(),
   }) {
     if (!reservaRepository) throw new Error('reservaRepository es requerido en ServicioReserva');
@@ -45,6 +47,7 @@ class ServicioReserva {
     this.servicioNotificacion = servicioNotificacion;
     this.estrategiaTarifa = estrategiaTarifa;
     this.estrategiaDisponibilidad = estrategiaDisponibilidad;
+    this.notificacionService = notificacionService;
     this.reloj = reloj;
   }
 
@@ -142,9 +145,12 @@ class ServicioReserva {
   }
 
   async listarMisReservas(usuario) {
-    this._exigirFamilia(usuario);
+    if (!usuario || !usuario.id) throw new UnauthorizedError('Debes iniciar sesión para consultar reservas.');
     const ahora = this.reloj();
-    const reservas = await this.reservaRepository.listarPorPadre(Number(usuario.id));
+    const esNinera = usuario.tipo_usuario === 'NINERA';
+    const reservas = esNinera
+      ? await this.reservaRepository.listarPorNinera(Number(usuario.id))
+      : await this.reservaRepository.listarPorPadre(Number(usuario.id));
     // Las pendientes que vencieron sin pago se muestran como "Expirada"
     return reservas.map((r) => {
       if (r.estaExpirada(ahora)) r.estadoReserva = 'Expirada';
@@ -206,6 +212,14 @@ class ServicioReserva {
   }
 
   // ---------- Reglas internas ----------
+
+  async _actualizarEstadoSiVigente(idReserva, estadoNuevo, estadosEsperados) {
+    const actualizada = await this.reservaRepository.actualizarEstado(idReserva, estadoNuevo, estadosEsperados);
+    if (!actualizada) {
+      throw new ConflictError('La reserva fue actualizada por otra acción. Recarga el historial e inténtalo nuevamente.');
+    }
+    return actualizada;
+  }
 
   _exigirFamilia(usuario) {
     if (!usuario || !usuario.id) {
@@ -314,6 +328,12 @@ class ServicioReserva {
   _calcularTarifa(tarifaHora, horaInicio, horaFin) {
     const minutos = aMinutos(horaFin) - aMinutos(horaInicio);
     return this.estrategiaTarifa.calcular({ tarifaHora, minutos });
+  }
+
+  async _notificarCambio(reserva, idReceptor) {
+    if (this.notificacionService?.crearNotificacionReserva) {
+      await this.notificacionService.crearNotificacionReserva(idReceptor, `La reserva #${reserva.id} ahora está ${reserva.estadoReserva}.`);
+    }
   }
 
   _ahoraEnLima() {

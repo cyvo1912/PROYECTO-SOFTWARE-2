@@ -28,18 +28,21 @@ const PostgresDisponibilidadRepository = require('./infrastructure/adapters/db/P
 const { EstrategiaDisponibilidadRangoFechas } = require('./domain/strategies/EstrategiaCalculoDisponibilidad');
 const ServicioDisponibilidad = require('./application/services/ServicioDisponibilidad');
 const DisponibilidadController = require('./infrastructure/http/controllers/DisponibilidadController');
+const PostgresOfertaTrabajoRepository = require('./infrastructure/adapters/db/PostgresOfertaTrabajoRepository');
+const ServicioBolsaTrabajo = require('./application/services/ServicioBolsaTrabajo');
+const BolsaTrabajoController = require('./infrastructure/http/controllers/BolsaTrabajoController');
 // HU Reservas
 const PostgresReservaRepository = require('./infrastructure/adapters/db/PostgresReservaRepository');
 const ServicioReserva = require('./application/services/ServicioReserva');
 const ReservaController = require('./infrastructure/http/controllers/ReservaController');
+const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
+const ServicioValoraciones = require('./application/services/ServicioValoraciones');
+const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 const PostgresNotificacionRepository = require('./infrastructure/adapters/db/PostgresNotificacionRepository');
-const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
 const ExpoNotificationAdapter = require('./infrastructure/adapters/notifications/ExpoNotificationAdapter');
 const ServicioNotificacion = require('./application/services/ServicioNotificacion');
-const ServicioValoracion = require('./application/services/ServicioValoracion');
 const NotificacionController = require('./infrastructure/http/controllers/NotificacionController');
-const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
 
 // HU17 - Mensajería en Tiempo Real (Gabriel)
 const PostgresMensajeRepository = require('./infrastructure/adapters/db/PostgresMensajeRepository');
@@ -54,14 +57,17 @@ class Container {
   constructor(options = {}) {
     // Selección de estrategia de persistencia (SOLID DIP)
     const usePrisma = options.usePrisma || process.env.USE_PRISMA === 'true';
+    let prismaClient = null;
     if (usePrisma) {
-      let prismaClient = null;
       try {
         const { PrismaClient } = require('@prisma/client');
         prismaClient = new PrismaClient();
-      } catch (e) {
-        // Fallback seguro si la librería del cliente aún no se ha generado
+      } catch (_error) {
+        // El cliente Prisma es opcional; se usa PostgreSQL si no está disponible.
       }
+    }
+
+    if (prismaClient) {
       this.userRepository = new PrismaUserRepository(prismaClient);
       this.hijoRepository = new PrismaHijoRepository(prismaClient);
     } else {
@@ -75,6 +81,8 @@ class Container {
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
+    // HU14: Bolsa de Trabajo
+    this.ofertaTrabajoRepository = new PostgresOfertaTrabajoRepository(pool);
     this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
     this.notificacionRepository = new PostgresNotificacionRepository(pool);
@@ -84,6 +92,7 @@ class Container {
     this.expoNotificationAdapter = new ExpoNotificationAdapter();
     this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
     this.reservaRepository = new PostgresReservaRepository(pool); // HU Reservas
+
 
     // HU17: Adaptadores Secundarios de Mensajería
     this.mensajeRepository = new PostgresMensajeRepository(pool);
@@ -134,12 +143,21 @@ class Container {
       disponibilidadRepository: this.disponibilidadRepository,
       estrategiaCalculo: this.estrategiaCalculoDisponibilidad,
     });
+    this.servicioBolsaTrabajo = new ServicioBolsaTrabajo({
+      ofertaTrabajoRepository: this.ofertaTrabajoRepository,
+    });
+
     this.servicioReserva = new ServicioReserva({
       reservaRepository: this.reservaRepository,
       disponibilidadRepository: this.disponibilidadRepository,
       hijoRepository: this.hijoRepository,
       estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,
+
+      // Notificaciones existentes de HU18
       servicioNotificacion: this.servicioNotificacion,
+
+      // Notificaciones de cambios de estado incorporadas por tus compañeros
+      notificacionService: this.notificacionService,
     });
 
     // HU17: Servicio de Aplicación de Mensajes
@@ -150,10 +168,12 @@ class Container {
       userRepository: this.userRepository,
     });
 
-    // HU18 - Servicio de Valoraciones
-    this.servicioValoracion = new ServicioValoracion({
+
+    this.servicioValoraciones = new ServicioValoraciones({
+      reservaRepository: this.reservaRepository,
       valoracionRepository: this.valoracionRepository,
     });
+
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
@@ -165,16 +185,13 @@ class Container {
     this.mensajeriaController = new MensajeriaController(this.servicioMensajes, this.realtimeNotifier);
     this.busquedaController = new BusquedaController(this.servicioBusqueda);
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
+    this.bolsaTrabajoController = new BolsaTrabajoController(this.servicioBolsaTrabajo);
     this.reservaController = new ReservaController(this.servicioReserva);
+    this.valoracionController = new ValoracionController(this.servicioValoraciones);
 
     // HU18 - Controlador de Notificaciones
     this.notificacionController = new NotificacionController(
       this.servicioNotificacion
-    );
-
-    // HU18 - Controlador de Valoraciones
-    this.valoracionController = new ValoracionController(
-      this.servicioValoracion
     );
 
     // Middleware de Autenticación

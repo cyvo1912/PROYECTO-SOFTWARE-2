@@ -19,6 +19,9 @@ import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
 import ReservationRequestScreen from './src/screens/ReservationRequestScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
+import JobBoardScreen from './src/screens/JobBoardScreen';
+import PublishJobOfferScreen from './src/screens/PublishJobOfferScreen';
+import ReservationHistoryScreen from './src/screens/ReservationHistoryScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 import NotificacionesScreen from './src/screens/NotificacionesScreen';
 import ValoracionScreen from './src/screens/ValoracionScreen';
@@ -50,6 +53,8 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'chat',
   'editPublicProfile', // HU12
   'nannyPublicProfile', // HU12
+  'jobBoard',         // HU14 - Bolsa de trabajo para niñeras
+  'publishJobOffer',  // HU14 - Publicar ofertas para familias
   'notificaciones', // HU18
   'valoracion',      // HU18
   'notFound',
@@ -174,14 +179,14 @@ const resolverPantallaPermitida = (solicitada, user) => {
   }
 
   // Rutas exclusivas de FAMILIA
-  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation'];
+  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer', 'reservationHistory'];
   if (rutasFamilia.includes(solicitada)) {
     if (rol === 'FAMILIA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'nannyDashboard';
   }
 
   // Rutas exclusivas de NINERA
-  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile'];
+  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile', 'jobBoard', 'reservationHistory'];
   if (rutasNinera.includes(solicitada)) {
     if (rol === 'NINERA') return solicitada;
     return rol === 'ADMIN' ? 'adminDashboard' : 'familyDashboard';
@@ -333,12 +338,23 @@ export default function App() {
   // Navegación al chat
   const navigateToChat = () => navegar('chat');
   const navigateToNannyAvailability = () => navegar('nannyAvailability');
+
+  // HU14 - Bolsa de trabajo
+  const navigateToJobBoard = () => navegar('jobBoard');
+
+  const navigateToPublishJobOffer = () =>
+    navegar('publishJobOffer');
+
+  // HU16 - Historial de reservas
+  const navigateToReservationHistory = () =>
+    navegar('reservationHistory');
+
   const navigateToRequestReservation = (slot) => {
     setSlotReserva(slot);
     navegar('requestReservation');
   };
   const navigateToEditPublicProfile = () => navegar('editPublicProfile');
-  
+
   // HU12: abre el perfil público de una niñera (desde la búsqueda HU11 o como vista previa).
   const navigateToNannyPublicProfile = (idNinera, volverA) => {
     setPerfilVisto({ idNinera, volverA });
@@ -480,6 +496,9 @@ export default function App() {
     return (
       <NannyDashboardScreen
         user={currentUser}
+        token={authToken}
+        onNavigateToJobBoard={navigateToJobBoard}
+        onNavigateToReservations={navigateToReservationHistory}
         onNavigateToEditProfile={navigateToEditNannyProfile}
         onNavigateToMultimedia={navigateToMultimedia}
         onNavigateToPublicProfile={navigateToEditPublicProfile}
@@ -505,9 +524,6 @@ export default function App() {
             navigateToFamilyDashboard();
           }
         }}
-        onVerPerfil={(contacto) => {
-          console.log('Ver perfil de:', contacto?.nombre);
-        }}
       />
     );
   }
@@ -532,6 +548,31 @@ export default function App() {
         onFotoActualizada={handleFotoActualizada}
       />
     );
+  }
+
+  // HU14: la niñera explora la bolsa de trabajo y se postula
+  if (currentScreen === 'jobBoard' && currentUser) {
+    return (
+      <JobBoardScreen
+        token={authToken}
+        onBack={navigateToNannyDashboard}
+      />
+    );
+  }
+
+  // HU14: la familia publica ofertas en la bolsa de trabajo
+  if (currentScreen === 'publishJobOffer' && currentUser) {
+    return (
+      <PublishJobOfferScreen
+        token={authToken}
+        user={currentUser}
+        onBack={navigateToFamilyDashboard}
+      />
+    );
+  }
+
+  if (currentScreen === 'reservationHistory' && currentUser) {
+    return <ReservationHistoryScreen token={authToken} user={currentUser} onBack={navigateToHomeOrDashboard} />;
   }
 
   // HU12: la niñera completa su perfil público (formulario de 5 campos)
@@ -568,6 +609,8 @@ export default function App() {
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
         onNavigateToSearch={navigateToSearchNannies}
+        onNavigateToPublishOffer={navigateToPublishJobOffer}
+        onNavigateToReservations={navigateToReservationHistory}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
         onNavigateToNotifications={abrirNotificaciones}

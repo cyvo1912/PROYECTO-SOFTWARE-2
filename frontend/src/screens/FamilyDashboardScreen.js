@@ -24,6 +24,7 @@ import { API_BASE_URL } from '../config/api';
  * - Tarjeta "Mis hijos" (Lista horizontal/tarjeta completa)
  * - Tarjetas en desarrollo "Buscar niñera" y "Mis reservas" (Próximamente)
  */
+
 export default function FamilyDashboardScreen({
   token,
   user,
@@ -37,7 +38,10 @@ export default function FamilyDashboardScreen({
   onLogout,
   logoutLoading = false,
   onNavigateToChat,
+  onNavigateToPublishOffer,
+  onNavigateToReservations,
 }) {
+
 
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
@@ -309,6 +313,26 @@ export default function FamilyDashboardScreen({
             </Text>
           </TouchableOpacity>
 
+          {/* Bolsa de trabajo (HU14): la familia publica ofertas para las niñeras */}
+          {onNavigateToPublishOffer ? (
+            <TouchableOpacity
+              style={styles.sectionBlock}
+              onPress={onNavigateToPublishOffer}
+              activeOpacity={0.8}
+            >
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleGroup}>
+                  <Ionicons name="megaphone-outline" size={20} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>Publicar oferta de trabajo</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </View>
+              <Text style={styles.disabledCardDesc}>
+                Publica el servicio que necesitas en la bolsa de trabajo y revisa cuántas niñeras se postularon.
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
           {/* Tarjeta 3: Consultar Disponibilidad de Niñeras (HU13) */}
           <View style={styles.sectionBlock}>
             <View style={styles.sectionHeaderRow}>
@@ -330,21 +354,19 @@ export default function FamilyDashboardScreen({
             </TouchableOpacity>
           </View>
 
-          {/* Tarjeta 3: Mis reservas (Bloqueada) */}
-          <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>
+          {/* HU16/HU18: historial, cambios de estado y reseñas */}
+          <TouchableOpacity style={styles.sectionBlock} onPress={onNavigateToReservations} activeOpacity={0.8}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
                 <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
-                <Text style={[styles.sectionTitle, styles.sectionTitleDisabled]}>Mis reservas</Text>
+                <Text style={styles.sectionTitle}>Mis reservas</Text>
               </View>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonBadgeText}>Próximamente</Text>
-              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
             </View>
             <Text style={styles.disabledCardDesc}>
               Gestiona la programación de servicios, historial de contrataciones y seguimiento de reservas activas.
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

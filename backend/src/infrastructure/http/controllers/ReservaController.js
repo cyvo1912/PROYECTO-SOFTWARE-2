@@ -42,6 +42,16 @@ class ReservaController {
       return responderError(res, error);
     }
   }
+
+  /** PATCH /api/reservas/:id/estado */
+  async cambiarEstado(req, res) {
+    try {
+      const data = await this.servicioReserva.cambiarEstado(req.user, req.params.id, req.body?.estado);
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
 }
 
 module.exports = ReservaController;

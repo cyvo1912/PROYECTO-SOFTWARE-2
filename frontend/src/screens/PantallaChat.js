@@ -24,7 +24,7 @@ import { MENSAJERIA_API_URL, SOCKET_URL } from '../config/api';
  * Corresponde a 'PantallaChat' en el Diagrama de Secuencia (Figura 56)
  * y al Mockup Oficial de Mensajería Interna (Figura 32).
  */
-export default function PantallaChat({ token, user, contactoInicial = null, onBack, onVerPerfil }) {
+export default function PantallaChat({ token, user, contactoInicial = null, onBack }) {
   const [conversaciones, setConversaciones] = useState([]);
   const [contactoActivo, setContactoActivo] = useState(contactoInicial);
   const [mensajes, setMensajes] = useState([]);
@@ -297,12 +297,6 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
     if (!contactoActivo) return;
     setPerfilDetalle(contactoActivo);
     setModalPerfilVisible(true);
-
-    if (typeof onVerPerfil === 'function') {
-      try {
-        onVerPerfil(contactoActivo);
-      } catch (err) {}
-    }
 
     try {
       setCargandoPerfil(true);

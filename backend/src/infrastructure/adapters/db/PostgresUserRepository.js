@@ -24,7 +24,7 @@ class PostgresUserRepository extends UserRepositoryPort {
       WHERE LOWER(correo) = LOWER($1)
       LIMIT 1;
     `;
-    const result = await this.pool.query(query, [email]);
+    const result = await ejecutarLecturaConReintento(this.pool, query, [email]);
     if (result.rows.length === 0) return null;
     return filaAUsuario(result.rows[0]);
   }
@@ -356,6 +356,32 @@ class PostgresUserRepository extends UserRepositoryPort {
       client.release();
     }
   }
+}
+
+/**
+ * Reintenta una vez solo consultas SELECT. Así se absorbe una reconexión
+ * transitoria del pool de Neon sin reejecutar operaciones que escriben datos.
+ */
+async function ejecutarLecturaConReintento(pool, query, valores) {
+  try {
+    return await pool.query(query, valores);
+  } catch (errorInicial) {
+    if (!esErrorTransitorioDeConexion(errorInicial)) throw errorInicial;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      return await pool.query(query, valores);
+    } catch (_errorFinal) {
+      throw errorInicial;
+    }
+  }
+}
+
+function esErrorTransitorioDeConexion(error) {
+  const codigosTransitorios = new Set([
+    'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT', 'EAI_AGAIN', '57P01',
+  ]);
+  if (codigosTransitorios.has(error?.code)) return true;
+  return /connection (terminated|reset|refused)|socket hang up|timeout/i.test(error?.message || '');
 }
 
 function filaAUsuario(row) {

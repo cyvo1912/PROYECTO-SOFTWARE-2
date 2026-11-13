@@ -10,6 +10,10 @@ class NotificacionServicePort {
   async crearNotificacionMensaje(idReceptor, idMensaje, texto) {
     throw new Error('Método crearNotificacionMensaje no implementado');
   }
+
+  async crearNotificacionReserva(idReceptor, texto) {
+    throw new Error('Método crearNotificacionReserva no implementado');
+  }
 }
 
 module.exports = NotificacionServicePort;

@@ -176,7 +176,10 @@ class ServicioMensajes {
           leidosPorId: usuarioActualId,
           fecha: new Date(),
         });
-      } catch (err) {}
+      } catch (_error) {
+        // El mensaje ya quedó marcado como leído; una falla al avisar por socket
+        // no debe revertir esa operación persistida.
+      }
     }
 
     return { success: true, actualizados };

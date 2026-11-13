@@ -38,6 +38,14 @@ export function listarMisReservas({ token }) {
   return llamar('/reservas', { token });
 }
 
+export function cambiarEstadoReserva({ token, idReserva, estado }) {
+  return llamar(`/reservas/${idReserva}/estado`, { token, method: 'PATCH', body: { estado } });
+}
+
+export function crearValoracion({ token, idReserva, calificacion, comentario }) {
+  return llamar('/valoraciones', { token, method: 'POST', body: { idReserva, calificacion, comentario } });
+}
+
 /** Hijos de la familia, para elegir a quién se cuidará. */
 export function listarHijos({ token }) {
   return llamar('/hijos', { token });
