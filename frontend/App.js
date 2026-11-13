@@ -11,6 +11,7 @@ import ChildFormScreen from './src/screens/ChildFormScreen';
 import MultimediaScreen from './src/screens/MultimediaScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import FamilyDashboardScreen from './src/screens/FamilyDashboardScreen';
+import ReservationsScreen from './src/screens/ReservationsScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 
 export default function App() {
@@ -45,6 +46,10 @@ export default function App() {
     setCurrentScreen('childForm');
   };
   const navigateToMultimedia = () => setCurrentScreen('multimedia');
+  const navigateToReservations = () => setCurrentScreen('reservations');
+  const navigateBackFromReservations = () => {
+    setCurrentScreen(currentUser?.rol === 'NINERA' ? 'nannyDashboard' : 'familyDashboard');
+  };
 
   // Callback al iniciar sesión o registrarse exitosamente
   const handleLoginSuccess = ({ user, token }) => {
@@ -131,6 +136,7 @@ export default function App() {
         user={currentUser}
         onNavigateToEditProfile={navigateToEditNannyProfile}
         onNavigateToMultimedia={navigateToMultimedia}
+        onNavigateToReservations={navigateToReservations}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
       />
@@ -167,6 +173,7 @@ export default function App() {
         user={currentUser}
         onNavigateToEditProfile={navigateToEditFamilyProfile}
         onNavigateToChildren={navigateToFamilyChildren}
+        onNavigateToReservations={navigateToReservations}
         onAddChild={() => navigateToChildForm(null)}
         onEditChild={navigateToChildForm}
         onLogout={handleLogout}
@@ -196,6 +203,16 @@ export default function App() {
         onEditChild={navigateToChildForm}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+      />
+    );
+  }
+
+  if (currentScreen === 'reservations' && currentUser) {
+    return (
+      <ReservationsScreen
+        token={authToken}
+        user={currentUser}
+        onBack={navigateBackFromReservations}
       />
     );
   }

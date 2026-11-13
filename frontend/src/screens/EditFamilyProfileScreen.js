@@ -206,7 +206,10 @@ export default function EditFamilyProfileScreen({
       } else {
         setSuccessMessage('¡Perfil de la familia actualizado exitosamente!');
         if (onProfileUpdated) {
-          onProfileUpdated(data.user);
+          onProfileUpdated({
+            ...data.user,
+            nombreUsuario: data.user.nombre,
+          });
         }
       }
     } catch (err) {

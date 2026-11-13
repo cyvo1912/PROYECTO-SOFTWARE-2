@@ -17,8 +17,11 @@ const UsuarioController = require('./infrastructure/http/controllers/UsuarioCont
 const HijoController = require('./infrastructure/http/controllers/HijoController');
 const MultimediaController = require('./infrastructure/http/controllers/MultimediaController');
 const PostgresAdministradorRepository = require('./infrastructure/adapters/db/PostgresAdministradorRepository');
+const PostgresReservaRepository = require('./infrastructure/adapters/db/PostgresReservaRepository');
 const ServicioAdministrador = require('./application/services/ServicioAdministrador');
+const ServicioReserva = require('./application/services/ServicioReserva');
 const AdministradorController = require('./infrastructure/http/controllers/AdministradorController');
+const ReservaController = require('./infrastructure/http/controllers/ReservaController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 
 
@@ -46,6 +49,7 @@ class Container {
     this.tokenService = new JwtTokenService();
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
+    this.reservaRepository = new PostgresReservaRepository(pool);
     this.almacenamiento = new CloudinaryAlmacenamiento();
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
@@ -73,6 +77,9 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+    this.servicioReserva = new ServicioReserva({
+      reservaRepository: this.reservaRepository,
+    });
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
@@ -80,6 +87,7 @@ class Container {
     this.hijoController = new HijoController(this.servicioHijo);
     this.multimediaController = new MultimediaController(this.servicioMultimedia);
     this.administradorController = new AdministradorController(this.servicioAdministrador);
+    this.reservaController = new ReservaController(this.servicioReserva);
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);

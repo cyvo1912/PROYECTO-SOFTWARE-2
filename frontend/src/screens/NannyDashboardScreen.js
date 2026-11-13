@@ -26,6 +26,7 @@ export default function NannyDashboardScreen({
   user,
   onNavigateToEditProfile,
   onNavigateToMultimedia,
+  onNavigateToReservations,
   onLogout,
   logoutLoading = false,
 }) {
@@ -65,6 +66,15 @@ export default function NannyDashboardScreen({
             >
               <Ionicons name="person-circle-outline" size={18} color="#1E1B4B" />
               <Text style={styles.profileNavBtnText}>Mi Perfil</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.profileNavBtn}
+              onPress={onNavigateToReservations}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#1E1B4B" />
+              <Text style={styles.profileNavBtnText}>Mis reservas</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

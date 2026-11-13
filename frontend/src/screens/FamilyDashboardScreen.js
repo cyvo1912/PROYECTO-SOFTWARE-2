@@ -29,6 +29,7 @@ export default function FamilyDashboardScreen({
   user,
   onNavigateToEditProfile,
   onNavigateToChildren,
+  onNavigateToReservations,
   onAddChild,
   onEditChild,
   onLogout,
@@ -275,19 +276,19 @@ export default function FamilyDashboardScreen({
             </Text>
           </View>
 
-          {/* Tarjeta 3: Mis reservas (Bloqueada) */}
-          <View style={[styles.sectionBlock, styles.sectionBlockDisabled]}>
+          {/* HU16: historial y gestión de reservas */}
+          <View style={styles.sectionBlock}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
-                <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
-                <Text style={[styles.sectionTitle, styles.sectionTitleDisabled]}>Mis reservas</Text>
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Mis reservas</Text>
               </View>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonBadgeText}>Próximamente</Text>
-              </View>
+              <TouchableOpacity onPress={onNavigateToReservations} activeOpacity={0.7}>
+                <Text style={styles.seeAllText}>Ver historial</Text>
+              </TouchableOpacity>
             </View>
             <Text style={styles.disabledCardDesc}>
-              Gestiona la programación de servicios, historial de contrataciones y seguimiento de reservas activas.
+              Consulta tus solicitudes y cancela las reservas pendientes o aceptadas.
             </Text>
           </View>
         </View>
