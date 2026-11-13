@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -206,10 +206,10 @@ const resolverPantallaPermitida = (solicitada, user) => {
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('landing');
   const [currentUser, setCurrentUser] = useState(null);
+  const currentUserRef = useRef(null);
   const [authToken, setAuthToken] = useState(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [selectedChild, setSelectedChild] = useState(null);
-  const [unrecognizedPath, setUnrecognizedPath] = useState('');
   // HU12: niñera cuyo perfil público se está viendo y pantalla a la que se vuelve
   const [perfilVisto, setPerfilVisto] = useState({ idNinera: null, volverA: 'landing' });
   // HU Reservas: bloque elegido en el calendario de disponibilidad
@@ -255,11 +255,6 @@ export default function App() {
 
   const navegar = (pantalla, hijo = null) => {
     const permitida = resolverPantallaPermitida(pantalla, currentUser);
-    if (permitida === 'notFound') {
-      setUnrecognizedPath(pantalla);
-    } else {
-      setUnrecognizedPath('');
-    }
     setCurrentScreen(permitida);
     setSelectedChild(hijo);
     guardarSesionLocal(authToken, currentUser, permitida, hijo);
@@ -273,6 +268,7 @@ export default function App() {
     let tokenActivo = sesion.token;
 
     if (tokenActivo && userActivo) {
+      currentUserRef.current = userActivo;
       setCurrentUser(userActivo);
       setAuthToken(tokenActivo);
       if (sesion.child) setSelectedChild(sesion.child);
@@ -286,9 +282,6 @@ export default function App() {
     if (permitida === 'nannyPublicProfile') {
       permitida = resolverPantallaPermitida('landing', userActivo);
     }
-    if (permitida === 'notFound') {
-      setUnrecognizedPath(pantallaDeseada);
-    }
     setCurrentScreen(permitida);
     sincronizarHash(permitida === 'notFound' ? pantallaDeseada : permitida);
 
@@ -296,13 +289,8 @@ export default function App() {
     const handleUrlChange = () => {
       const nuevaRuta = obtenerRutaDesdeNavegador() || 'landing';
       const sesionActual = obtenerSesionInicial();
-      const userRef = sesionActual.user || userActivo;
+      const userRef = sesionActual.user || currentUserRef.current;
       const destino = resolverPantallaPermitida(nuevaRuta, userRef);
-      if (destino === 'notFound') {
-        setUnrecognizedPath(nuevaRuta);
-      } else {
-        setUnrecognizedPath('');
-      }
       setCurrentScreen(destino);
       sincronizarHash(destino === 'notFound' ? nuevaRuta : destino);
     };
@@ -373,6 +361,7 @@ export default function App() {
 
   // Callback al iniciar sesión exitosamente
   const handleLoginSuccess = ({ user, token }) => {
+    currentUserRef.current = user;
     setCurrentUser(user);
     setAuthToken(token);
 
@@ -441,6 +430,7 @@ export default function App() {
       // Proceder con limpieza local
     } finally {
       limpiarSesionLocal();
+      currentUserRef.current = null;
       setCurrentUser(null);
       setAuthToken(null);
       setSelectedChild(null);
@@ -737,7 +727,6 @@ export default function App() {
   if (currentScreen === 'notFound') {
     return (
       <NotFoundScreen
-        requestedPath={unrecognizedPath}
         user={currentUser}
         onGoHome={navigateToHomeOrDashboard}
         onGoBack={navigateToHomeOrDashboard}
@@ -758,7 +747,6 @@ export default function App() {
   // Fallback seguro ante cualquier estado no contemplado
   return (
     <NotFoundScreen
-      requestedPath={unrecognizedPath || currentScreen}
       user={currentUser}
       onGoHome={navigateToHomeOrDashboard}
       onGoBack={navigateToHomeOrDashboard}

@@ -152,9 +152,12 @@ class ServicioReserva {
       ? await this.reservaRepository.listarPorNinera(Number(usuario.id))
       : await this.reservaRepository.listarPorPadre(Number(usuario.id));
     // Las pendientes que vencieron sin pago se muestran como "Expirada"
+    // sin alterar la entidad recuperada desde el repositorio.
     return reservas.map((r) => {
-      if (r.estaExpirada(ahora)) r.estadoReserva = 'Expirada';
-      return r;
+      if (!r.estaExpirada(ahora)) return r;
+      return Object.assign(Object.create(Object.getPrototypeOf(r)), r, {
+        estadoReserva: 'Expirada',
+      });
     });
   }
 
@@ -174,6 +177,7 @@ class ServicioReserva {
       `${reserva.fechaReserva}, ` +
       `de ${reserva.horaInicio} a ${reserva.horaFin}`;
 
+<<<<<<< HEAD
     const notificaciones = [
       {
         idUsuario: reserva.idPadre,
@@ -208,6 +212,32 @@ class ServicioReserva {
           resultado.reason
         );
       }
+=======
+    if (!esFamiliaPropietaria && !esNineraAsignada) {
+      throw new ForbiddenError('No tienes permiso para realizar este cambio de estado.');
+    }
+    if (reserva.estaExpirada(this.reloj())) {
+      throw new ConflictError('La reserva venció porque no se confirmó el pago dentro del plazo.');
+    }
+
+    if (esFamiliaPropietaria && estado === 'CANCELADA' && ['PENDIENTE', 'ACEPTADA'].includes(actual)) {
+      const actualizada = await this._actualizarEstadoSiVigente(idReserva, 'Cancelada', [actual]);
+      await this._notificarCambio(actualizada, actualizada.idNinera);
+      return actualizada;
+    }
+    if (esNineraAsignada && ['PENDIENTE'].includes(actual) && ['ACEPTADA', 'RECHAZADA'].includes(estado)) {
+      const actualizada = await this._actualizarEstadoSiVigente(idReserva, estado === 'ACEPTADA' ? 'Aceptada' : 'Rechazada', [actual]);
+      await this._notificarCambio(actualizada, actualizada.idPadre);
+      return actualizada;
+    }
+    if (esNineraAsignada && actual === 'ACEPTADA' && estado === 'COMPLETADA') {
+      const actualizada = await this._actualizarEstadoSiVigente(idReserva, 'Completada', [actual]);
+      await this._notificarCambio(actualizada, actualizada.idPadre);
+      return actualizada;
+    }
+    throw new ValidationError('El cambio de estado no es válido para esta reserva.', {
+      estado: 'La reserva ya no admite esta acción.',
+>>>>>>> origin/main
     });
   }
 

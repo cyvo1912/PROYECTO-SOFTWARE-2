@@ -18,13 +18,11 @@ import { colors } from '../theme/colors';
  * previniendo que la aplicación quede en blanco.
  *
  * @param {Object} props
- * @param {string} [props.requestedPath] - Ruta o identificador solicitado que no existe
  * @param {Object|null} props.user - Usuario autenticado actual (si existe sesión)
  * @param {Function} props.onGoHome - Acción para ir al panel del usuario o inicio
  * @param {Function} [props.onGoBack] - Acción para volver a la pantalla anterior
  */
 export default function NotFoundScreen({
-  requestedPath = '',
   user = null,
   onGoHome,
   onGoBack,
@@ -70,16 +68,6 @@ export default function NotFoundScreen({
           <Text style={styles.subtitle}>
             La página o ruta que estás buscando no existe, ha sido movida o la dirección fue escrita incorrectamente.
           </Text>
-
-          {/* Cuadro de ruta solicitada */}
-          {Boolean(requestedPath) && (
-            <View style={styles.pathBox}>
-              <Ionicons name="link-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.pathText} numberOfLines={1}>
-                {requestedPath.startsWith('/') ? requestedPath : `/${requestedPath}`}
-              </Text>
-            </View>
-          )}
 
           {/* Botones de acción */}
           <View style={styles.actionsContainer}>
@@ -233,24 +221,6 @@ const styles = StyleSheet.create({
     color: colors.textBody,
     textAlign: 'center',
     marginBottom: 20,
-  },
-  pathBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 8,
-    marginBottom: 26,
-    maxWidth: '100%',
-  },
-  pathText: {
-    fontSize: 13,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    color: colors.textMuted,
   },
   actionsContainer: {
     width: '100%',

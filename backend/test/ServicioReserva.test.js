@@ -32,7 +32,10 @@ class ReservaRepositoryEnMemoria extends ReservaRepositoryPort {
   }
   async crearSiNoHaySolapamiento(reserva) {
     const choque = this.reservas.some(
-      (r) => r.idNinera === reserva.idNinera && r.estaActiva(this.reloj()) && reserva.seSolapaCon(r),
+      (r) => (
+        r.idNinera === reserva.idNinera
+        || (reserva.idHijo !== null && r.idHijo === reserva.idHijo)
+      ) && r.estaActiva(this.reloj()) && reserva.seSolapaCon(r),
     );
     if (choque) return null;
     const guardada = new Reserva({ ...reserva, id: this.siguienteId++ });
@@ -242,6 +245,17 @@ describe('ServicioReserva', () => {
     await assert.rejects(() => servicio.solicitar(FAMILIA, solicitudBase({ idHijo: null })), ConflictoHorarioError);
   });
 
+  test('impide atómicamente que el mismo hijo tenga dos reservas simultáneas', async () => {
+    reservas.listarActivasDeNineraEnFecha = async () => [];
+    reservas.listarActivasDeHijoEnFecha = async () => [];
+    reservas.reservas.push(new Reserva({
+      id: 50, idPadre: OTRA_FAMILIA.id, idNinera: 6, idHijo: 1, fechaReserva: LUNES,
+      horaInicio: '10:00', horaFin: '11:00', direccion: 'x',
+    }));
+
+    await assert.rejects(() => servicio.solicitar(FAMILIA, solicitudBase()), ConflictoHorarioError);
+  });
+
   test('HU16: la niñera acepta y completa; la familia puede consultar su historial', async () => {
     const creada = await servicio.solicitar(FAMILIA, solicitudBase());
     const ninera = { id: ID_NINERA, tipo_usuario: 'NINERA' };
@@ -254,6 +268,14 @@ describe('ServicioReserva', () => {
     const creada = await servicio.solicitar(FAMILIA, solicitudBase());
     await assert.rejects(() => servicio.cambiarEstado(OTRA_FAMILIA, creada.id, 'CANCELADA'), ForbiddenError);
     assert.equal((await servicio.cambiarEstado(FAMILIA, creada.id, 'CANCELADA')).estadoReserva, 'Cancelada');
+  });
+
+  test('HU16: no permite aceptar una reserva vencida por falta de pago', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    minutosTranscurridos = 11;
+    const ninera = { id: ID_NINERA, tipo_usuario: 'NINERA' };
+
+    await assert.rejects(() => servicio.cambiarEstado(ninera, creada.id, 'ACEPTADA'), ConflictError);
   });
 
   test('HU16: rechaza una transición si otra acción cambió la reserva antes de guardarla', async () => {

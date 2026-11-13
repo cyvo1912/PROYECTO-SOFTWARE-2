@@ -71,7 +71,10 @@ class PostgresReservaRepository extends ReservaRepositoryPort {
        SELECT $1, $2, $3, $4::date, $5::time, $6::time, $7, 'Pendiente', $8, $9, $10, $11, $12::timestamptz
        WHERE NOT EXISTS (
          SELECT 1 FROM reserva
-         WHERE id_ninera = $2
+         WHERE (
+             id_ninera = $2
+             OR ($3::integer IS NOT NULL AND id_hijo = $3::integer)
+           )
            AND fecha_reserva = $4::date
            AND ${FILTRO_ACTIVA}
            AND hora_inicio < $6::time
