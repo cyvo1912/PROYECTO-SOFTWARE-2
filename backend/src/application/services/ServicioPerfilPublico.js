@@ -47,7 +47,10 @@ class ServicioPerfilPublico {
       mensajeCertificados = 'Aún no tiene certificados verificados.';
     }
 
-    const valoraciones = await this.perfilRepository.obtenerReputacion(id);
+    const [valoraciones, reseñas] = await Promise.all([
+      this.perfilRepository.obtenerReputacion(id),
+      this.perfilRepository.listarValoraciones(id),
+    ]);
     let reputacion = { promedio: valoraciones.promedio, total: valoraciones.total, texto: null };
     if (valoraciones.total === 0) {                                 // Decisión 5
       reputacion = { promedio: null, total: 0, texto: 'Sin valoraciones' };
@@ -68,6 +71,7 @@ class ServicioPerfilPublico {
       certificados,
       mensajeCertificados,
       reputacion,
+      valoraciones: reseñas,
     };
   }
 

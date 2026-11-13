@@ -83,6 +83,11 @@ class PerfilRepositoryMemoryStub extends PerfilPublicoRepositoryPort {
   async obtenerReputacion(id) {
     return this.reputaciones[id] || { total: 0, promedio: null };
   }
+
+  async listarValoraciones(id) {
+    if (Number(id) !== 7) return [];
+    return [{ calificacion: 5, comentario: 'Muy responsable y puntual.', fechaValoracion: '2026-11-01' }];
+  }
 }
 
 describe('Integración HTTP End-to-End: HU12 Perfil Público (Arquitectura Hexagonal)', () => {
@@ -309,6 +314,7 @@ describe('Integración HTTP End-to-End: HU12 Perfil Público (Arquitectura Hexag
     assert.equal(perfil.aniosExperiencia, 5);
     assert.equal(perfil.reputacion.promedio, 4.8);
     assert.equal(perfil.reputacion.total, 3);
+    assert.deepEqual(perfil.valoraciones, [{ calificacion: 5, comentario: 'Muy responsable y puntual.', fechaValoracion: '2026-11-01' }]);
     assert.equal(perfil.certificados.length, 1);
     assert.equal(perfil.certificados[0].nombre, 'RCP y Primeros Auxilios');
 

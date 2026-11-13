@@ -23,6 +23,11 @@ class PerfilPublicoRepositoryPort {
   async obtenerReputacion(idNinera) {
     throw new Error('Método obtenerReputacion no implementado');
   }
+
+  /** Reseñas públicas asociadas a servicios completados (HU18). */
+  async listarValoraciones(idNinera) {
+    throw new Error('Método listarValoraciones no implementado');
+  }
 }
 
 module.exports = PerfilPublicoRepositoryPort;

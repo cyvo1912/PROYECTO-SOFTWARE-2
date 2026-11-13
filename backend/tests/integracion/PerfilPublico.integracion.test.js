@@ -30,6 +30,7 @@ class PerfilRepositoryStub {
   async actualizarPerfil(id, datos) { Object.assign(this.nineras[id], datos); }
   async listarCertificadosAprobados() { return []; }
   async obtenerReputacion() { return { total: 0, promedio: null }; }
+  async listarValoraciones() { return []; }
 }
 
 /** Respuesta HTTP falsa de Express: guarda el status y el JSON enviado. */

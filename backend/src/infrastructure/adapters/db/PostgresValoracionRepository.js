@@ -12,10 +12,11 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
     const result = await this.pool.query(
       `INSERT INTO valoracion (id_reserva, id_padre, id_ninera, calificacion, comentario)
        VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id_reserva) DO NOTHING
        RETURNING id_valoracion AS id, id_reserva AS "idReserva", id_ninera AS "idNinera", calificacion, comentario, fecha_valoracion AS "fechaValoracion";`,
       [idReserva, idPadre, idNinera, calificacion, comentario],
     );
-    return result.rows[0];
+    return result.rows[0] || null;
   }
 
   async listarPorNinera(idNinera) {

@@ -28,11 +28,12 @@ const NINERA_VERIFICADA = {
 const CERTIFICADO = { tipo: 'RCP', nombre: 'RCP Básico', institucion: 'Cruz Roja', fechaEmision: '2026-05-01' };
 
 /** Crea el servicio con un repositorio falso configurable. */
-function crearServicio({ ninera = NINERA_VERIFICADA, certificados = [], reputacion = { total: 0, promedio: null } } = {}) {
+function crearServicio({ ninera = NINERA_VERIFICADA, certificados = [], reputacion = { total: 0, promedio: null }, valoraciones = [] } = {}) {
   const perfilRepository = {
     buscarNinera: jest.fn().mockResolvedValue(ninera),
     listarCertificadosAprobados: jest.fn().mockResolvedValue(certificados),
     obtenerReputacion: jest.fn().mockResolvedValue(reputacion),
+    listarValoraciones: jest.fn().mockResolvedValue(valoraciones),
     actualizarPerfil: jest.fn().mockResolvedValue(),
   };
   return { servicio: new ServicioPerfilPublico({ perfilRepository }), perfilRepository };
@@ -68,6 +69,7 @@ describe('ServicioPerfilPublico.verPerfilPublico (caminos de caja blanca)', () =
 
     expect(perfil.mensajeCertificados).toBe('Aún no tiene certificados verificados.');
     expect(perfil.reputacion).toEqual({ promedio: null, total: 0, texto: 'Sin valoraciones' });
+    expect(perfil.valoraciones).toEqual([]);
   });
 
   test('Camino 5: con certificados aprobados pero sin valoraciones', async () => {
@@ -81,12 +83,14 @@ describe('ServicioPerfilPublico.verPerfilPublico (caminos de caja blanca)', () =
   });
 
   test('Camino 6: perfil completo con certificados y reputación 4.5 de 2 valoraciones', async () => {
-    const { servicio } = crearServicio({ certificados: [CERTIFICADO], reputacion: { total: 2, promedio: 4.5 } });
+    const reseñas = [{ calificacion: 5, comentario: 'Excelente servicio.', fechaValoracion: '2026-11-01' }];
+    const { servicio } = crearServicio({ certificados: [CERTIFICADO], reputacion: { total: 2, promedio: 4.5 }, valoraciones: reseñas });
 
     const perfil = await servicio.verPerfilPublico(FAMILIA, '7');
 
     expect(perfil).toMatchObject({ id: 7, nombre: 'Ana Pérez', aniosExperiencia: 5, tarifaHora: 20 });
     expect(perfil.reputacion).toEqual({ promedio: 4.5, total: 2, texto: null });
+    expect(perfil.valoraciones).toEqual(reseñas);
   });
 });
 

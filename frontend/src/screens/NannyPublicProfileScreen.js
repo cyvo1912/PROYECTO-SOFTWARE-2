@@ -19,7 +19,7 @@ import { API_BASE_URL } from '../config/api';
  * Pantalla: Perfil público ampliado de una niñera (HU12)
  * La familia la abre desde la búsqueda (HU11) y la niñera la usa como vista previa.
  * Muestra foto, biografía, experiencia, habilidades, idiomas, distritos, tarifa,
- * certificados aprobados y reputación ("Sin valoraciones" hasta que exista la HU18).
+ * certificados aprobados, reputación y reseñas publicadas (HU18).
  */
 export default function NannyPublicProfileScreen({ token, idNinera, onBack }) {
   const [cargando, setCargando] = useState(true);
@@ -157,6 +157,24 @@ export default function NannyPublicProfileScreen({ token, idNinera, onBack }) {
             ))
           )}
         </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="star-outline" size={18} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Valoraciones</Text>
+          </View>
+          {perfil.valoraciones?.length ? (
+            perfil.valoraciones.map((valoracion, index) => (
+              <View key={`${valoracion.fechaValoracion}-${index}`} style={styles.reviewRow}>
+                <Text style={styles.reviewStars}>{'★'.repeat(valoracion.calificacion)}{'☆'.repeat(5 - valoracion.calificacion)}</Text>
+                {valoracion.comentario ? <Text style={styles.reviewComment}>{valoracion.comentario}</Text> : null}
+                <Text style={styles.reviewDate}>{valoracion.fechaValoracion}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>Aún no hay valoraciones publicadas.</Text>
+          )}
+        </View>
       </>
     );
   };
@@ -265,6 +283,10 @@ const styles = StyleSheet.create({
   certRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   certName: { fontSize: 14, fontWeight: '700', color: '#1E1B4B' },
   certInfo: { fontSize: 12, color: '#6B7280' },
+  reviewRow: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingVertical: 10 },
+  reviewStars: { color: '#D97706', fontSize: 15, letterSpacing: 1 },
+  reviewComment: { fontSize: 14, color: '#4B5563', lineHeight: 20, marginTop: 4 },
+  reviewDate: { fontSize: 12, color: '#9CA3AF', marginTop: 4 },
   noDisponible: { alignItems: 'center', paddingVertical: 40, gap: 10 },
   noDisponibleText: { fontSize: 15, color: '#6B7280', fontWeight: '600' },
 });

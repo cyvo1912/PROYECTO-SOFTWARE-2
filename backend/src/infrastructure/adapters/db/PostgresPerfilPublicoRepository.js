@@ -86,6 +86,27 @@ class PostgresPerfilPublicoRepository extends PerfilPublicoRepositoryPort {
       throw error;
     }
   }
+
+  async listarValoraciones(idNinera) {
+    try {
+      const result = await this.pool.query(
+        `SELECT calificacion, comentario, TO_CHAR(fecha_valoracion, 'YYYY-MM-DD') AS fecha_valoracion
+           FROM valoracion
+          WHERE id_ninera = $1
+          ORDER BY fecha_valoracion DESC, id_valoracion DESC;`,
+        [idNinera],
+      );
+      return result.rows.map((row) => ({
+        calificacion: Number(row.calificacion),
+        comentario: row.comentario,
+        fechaValoracion: row.fecha_valoracion,
+      }));
+    } catch (error) {
+      // Una instalación que aún no aplicó HU18 conserva el perfil visible.
+      if (error.code === '42P01') return [];
+      throw error;
+    }
+  }
 }
 
 module.exports = PostgresPerfilPublicoRepository;

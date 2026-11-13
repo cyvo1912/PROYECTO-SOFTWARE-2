@@ -95,12 +95,12 @@ CREATE TABLE IF NOT EXISTS reserva (
 -- Valoraciones y reseñas
 CREATE TABLE IF NOT EXISTS valoracion (
     id_valoracion SERIAL PRIMARY KEY,
-    id_reserva INT UNIQUE REFERENCES reserva(id_reserva),
+    id_reserva INT UNIQUE NOT NULL REFERENCES reserva(id_reserva) ON DELETE CASCADE,
     id_padre INT NOT NULL REFERENCES padre(id_padre),
     id_ninera INT NOT NULL REFERENCES ninera(id_ninera),
-    calificacion INT CHECK (calificacion >= 1 AND calificacion <= 5),
+    calificacion INT NOT NULL CHECK (calificacion >= 1 AND calificacion <= 5),
     comentario TEXT,
-    fecha_valoracion DATE DEFAULT CURRENT_DATE
+    fecha_valoracion TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'America/Lima')
 );
 
 -- Niñeras Favoritas marcadas por Padres
