@@ -23,6 +23,9 @@ import JobBoardScreen from './src/screens/JobBoardScreen';
 import PublishJobOfferScreen from './src/screens/PublishJobOfferScreen';
 import ReservationHistoryScreen from './src/screens/ReservationHistoryScreen';
 import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
+import NotificacionesScreen from './src/screens/NotificacionesScreen';
+import ValoracionScreen from './src/screens/ValoracionScreen';
+import { registrarNotificaciones } from './src/services/notificacionesService';
 
 // Constantes para persistencia local de sesión
 const STORAGE_TOKEN_KEY = 'minana_auth_token';
@@ -50,9 +53,11 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'chat',
   'editPublicProfile', // HU12
   'nannyPublicProfile', // HU12
-  'jobBoard', // HU14
-  'publishJobOffer', // HU14
-  'reservationHistory', // HU16 y HU18
+  'jobBoard',         // HU14 - Bolsa de trabajo para niñeras
+  'publishJobOffer',  // HU14 - Publicar ofertas para familias
+  'reservationHistory',
+  'notificaciones', // HU18
+  'valoracion',      // HU18
   'notFound',
 ];
 
@@ -157,6 +162,32 @@ const resolverPantallaPermitida = (solicitada, user) => {
     return solicitada;
   }
 
+
+  // HU18 - Notificaciones para usuarios autenticados
+  if (solicitada === 'notificaciones') {
+    return solicitada;
+  }
+
+  // HU18 - Valoraciones exclusivas de familias
+  if (solicitada === 'valoracion') {
+    if (rol === 'FAMILIA') {
+      return solicitada;
+    }
+
+    return rol === 'ADMIN'
+      ? 'adminDashboard'
+      : 'nannyDashboard';
+  }
+
+  // Historial de reservas compartido por familias y niñeras
+  if (solicitada === 'reservationHistory') {
+    if (rol === 'FAMILIA' || rol === 'NINERA') {
+      return solicitada;
+    }
+
+    return 'adminDashboard';
+  }
+
   // Rutas exclusivas de FAMILIA
   const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer', 'reservationHistory'];
   if (rutasFamilia.includes(solicitada)) {
@@ -194,6 +225,35 @@ export default function App() {
   // HU Reservas: bloque elegido en el calendario de disponibilidad
   const [slotReserva, setSlotReserva] = useState(null);
 
+  // HU18 - Reserva seleccionada para valorar
+  const [reservaParaValorar, setReservaParaValorar] = useState(null);
+
+  // HU18 - Pantalla desde la que se accede
+  const [pantallaAnterior, setPantallaAnterior] = useState('familyDashboard');
+
+  const abrirNotificaciones = () => {
+    setPantallaAnterior(currentScreen);
+    navegar('notificaciones');
+  };
+
+  const abrirValoracion = (reserva) => {
+    if (!reserva) return;
+
+    setReservaParaValorar(reserva);
+    setPantallaAnterior(currentScreen);
+    navegar('valoracion');
+  };
+
+  const volverPantallaAnterior = () => {
+    navegar(pantallaAnterior);
+  };
+
+  const valoracionExitosa = () => {
+    setReservaParaValorar(null);
+    navegar(pantallaAnterior);
+  };
+
+  // Callback al iniciar sesión o registrarse exitosamente
   const sincronizarHash = (pantalla) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const hashActual = window.location.hash.replace(/^#[/]?/, '');
@@ -255,28 +315,44 @@ export default function App() {
     }
   }, []);
 
+  // Navegación general
   const navigateToLogin = () => navegar('login');
   const navigateToLanding = () => navegar('landing');
   const navigateToRegisterFamily = () => navegar('registerFamily');
   const navigateToRegisterNanny = () => navegar('registerNanny');
+
+  // Navegación de niñeras
   const navigateToNannyDashboard = () => navegar('nannyDashboard');
   const navigateToEditNannyProfile = () => navegar('editNannyProfile');
-  const navigateToEditFamilyProfile = () => navegar('editFamilyProfile');
-  const navigateToChat = () => navegar('chat');
+  const navigateToMultimedia = () => navegar('multimedia');
+
+  // Navegación de familias
   const navigateToFamilyDashboard = () => navegar('familyDashboard');
+  const navigateToEditFamilyProfile = () => navegar('editFamilyProfile');
   const navigateToFamilyChildren = () => navegar('familyChildren');
   const navigateToChildForm = (child = null) => navegar('childForm', child);
-  const navigateToMultimedia = () => navegar('multimedia');
   const navigateToSearchNannies = () => navegar('searchNannies');
+
+  // Navegación al chat
+  const navigateToChat = () => navegar('chat');
   const navigateToNannyAvailability = () => navegar('nannyAvailability');
+
+  // HU14 - Bolsa de trabajo
+  const navigateToJobBoard = () => navegar('jobBoard');
+
+  const navigateToPublishJobOffer = () =>
+    navegar('publishJobOffer');
+
+  // HU16 - Historial de reservas
+  const navigateToReservationHistory = () =>
+    navegar('reservationHistory');
+
   const navigateToRequestReservation = (slot) => {
     setSlotReserva(slot);
     navegar('requestReservation');
   };
   const navigateToEditPublicProfile = () => navegar('editPublicProfile');
-  const navigateToJobBoard = () => navegar('jobBoard'); // HU14
-  const navigateToPublishJobOffer = () => navegar('publishJobOffer'); // HU14
-  const navigateToReservationHistory = () => navegar('reservationHistory'); // HU16/HU18
+
   // HU12: abre el perfil público de una niñera (desde la búsqueda HU11 o como vista previa).
   const navigateToNannyPublicProfile = (idNinera, volverA) => {
     setPerfilVisto({ idNinera, volverA });
@@ -298,6 +374,15 @@ export default function App() {
     currentUserRef.current = user;
     setCurrentUser(user);
     setAuthToken(token);
+
+    // HU18 - Registrar dispositivo para notificaciones push
+    registrarNotificaciones(token).catch((error) => {
+      console.log(
+        'Error al registrar notificaciones:',
+        error.message
+      );
+    });
+
     cargarFotoPerfil(token);
 
     let destino = 'familyDashboard';
@@ -359,6 +444,8 @@ export default function App() {
       setCurrentUser(null);
       setAuthToken(null);
       setSelectedChild(null);
+      setReservaParaValorar(null);
+      setPantallaAnterior('familyDashboard');
       setLogoutLoading(false);
       setCurrentScreen('landing');
       sincronizarHash('landing');
@@ -373,6 +460,27 @@ export default function App() {
       return nuevo;
     });
   };
+
+
+  if (currentScreen === 'notificaciones' && currentUser) {
+    return (
+      <NotificacionesScreen
+        token={authToken}
+        onBack={volverPantallaAnterior}
+      />
+    );
+  }
+
+  if (currentScreen === 'valoracion' && currentUser && reservaParaValorar) {
+    return (
+      <ValoracionScreen
+        token={authToken}
+        reserva={reservaParaValorar}
+        onBack={volverPantallaAnterior}
+        onSuccess={valoracionExitosa}
+      />
+    );
+  }
 
   if (currentScreen === 'adminDashboard' && currentUser) {
     return (
@@ -396,6 +504,7 @@ export default function App() {
         onNavigateToPublicProfile={navigateToEditPublicProfile}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+        onNotificaciones={abrirNotificaciones}
         onNavigateToChat={navigateToChat}
       />
     );
@@ -504,6 +613,8 @@ export default function App() {
         onNavigateToReservations={navigateToReservationHistory}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
+        onNavigateToNotifications={abrirNotificaciones}
+        onValorar={abrirValoracion}
         onNavigateToChat={navigateToChat}
       />
     );

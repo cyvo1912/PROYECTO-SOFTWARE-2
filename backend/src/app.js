@@ -14,12 +14,17 @@ const usuarioRoutes = require('./routes/usuario.routes');
 const multimediaRoutes = require('./routes/multimedia.routes');
 const administradorRoutes = require('./routes/administrador.routes');
 const hijoRoutes = require('./routes/hijo.routes');
+
+// Funcionalidad de búsqueda
 const perfilPublicoRoutes = require('./routes/perfilPublico.routes');
 const mensajeriaRoutes = require('./routes/mensajeria.routes');
 const busquedaRoutes = require('./routes/busqueda.routes');
 const disponibilidadRoutes = require('./routes/disponibilidad.routes');
 const bolsaTrabajoRoutes = require('./routes/bolsaTrabajo.routes');
 const reservaRoutes = require('./routes/reserva.routes');
+
+// HU18 - Notificaciones y valoraciones
+const notificacionRoutes = require('./routes/notificacion.routes');
 const valoracionRoutes = require('./routes/valoracion.routes');
 
 app.use('/api', landingRoutes);
@@ -35,6 +40,10 @@ app.use('/api/nineras', disponibilidadRoutes);
 app.use('/api/ofertas', bolsaTrabajoRoutes); // HU14
 app.use('/api/reservas', reservaRoutes);
 app.use('/api/valoraciones', valoracionRoutes);
+
+// HU18
+app.use('/api/notificaciones', notificacionRoutes);
+
 
 // Health check endpoint
 app.get('/', (req, res) => {

@@ -33,6 +33,7 @@ export default function NannyDashboardScreen({
   onNavigateToPublicProfile,
   onLogout,
   logoutLoading = false,
+  onNotificaciones,
   onNavigateToChat,
 }) {
   const { width } = useWindowDimensions();
@@ -91,6 +92,20 @@ export default function NannyDashboardScreen({
                 Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
               </Text>
             </View>
+
+            <TouchableOpacity
+              style={styles.notificationNavBtn}
+              onPress={onNotificaciones}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir notificaciones"
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.profileNavBtn}
@@ -345,6 +360,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  notificationNavBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
   },
   userGreeting: {
     marginRight: 4,

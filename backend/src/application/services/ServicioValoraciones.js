@@ -27,16 +27,23 @@ class ServicioValoraciones {
       throw new ValidationError('Solo puedes valorar servicios completados.', { idReserva: 'La reserva aún no está completada.' });
     }
     if (await this.valoracionRepository.existeParaReserva(idReserva)) throw new ConflictError('Esta reserva ya fue valorada.');
-    const creada = await this.valoracionRepository.crear({
+
+    const resultado = await this.valoracionRepository.crear({
       idReserva,
       idPadre: Number(usuario.id),
       idNinera: reserva.idNinera,
       calificacion,
       comentario,
     });
-    // La restricción UNIQUE también cubre dos envíos simultáneos.
-    if (!creada) throw new ConflictError('Esta reserva ya fue valorada.');
-    return creada;
+
+    // La restricción UNIQUE impide valorar dos veces
+    // la misma reserva, incluso con solicitudes simultáneas.
+    if (!resultado) {
+      throw new ConflictError('Esta reserva ya fue valorada.');
+    }
+
+    return resultado;
+
   }
 
   async listarPorNinera(idNinera) {

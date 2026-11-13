@@ -24,6 +24,7 @@ import { API_BASE_URL } from '../config/api';
  * - Tarjeta "Mis hijos" (Lista horizontal/tarjeta completa)
  * - Tarjetas en desarrollo "Buscar niñera" y "Mis reservas" (Próximamente)
  */
+
 export default function FamilyDashboardScreen({
   token,
   user,
@@ -33,11 +34,12 @@ export default function FamilyDashboardScreen({
   onAddChild,
   onEditChild,
   onNavigateToSearch,
-  onNavigateToPublishOffer,
-  onNavigateToReservations,
+  onNavigateToNotifications,
   onLogout,
   logoutLoading = false,
   onNavigateToChat,
+  onNavigateToPublishOffer,
+  onNavigateToReservations,
 }) {
 
   const { width } = useWindowDimensions();
@@ -106,6 +108,21 @@ export default function FamilyDashboardScreen({
                 Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
               </Text>
             )}
+
+            {/* HU18 - Botón de notificaciones */}
+            <TouchableOpacity
+              style={styles.notificationNavBtn}
+              onPress={onNavigateToNotifications}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir notificaciones"
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.profileNavBtn}
@@ -407,6 +424,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+
+  notificationNavBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+  },
+
   userGreetingText: {
     fontSize: 14,
     color: '#6B7280',

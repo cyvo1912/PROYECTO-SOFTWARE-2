@@ -50,3 +50,9 @@ export function crearValoracion({ token, idReserva, calificacion, comentario }) 
 export function listarHijos({ token }) {
   return llamar('/hijos', { token });
 }
+
+export function obtenerValoracionPorReserva({ token, idReserva }) {
+  return llamar(`/valoraciones/reserva/${idReserva}`, {
+    token,
+  });
+}

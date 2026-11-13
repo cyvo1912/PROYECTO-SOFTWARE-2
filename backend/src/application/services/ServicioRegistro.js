@@ -15,7 +15,7 @@ const CELULAR_REGEX = /^\+?\d{9,15}$/;
  * Métodos: registrarPadre(datos) · registrarNinera(datos)
  */
 class ServicioRegistro {
-  constructor({ userRepository, passwordHasher, tokenService }) {
+  constructor({ userRepository, passwordHasher, tokenService, servicioNotificacion = null, }) {
     if (!userRepository) throw new Error('userRepository es requerido');
     if (!passwordHasher) throw new Error('passwordHasher es requerido');
     if (!tokenService) throw new Error('tokenService es requerido');
@@ -23,6 +23,49 @@ class ServicioRegistro {
     this.userRepository = userRepository;
     this.passwordHasher = passwordHasher;
     this.tokenService = tokenService;
+    this.servicioNotificacion = servicioNotificacion;
+  }
+
+  async _enviarBienvenida(idUsuario, nombre, tipoUsuario) {
+    if (!this.servicioNotificacion) {
+      console.warn(
+        'HU18: servicioNotificacion no está configurado en ServicioRegistro.'
+      );
+      return;
+    }
+
+    try {
+      const esNinera = tipoUsuario === 'NINERA';
+
+      const mensaje = esNinera
+        ? `¡Hola, ${nombre}! Bienvenida a Mi Nana. ` +
+        'Tu cuenta fue creada correctamente y está pendiente de verificación.'
+        : `¡Hola, ${nombre}! Bienvenido a Mi Nana. ` +
+        'Tu cuenta fue creada correctamente. ' +
+        'Ya puedes explorar nuestros servicios.';
+
+      const notificacion =
+        await this.servicioNotificacion.enviarNotificacion({
+          idUsuario,
+          idReserva: null,
+          titulo: '¡Bienvenido a Mi Nana!',
+          mensaje,
+          tipo: 'BIENVENIDA',
+        });
+
+      console.log(
+        'HU18: bienvenida creada para usuario:',
+        idUsuario,
+        'Notificación:',
+        notificacion.id_notificacion
+      );
+    } catch (error) {
+      // Una falla en notificaciones no debe impedir el registro.
+      console.error(
+        'HU18: error al crear la bienvenida:',
+        error
+      );
+    }
   }
 
   /**
@@ -112,6 +155,13 @@ class ServicioRegistro {
       tipo_usuario: padre.tipoUsuario,
     });
 
+    // HU18 - Bienvenida para nueva familia
+    await this._enviarBienvenida(
+      padre.id,
+      padre.nombreCompleto,
+      'FAMILIA'
+    );
+
     return {
       token,
       usuario: {
@@ -176,6 +226,12 @@ class ServicioRegistro {
       },
     );
 
+    // HU18 - Bienvenida para nueva niñera
+    await this._enviarBienvenida(
+      ninera.id,
+      ninera.nombreCompleto,
+      'NINERA'
+    );
     // Restricción 13: la cuenta queda PENDIENTE_VERIFICACION; no se emite token.
     return {
       usuario: {

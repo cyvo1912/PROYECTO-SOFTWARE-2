@@ -36,9 +36,13 @@ const PostgresReservaRepository = require('./infrastructure/adapters/db/Postgres
 const ServicioReserva = require('./application/services/ServicioReserva');
 const ReservaController = require('./infrastructure/http/controllers/ReservaController');
 const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
-const ServicioValoraciones = require('./application/services/ServicioValoraciones');
+const ServicioValoracion = require('./application/services/ServicioValoracion');
 const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
+const PostgresNotificacionRepository = require('./infrastructure/adapters/db/PostgresNotificacionRepository');
+const ExpoNotificationAdapter = require('./infrastructure/adapters/notifications/ExpoNotificationAdapter');
+const ServicioNotificacion = require('./application/services/ServicioNotificacion');
+const NotificacionController = require('./infrastructure/http/controllers/NotificacionController');
 
 // HU17 - Mensajería en Tiempo Real (Gabriel)
 const PostgresMensajeRepository = require('./infrastructure/adapters/db/PostgresMensajeRepository');
@@ -81,14 +85,25 @@ class Container {
     this.ofertaTrabajoRepository = new PostgresOfertaTrabajoRepository(pool);
     this.estrategiaCalculoDisponibilidad = new EstrategiaDisponibilidadRangoFechas();
     this.almacenamiento = new CloudinaryAlmacenamiento();
+    this.notificacionRepository = new PostgresNotificacionRepository(pool);
+    this.valoracionRepository = new PostgresValoracionRepository(pool);
+
+    // HU18 - Adaptador de notificaciones push
+    this.expoNotificationAdapter = new ExpoNotificationAdapter();
     this.perfilPublicoRepository = new PostgresPerfilPublicoRepository(pool); // HU12
     this.reservaRepository = new PostgresReservaRepository(pool); // HU Reservas
-    this.valoracionRepository = new PostgresValoracionRepository(pool); // HU18
+
 
     // HU17: Adaptadores Secundarios de Mensajería
     this.mensajeRepository = new PostgresMensajeRepository(pool);
     this.realtimeNotifier = new SocketIoRealtimeNotifier();
     this.notificacionService = new PostgresNotificacionService(pool);
+
+    // HU18 - Servicio de Notificaciones
+    this.servicioNotificacion = new ServicioNotificacion({
+      notificacionRepository: this.notificacionRepository,
+      expoNotificationAdapter: this.expoNotificationAdapter,
+    });
 
     // Servicios de Aplicación (Núcleo de Negocio UML)
     this.servicioAuth = new ServicioAuth({
@@ -100,6 +115,7 @@ class Container {
       userRepository: this.userRepository,
       passwordHasher: this.passwordHasher,
       tokenService: this.tokenService,
+      servicioNotificacion: this.servicioNotificacion,
     });
     this.servicioUsuario = new ServicioUsuario({
       userRepository: this.userRepository,
@@ -115,6 +131,8 @@ class Container {
       administradorRepository: this.administradorRepository,
       almacenamiento: this.almacenamiento,
     });
+
+    // Servicio de búsqueda
     this.servicioPerfilPublico = new ServicioPerfilPublico({
       perfilRepository: this.perfilPublicoRepository,
     });
@@ -128,16 +146,18 @@ class Container {
     this.servicioBolsaTrabajo = new ServicioBolsaTrabajo({
       ofertaTrabajoRepository: this.ofertaTrabajoRepository,
     });
+
     this.servicioReserva = new ServicioReserva({
       reservaRepository: this.reservaRepository,
       disponibilidadRepository: this.disponibilidadRepository,
       hijoRepository: this.hijoRepository,
       estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,
+
+      // Notificaciones existentes de HU18
+      servicioNotificacion: this.servicioNotificacion,
+
+      // Notificaciones de cambios de estado incorporadas por tus compañeros
       notificacionService: this.notificacionService,
-    });
-    this.servicioValoraciones = new ServicioValoraciones({
-      reservaRepository: this.reservaRepository,
-      valoracionRepository: this.valoracionRepository,
     });
 
     // HU17: Servicio de Aplicación de Mensajes
@@ -147,6 +167,12 @@ class Container {
       notificacionService: this.notificacionService,
       userRepository: this.userRepository,
     });
+
+
+    this.servicioValoracion = new ServicioValoracion({
+      valoracionRepository: this.valoracionRepository,
+    });
+
 
     // Adaptador Primario (Controladores de Entrada)
     this.authController = new AuthController(this.servicioAuth, this.servicioRegistro);
@@ -160,7 +186,12 @@ class Container {
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
     this.bolsaTrabajoController = new BolsaTrabajoController(this.servicioBolsaTrabajo);
     this.reservaController = new ReservaController(this.servicioReserva);
-    this.valoracionController = new ValoracionController(this.servicioValoraciones);
+    this.valoracionController = new ValoracionController(this.servicioValoracion);
+
+    // HU18 - Controlador de Notificaciones
+    this.notificacionController = new NotificacionController(
+      this.servicioNotificacion
+    );
 
     // Middleware de Autenticación
     this.authMiddleware = crearAuthMiddleware(this.tokenService);
