@@ -40,18 +40,18 @@ class ValoracionController {
       return responderError(res, error);
     }
   }
-
   async obtenerPorReserva(req, res) {
     try {
       const data = await this.servicioValoracion.obtenerPorReserva(
         req.user,
-        req.params.id,
+        req.params.id
       );
 
       return res.status(200).json({
         success: true,
         data,
       });
+
     } catch (error) {
       return responderError(res, error);
     }

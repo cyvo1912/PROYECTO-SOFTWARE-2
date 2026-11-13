@@ -36,7 +36,7 @@ const PostgresReservaRepository = require('./infrastructure/adapters/db/Postgres
 const ServicioReserva = require('./application/services/ServicioReserva');
 const ReservaController = require('./infrastructure/http/controllers/ReservaController');
 const PostgresValoracionRepository = require('./infrastructure/adapters/db/PostgresValoracionRepository');
-const ServicioValoraciones = require('./application/services/ServicioValoraciones');
+const ServicioValoracion = require('./application/services/ServicioValoracion');
 const ValoracionController = require('./infrastructure/http/controllers/ValoracionController');
 const crearAuthMiddleware = require('./infrastructure/http/middlewares/authMiddleware');
 const PostgresNotificacionRepository = require('./infrastructure/adapters/db/PostgresNotificacionRepository');
@@ -169,8 +169,7 @@ class Container {
     });
 
 
-    this.servicioValoraciones = new ServicioValoraciones({
-      reservaRepository: this.reservaRepository,
+    this.servicioValoracion = new ServicioValoracion({
       valoracionRepository: this.valoracionRepository,
     });
 
@@ -187,7 +186,7 @@ class Container {
     this.disponibilidadController = new DisponibilidadController(this.servicioDisponibilidad);
     this.bolsaTrabajoController = new BolsaTrabajoController(this.servicioBolsaTrabajo);
     this.reservaController = new ReservaController(this.servicioReserva);
-    this.valoracionController = new ValoracionController(this.servicioValoraciones);
+    this.valoracionController = new ValoracionController(this.servicioValoracion);
 
     // HU18 - Controlador de Notificaciones
     this.notificacionController = new NotificacionController(

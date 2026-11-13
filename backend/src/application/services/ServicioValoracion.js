@@ -63,8 +63,8 @@ class ServicioValoracion {
     return this.valoracionRepository.listarPorNinera(id);
   }
 
+
   async obtenerPorReserva(usuario, idReserva) {
-    
     if (!usuario || !usuario.id || !usuario.tipo_usuario) {
       throw new ForbiddenError('Usuario no autorizado.');
     }
@@ -72,24 +72,32 @@ class ServicioValoracion {
     const id = Number(idReserva);
 
     if (!Number.isInteger(id) || id <= 0) {
-      throw new ValidationError('El identificador de la reserva no es válido.');
+      throw new ValidationError(
+        'El identificador de la reserva no es válido.'
+      );
     }
 
-    const resultado = await this.valoracionRepository.obtenerPorReserva(id);
+    const resultado =
+      await this.valoracionRepository.obtenerPorReserva(id);
 
     if (!resultado) {
-      throw new NotFoundError('No existe una valoración para esta reserva.');
+      throw new NotFoundError(
+        'No existe una valoración para esta reserva.'
+      );
     }
 
     if (
       usuario.tipo_usuario !== 'ADMIN' &&
       Number(resultado.id_padre) !== Number(usuario.id)
     ) {
-      throw new ForbiddenError('No puedes consultar esta valoración.');
+      throw new ForbiddenError(
+        'No puedes consultar esta valoración.'
+      );
     }
 
     return resultado;
   }
+
 }
 
 module.exports = ServicioValoracion;
