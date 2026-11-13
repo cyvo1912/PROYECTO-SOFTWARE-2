@@ -16,7 +16,20 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
   const esNinera = (user?.rol || user?.tipo_usuario) === 'NINERA';
   const cargar = useCallback(async () => {
     setLoading(true);
-    try { setReservas(await listarMisReservas({ token })); }
+    try {
+      const resultado = await listarMisReservas({ token });
+      console.log('Respuesta de reservas:', resultado);
+      const lista = Array.isArray(resultado)
+        ? resultado
+        : resultado?.reservas;
+
+      if (!Array.isArray(lista)) {
+        throw new Error(
+          'El backend no devolvió una lista válida de reservas.'
+        );
+      }
+      setReservas(lista);
+    }
     catch (error) { Alert.alert('No se pudieron cargar las reservas', error.message); }
     finally { setLoading(false); }
   }, [token]);
@@ -48,10 +61,10 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
           {esNinera && estado === 'ACEPTADA' && <Action label="Marcar completada" onPress={() => actualizar(reserva, 'COMPLETADA')} />}
           {!esNinera && estado === 'COMPLETADA' && <Action label="Dejar reseña" onPress={() => setValorando(reserva.id)} />}
         </View>}
-        {valorando === reserva.id && <View style={styles.review}><Text style={styles.reviewTitle}>¿Cómo fue el servicio?</Text><View style={styles.stars}>{[1,2,3,4,5].map((n) => <TouchableOpacity key={n} onPress={() => setCalificacion(n)}><Ionicons name={n <= calificacion ? 'star' : 'star-outline'} size={30} color="#F59E0B" /></TouchableOpacity>)}</View><TextInput value={comentario} onChangeText={setComentario} placeholder="Comentario opcional" multiline style={styles.input} maxLength={1000} /><Action label="Publicar reseña" onPress={() => publicar(reserva)} /></View>}
+        {valorando === reserva.id && <View style={styles.review}><Text style={styles.reviewTitle}>¿Cómo fue el servicio?</Text><View style={styles.stars}>{[1, 2, 3, 4, 5].map((n) => <TouchableOpacity key={n} onPress={() => setCalificacion(n)}><Ionicons name={n <= calificacion ? 'star' : 'star-outline'} size={30} color="#F59E0B" /></TouchableOpacity>)}</View><TextInput value={comentario} onChangeText={setComentario} placeholder="Comentario opcional" multiline style={styles.input} maxLength={1000} /><Action label="Publicar reseña" onPress={() => publicar(reserva)} /></View>}
       </View>;
     })}
   </ScrollView></SafeAreaView>;
 }
 function Action({ label, color = colors.primary, onPress }) { return <TouchableOpacity onPress={onPress} style={[styles.action, { borderColor: color }]}><Text style={[styles.actionText, { color }]}>{label}</Text></TouchableOpacity>; }
-const styles = StyleSheet.create({ safe:{flex:1,backgroundColor:'#F8FAFC'},container:{padding:20,paddingBottom:40},back:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:18},backText:{color:colors.primary,fontWeight:'700'},title:{fontSize:28,fontWeight:'800',color:'#172033'},subtitle:{color:'#64748B',marginTop:6,marginBottom:20},loader:{marginTop:40},empty:{alignItems:'center',padding:40,backgroundColor:'#FFF',borderRadius:16},card:{backgroundColor:'#FFF',borderRadius:16,padding:16,marginBottom:14,elevation:1},row:{flexDirection:'row',justifyContent:'space-between',gap:8},date:{fontWeight:'700',color:'#172033',flex:1},status:{color:colors.primary,fontWeight:'700'},detail:{marginTop:10,color:'#475569'},address:{marginTop:4,color:'#64748B'},actions:{flexDirection:'row',flexWrap:'wrap',gap:8,marginTop:14},action:{borderWidth:1,borderRadius:8,paddingVertical:8,paddingHorizontal:11},actionText:{fontWeight:'700'},review:{marginTop:16,borderTopWidth:1,borderTopColor:'#E2E8F0',paddingTop:14},reviewTitle:{fontWeight:'700',color:'#172033'},stars:{flexDirection:'row',marginVertical:8},input:{borderWidth:1,borderColor:'#CBD5E1',borderRadius:8,padding:10,minHeight:70,textAlignVertical:'top',marginBottom:10} });
+const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: '#F8FAFC' }, container: { padding: 20, paddingBottom: 40 }, back: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }, backText: { color: colors.primary, fontWeight: '700' }, title: { fontSize: 28, fontWeight: '800', color: '#172033' }, subtitle: { color: '#64748B', marginTop: 6, marginBottom: 20 }, loader: { marginTop: 40 }, empty: { alignItems: 'center', padding: 40, backgroundColor: '#FFF', borderRadius: 16 }, card: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 1 }, row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 }, date: { fontWeight: '700', color: '#172033', flex: 1 }, status: { color: colors.primary, fontWeight: '700' }, detail: { marginTop: 10, color: '#475569' }, address: { marginTop: 4, color: '#64748B' }, actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, action: { borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 11 }, actionText: { fontWeight: '700' }, review: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }, reviewTitle: { fontWeight: '700', color: '#172033' }, stars: { flexDirection: 'row', marginVertical: 8 }, input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, minHeight: 70, textAlignVertical: 'top', marginBottom: 10 } });

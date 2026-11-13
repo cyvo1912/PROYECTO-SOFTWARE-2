@@ -161,6 +161,126 @@ class ServicioReserva {
     });
   }
 
+
+  /**
+   * HU18 - Cambiar el estado de una reserva
+   * y notificar al usuario correspondiente.
+   */
+  async cambiarEstado(usuario, idReservaParam, nuevoEstado) {
+    if (!usuario?.id) {
+      throw new UnauthorizedError('Debes iniciar sesión.');
+    }
+
+    const rol = usuario.tipo_usuario || usuario.rol;
+
+    if (!['FAMILIA', 'NINERA'].includes(rol)) {
+      throw new ForbiddenError(
+        'No tienes permiso para gestionar reservas.'
+      );
+    }
+
+    const idReserva = Number(idReservaParam);
+
+    if (!Number.isInteger(idReserva) || idReserva <= 0) {
+      throw new ValidationError(
+        'El identificador de reserva no es válido.'
+      );
+    }
+
+    const estado = String(nuevoEstado || '')
+      .trim()
+      .toUpperCase();
+
+    if (!['ACEPTADA', 'RECHAZADA', 'CANCELADA', 'COMPLETADA'].includes(estado)) {
+      throw new ValidationError(
+        'El estado solicitado no es válido.'
+      );
+    }
+
+    const reserva = await this.reservaRepository.buscarPorId(idReserva);
+
+    if (!reserva) {
+      throw new NotFoundError('La reserva no existe.');
+    }
+
+    const esFamiliaPropietaria =
+      rol === 'FAMILIA' &&
+      Number(reserva.idPadre) === Number(usuario.id);
+
+    const esNineraAsignada =
+      rol === 'NINERA' &&
+      Number(reserva.idNinera) === Number(usuario.id);
+
+    if (!esFamiliaPropietaria && !esNineraAsignada) {
+      throw new ForbiddenError(
+        'No tienes permiso para modificar esta reserva.'
+      );
+    }
+
+    const actual = String(reserva.estadoReserva || '')
+      .trim()
+      .toUpperCase();
+
+    if (reserva.estaExpirada(this.reloj())) {
+      throw new ConflictError(
+        'La reserva expiró porque no se confirmó el pago a tiempo.'
+      );
+    }
+
+    let estadoNuevo = null;
+    let idReceptor = null;
+
+    // La familia puede cancelar una reserva pendiente o aceptada
+    if (
+      esFamiliaPropietaria &&
+      estado === 'CANCELADA' &&
+      ['PENDIENTE', 'ACEPTADA'].includes(actual)
+    ) {
+      estadoNuevo = 'Cancelada';
+      idReceptor = reserva.idNinera;
+    }
+
+    // La niñera puede aceptar o rechazar solicitudes pendientes
+    else if (
+      esNineraAsignada &&
+      actual === 'PENDIENTE' &&
+      ['ACEPTADA', 'RECHAZADA'].includes(estado)
+    ) {
+      estadoNuevo = estado === 'ACEPTADA'
+        ? 'Aceptada'
+        : 'Rechazada';
+
+      idReceptor = reserva.idPadre;
+    }
+
+    // La niñera puede completar una reserva aceptada
+    else if (
+      esNineraAsignada &&
+      actual === 'ACEPTADA' &&
+      estado === 'COMPLETADA'
+    ) {
+      estadoNuevo = 'Completada';
+      idReceptor = reserva.idPadre;
+    }
+
+    if (!estadoNuevo) {
+      throw new ValidationError(
+        'No se permite realizar este cambio de estado.'
+      );
+    }
+
+    const actualizada = await this._actualizarEstadoSiVigente(
+      idReserva,
+      estadoNuevo,
+      [actual]
+    );
+
+    // Notificar únicamente después de actualizar correctamente
+    await this._notificarCambio(actualizada, idReceptor);
+
+    return actualizada;
+  }
+
   /**
    * HU18 - Notifica a la familia y a la niñera
    * cuando se registra una nueva solicitud de reserva.
@@ -177,7 +297,6 @@ class ServicioReserva {
       `${reserva.fechaReserva}, ` +
       `de ${reserva.horaInicio} a ${reserva.horaFin}`;
 
-<<<<<<< HEAD
     const notificaciones = [
       {
         idUsuario: reserva.idPadre,
@@ -212,32 +331,6 @@ class ServicioReserva {
           resultado.reason
         );
       }
-=======
-    if (!esFamiliaPropietaria && !esNineraAsignada) {
-      throw new ForbiddenError('No tienes permiso para realizar este cambio de estado.');
-    }
-    if (reserva.estaExpirada(this.reloj())) {
-      throw new ConflictError('La reserva venció porque no se confirmó el pago dentro del plazo.');
-    }
-
-    if (esFamiliaPropietaria && estado === 'CANCELADA' && ['PENDIENTE', 'ACEPTADA'].includes(actual)) {
-      const actualizada = await this._actualizarEstadoSiVigente(idReserva, 'Cancelada', [actual]);
-      await this._notificarCambio(actualizada, actualizada.idNinera);
-      return actualizada;
-    }
-    if (esNineraAsignada && ['PENDIENTE'].includes(actual) && ['ACEPTADA', 'RECHAZADA'].includes(estado)) {
-      const actualizada = await this._actualizarEstadoSiVigente(idReserva, estado === 'ACEPTADA' ? 'Aceptada' : 'Rechazada', [actual]);
-      await this._notificarCambio(actualizada, actualizada.idPadre);
-      return actualizada;
-    }
-    if (esNineraAsignada && actual === 'ACEPTADA' && estado === 'COMPLETADA') {
-      const actualizada = await this._actualizarEstadoSiVigente(idReserva, 'Completada', [actual]);
-      await this._notificarCambio(actualizada, actualizada.idPadre);
-      return actualizada;
-    }
-    throw new ValidationError('El cambio de estado no es válido para esta reserva.', {
-      estado: 'La reserva ya no admite esta acción.',
->>>>>>> origin/main
     });
   }
 
@@ -360,11 +453,65 @@ class ServicioReserva {
     return this.estrategiaTarifa.calcular({ tarifaHora, minutos });
   }
 
+
+
   async _notificarCambio(reserva, idReceptor) {
-    if (this.notificacionService?.crearNotificacionReserva) {
-      await this.notificacionService.crearNotificacionReserva(idReceptor, `La reserva #${reserva.id} ahora está ${reserva.estadoReserva}.`);
+    const estado = String(reserva.estadoReserva || '')
+      .trim()
+      .toUpperCase();
+
+    const mensajes = {
+      ACEPTADA: {
+        titulo: 'Reserva aceptada',
+        mensaje: `Tu reserva #${reserva.id} fue aceptada.`,
+      },
+      RECHAZADA: {
+        titulo: 'Reserva rechazada',
+        mensaje: `Tu reserva #${reserva.id} fue rechazada.`,
+      },
+      CANCELADA: {
+        titulo: 'Reserva cancelada',
+        mensaje: `La reserva #${reserva.id} fue cancelada.`,
+      },
+      COMPLETADA: {
+        titulo: 'Servicio completado',
+        mensaje:
+          `La reserva #${reserva.id} fue completada. ` +
+          'Ya puedes valorar el servicio recibido.',
+      },
+    };
+
+    const datos = mensajes[estado];
+
+    if (!datos) return;
+
+    try {
+      if (this.servicioNotificacion?.enviarNotificacion) {
+        await this.servicioNotificacion.enviarNotificacion({
+          idUsuario: Number(idReceptor),
+          idReserva: Number(reserva.id),
+          titulo: datos.titulo,
+          mensaje: datos.mensaje,
+          tipo: 'RESERVA',
+        });
+      } else if (this.notificacionService?.crearNotificacionReserva) {
+        await this.notificacionService.crearNotificacionReserva(
+          idReceptor,
+          datos.mensaje
+        );
+      } else {
+        console.warn(
+          'HU18: no se configuró el servicio de notificaciones.'
+        );
+      }
+    } catch (error) {
+      console.error(
+        'HU18: error al notificar cambio de reserva:',
+        error
+      );
     }
   }
+
 
   _ahoraEnLima() {
     const lima = new Date(this.reloj().getTime() + DESFASE_LIMA_MS);

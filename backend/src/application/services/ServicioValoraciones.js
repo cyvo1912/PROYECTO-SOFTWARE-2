@@ -27,7 +27,21 @@ class ServicioValoraciones {
       throw new ValidationError('Solo puedes valorar servicios completados.', { idReserva: 'La reserva aún no está completada.' });
     }
     if (await this.valoracionRepository.existeParaReserva(idReserva)) throw new ConflictError('Esta reserva ya fue valorada.');
-    return this.valoracionRepository.crear({ idReserva, idPadre: Number(usuario.id), idNinera: reserva.idNinera, calificacion, comentario });
+    const resultado = await this.valoracionRepository.crear({
+      idReserva,
+      idPadre: Number(usuario.id),
+      idNinera: reserva.idNinera,
+      calificacion,
+      comentario,
+    });
+
+    if (!resultado) {
+      throw new ConflictError(
+        'No se pudo registrar la valoración. Verifica que la reserva esté completada y que no haya sido valorada anteriormente.'
+      );
+    }
+
+    return resultado;
   }
 
   async listarPorNinera(idNinera) {

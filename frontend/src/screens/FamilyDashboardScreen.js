@@ -42,7 +42,6 @@ export default function FamilyDashboardScreen({
   onNavigateToReservations,
 }) {
 
-
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
 

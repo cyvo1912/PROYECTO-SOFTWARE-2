@@ -55,6 +55,7 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'nannyPublicProfile', // HU12
   'jobBoard',         // HU14 - Bolsa de trabajo para niñeras
   'publishJobOffer',  // HU14 - Publicar ofertas para familias
+  'reservationHistory',
   'notificaciones', // HU18
   'valoracion',      // HU18
   'notFound',
