@@ -127,6 +127,15 @@ class ServicioReserva {
     // 5) Plazo para pagar: el horario queda separado 10 minutos
     nueva.expiraEn = new Date(ahora.getTime() + MINUTOS_PARA_PAGAR * 60 * 1000);
 
+    // DIAGNÓSTICO TEMPORAL DEL VENCIMIENTO
+    console.log('=== DIAGNÓSTICO DE VENCIMIENTO ===');
+    console.log('Hora actual del backend:', ahora.toISOString());
+    console.log('Hora de vencimiento:', nueva.expiraEn.toISOString());
+    console.log(
+      'Minutos de diferencia:',
+      (nueva.expiraEn.getTime() - ahora.getTime()) / 60000
+    );
+
     // 6) Guardado atómico: si otra familia tomó el horario en este instante, falla
     const guardada = await this.reservaRepository.crearSiNoHaySolapamiento(nueva);
     if (!guardada) {
@@ -134,6 +143,15 @@ class ServicioReserva {
         'Otra familia acaba de reservar ese horario. Elige otro horario.',
       );
     }
+    console.log('=== RESERVA GUARDADA ===');
+    console.log('ID:', guardada.id);
+    console.log('Vencimiento recuperado:', guardada.expiraEn?.toISOString());
+    console.log(
+      'Segundos disponibles:',
+      Math.round(
+        (guardada.expiraEn.getTime() - this.reloj().getTime()) / 1000
+      )
+    );
     // Segundos que le quedan a la familia para pagar (los cuenta la pantalla)
     guardada.segundosParaPagar = Math.max(
       0,

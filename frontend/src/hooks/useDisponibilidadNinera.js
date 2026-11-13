@@ -76,6 +76,13 @@ export function useDisponibilidadNinera({ token, initialIdNinera = null }) {
         desde,
         hasta,
       });
+      console.log('=== RESPUESTA DEL FRONTEND ===');
+      console.log('Niñera seleccionada:', idNineraSeleccionada);
+      console.log('Respuesta completa:', data);
+      console.log(
+        'Horario 16/11:',
+        data?.disponibilidadPorFecha?.['2026-11-16']
+      );
 
       setNineraInfo(data.ninera || null);
       setDisponibilidadPorFecha(data.disponibilidadPorFecha || {});

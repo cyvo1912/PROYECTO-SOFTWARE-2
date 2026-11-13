@@ -7,6 +7,22 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
     this.pool = pool;
   }
 
+  // Verificar si una reserva ya fue valorada
+  async existeParaReserva(idReserva) {
+    const result = await this.pool.query(
+      `
+      SELECT 1
+      FROM valoracion
+      WHERE id_reserva = $1
+      LIMIT 1;
+      `,
+      [idReserva]
+    );
+
+    return result.rows.length > 0;
+  }
+
+  // Registrar una valoración y actualizar el promedio
   async crear(datos) {
     const client = await this.pool.connect();
 
@@ -22,7 +38,7 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
         FROM reserva
         WHERE id_reserva = $1
           AND id_padre = $2
-          AND UPPER(estado_reserva) = 'FINALIZADA'
+          AND UPPER(TRIM(estado_reserva)) = 'COMPLETADA'
         FOR UPDATE;
         `,
         [datos.idReserva, datos.idPadre]
@@ -79,13 +95,26 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
 
       return valoracionResult.rows[0];
     } catch (error) {
-      await client.query('ROLLBACK');
+      console.error('=== ERROR AL CREAR VALORACIÓN HU18 ===');
+      console.error('Mensaje:', error.message);
+      console.error('Código PostgreSQL:', error.code);
+      console.error('Detalle:', error.detail);
+      console.error('Restricción:', error.constraint);
+      console.error('Tabla:', error.table);
+
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('Error al revertir transacción:', rollbackError.message);
+      }
+
       throw error;
     } finally {
       client.release();
     }
   }
 
+  // Listar las valoraciones recibidas por una niñera
   async listarPorNinera(idNinera) {
     const result = await this.pool.query(
       `
@@ -96,7 +125,7 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
         v.id_ninera,
         v.calificacion,
         v.comentario,
-        v.fecha_creacion AS fecha_valoracion,
+        v.fecha_creacion,
         u.nombre_usuario,
         u.apellido_usuario
       FROM valoracion v
@@ -111,6 +140,7 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
     return result.rows;
   }
 
+  // Consultar la valoración de una reserva específica
   async obtenerPorReserva(idReserva) {
     const result = await this.pool.query(
       `

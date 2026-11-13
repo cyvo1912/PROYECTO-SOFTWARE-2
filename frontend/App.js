@@ -179,6 +179,15 @@ const resolverPantallaPermitida = (solicitada, user) => {
       : 'nannyDashboard';
   }
 
+  // Historial de reservas compartido por familias y niñeras
+  if (solicitada === 'reservationHistory') {
+    if (rol === 'FAMILIA' || rol === 'NINERA') {
+      return solicitada;
+    }
+
+    return 'adminDashboard';
+  }
+
   // Rutas exclusivas de FAMILIA
   const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer', 'reservationHistory'];
   if (rutasFamilia.includes(solicitada)) {

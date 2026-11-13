@@ -28,7 +28,10 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
           'El backend no devolvió una lista válida de reservas.'
         );
       }
-      setReservas(lista);
+      const reservasOrdenadas = [...lista].sort(
+        (a, b) => Number(b.id) - Number(a.id)
+      );
+      setReservas(reservasOrdenadas);
     }
     catch (error) { Alert.alert('No se pudieron cargar las reservas', error.message); }
     finally { setLoading(false); }

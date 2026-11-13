@@ -84,12 +84,38 @@ class ServicioDisponibilidad {
       ),
     ]);
 
-    const disponibilidadPorFecha = this.estrategiaCalculo.resolverHorariosPorRango({
-      bloquesDisponibilidad,
-      reservasActivas,
-      fechaDesde,
-      fechaHasta,
-    });
+    // ===== DIAGNÓSTICO 1: DATOS RECUPERADOS DE NEON =====
+    if (idNinera === 44) {
+      console.log('=== DIAGNÓSTICO NIÑERA 44 ===');
+      console.log('Rango consultado:', fechaDesde, fechaHasta);
+
+      console.log(
+        'Bloques recuperados:',
+        JSON.stringify(bloquesDisponibilidad, null, 2)
+      );
+
+      console.log(
+        'Reservas activas:',
+        JSON.stringify(reservasActivas, null, 2)
+      );
+    }
+    // ===== FIN DEL DIAGNÓSTICO 1 =====
+
+    const disponibilidadPorFecha =
+      this.estrategiaCalculo.resolverHorariosPorRango({
+        bloquesDisponibilidad,
+        reservasActivas,
+        fechaDesde,
+        fechaHasta,
+      });
+      // ===== DIAGNÓSTICO 2: HORARIOS CALCULADOS =====
+    if (idNinera === 44) {
+      console.log(
+        'Horarios calculados para 2026-11-16:',
+        disponibilidadPorFecha['2026-11-16'] || []
+      );
+    }
+    // ===== FIN DEL DIAGNÓSTICO 2 =====
 
     const fechasDisponibles = Object.keys(disponibilidadPorFecha).sort();
 
