@@ -62,20 +62,30 @@ const TODAS_LAS_RUTAS_VALIDAS = [
   'notFound',
 ];
 
+// Normalizar rutas desde el código original de forma directa
+const normalizarRuta = (ruta) => {
+  if (!ruta || typeof ruta !== 'string') return null;
+  const limpia = ruta.replace(/^#[/]?/, '').replace(/^\//, '').replace(/\/$/, '').trim();
+  if (!limpia) return null;
+  return TODAS_LAS_RUTAS_VALIDAS.find((r) => r.toLowerCase() === limpia.toLowerCase()) || null;
+};
+
+const tieneSesionValida = (user, token) => {
+  return Boolean(token && user && (user.id || user.id_usuario));
+};
+
 const guardarSesionLocal = (token, user, screen, child = null) => {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
     try {
-      if (token) window.localStorage.setItem(STORAGE_TOKEN_KEY, token);
-      else window.localStorage.removeItem(STORAGE_TOKEN_KEY);
-
-      if (user) window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
-      else window.localStorage.removeItem(STORAGE_USER_KEY);
-
-      if (screen) window.localStorage.setItem(STORAGE_SCREEN_KEY, screen);
-      else window.localStorage.removeItem(STORAGE_SCREEN_KEY);
-
-      if (child) window.localStorage.setItem(STORAGE_CHILD_KEY, JSON.stringify(child));
-      else window.localStorage.removeItem(STORAGE_CHILD_KEY);
+      if (token && user) {
+        window.localStorage.setItem(STORAGE_TOKEN_KEY, token);
+        window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+        if (screen) window.localStorage.setItem(STORAGE_SCREEN_KEY, screen);
+        if (child) window.localStorage.setItem(STORAGE_CHILD_KEY, JSON.stringify(child));
+        else window.localStorage.removeItem(STORAGE_CHILD_KEY);
+      } else {
+        limpiarSesionLocal();
+      }
     } catch (e) {
       console.warn('Error al guardar sesión local:', e);
     }
@@ -100,11 +110,33 @@ const obtenerSesionInicial = () => {
     try {
       const token = window.localStorage.getItem(STORAGE_TOKEN_KEY);
       const userStr = window.localStorage.getItem(STORAGE_USER_KEY);
-      const user = userStr ? JSON.parse(userStr) : null;
+      let user = null;
+      if (userStr) {
+        try {
+          user = JSON.parse(userStr);
+        } catch (_) {
+          user = null;
+        }
+      }
       const savedScreen = window.localStorage.getItem(STORAGE_SCREEN_KEY);
+      let child = null;
       const childStr = window.localStorage.getItem(STORAGE_CHILD_KEY);
-      const child = childStr ? JSON.parse(childStr) : null;
-      return { token, user, savedScreen, child };
+      if (childStr) {
+        try {
+          child = JSON.parse(childStr);
+        } catch (_) {
+          child = null;
+        }
+      }
+
+      // Validar integridad de sesión
+      if (tieneSesionValida(user, token)) {
+        return { token, user, savedScreen, child };
+      }
+
+      // Limpiar residuos en caso de sesión parcial
+      limpiarSesionLocal();
+      return { token: null, user: null, savedScreen: null, child: null };
     } catch (e) {
       return { token: null, user: null, savedScreen: null, child: null };
     }
@@ -123,104 +155,123 @@ const obtenerRutaDesdeNavegador = () => {
   return null;
 };
 
-/**
- * Protección de rutas y control de acceso (Guards)
- * - Si no hay usuario registrado/autenticado, bloquea rutas privadas y manda a landing.
- * - Si hay usuario, valida roles (FAMILIA, NINERA, ADMIN).
- */
-const resolverPantallaPermitida = (solicitada, user) => {
-  if (!solicitada) return user ? 'familyDashboard' : 'landing';
-
-  // Si la ruta no está registrada en la aplicación, redirigir a 404 Not Found
-  if (!TODAS_LAS_RUTAS_VALIDAS.includes(solicitada)) {
-    return 'notFound';
-  }
-
-  if (solicitada === 'notFound') {
-    return 'notFound';
-  }
-
-  if (!user) {
-    if (RUTAS_PUBLICAS.includes(solicitada)) {
-      return solicitada;
-    }
-    // Protección de ruta: Si se intenta forzar una URL protegida sin estar autenticado,
-    // se bloquea el acceso y permanece en el inicio (landing)
-    return 'landing';
-  }
-
+const getDashboardPorRol = (user) => {
   const rol = user?.rol || user?.tipo_usuario;
-
-  // Redirigir fuera de vistas públicas si ya tiene sesión
-  if (solicitada === 'login' || solicitada === 'registerFamily' || solicitada === 'registerNanny' || solicitada === 'landing') {
-    if (rol === 'ADMIN') return 'adminDashboard';
-    if (rol === 'NINERA') return 'nannyDashboard';
-    return 'familyDashboard';
-  }
-
-  // Chat y perfil público (HU12) accesibles por usuarios autenticados
-  if (solicitada === 'chat' || solicitada === 'nannyPublicProfile') {
-    return solicitada;
-  }
-
-
-  // HU18 - Notificaciones para usuarios autenticados
-  if (solicitada === 'notificaciones') {
-    return solicitada;
-  }
-
-  // HU18 - Valoraciones exclusivas de familias
-  if (solicitada === 'valoracion') {
-    if (rol === 'FAMILIA') {
-      return solicitada;
-    }
-
-    return rol === 'ADMIN'
-      ? 'adminDashboard'
-      : 'nannyDashboard';
-  }
-
-  // Historial de reservas compartido por familias y niñeras
-  if (solicitada === 'reservationHistory') {
-    if (rol === 'FAMILIA' || rol === 'NINERA') {
-      return solicitada;
-    }
-
-    return 'adminDashboard';
-  }
-
-  // Rutas exclusivas de FAMILIA
-  const rutasFamilia = ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'searchNannies', 'nannyAvailability', 'requestReservation', 'publishJobOffer', 'reservationHistory'];
-  if (rutasFamilia.includes(solicitada)) {
-    if (rol === 'FAMILIA') return solicitada;
-    return rol === 'ADMIN' ? 'adminDashboard' : 'nannyDashboard';
-  }
-
-  // Rutas exclusivas de NINERA
-  const rutasNinera = ['nannyDashboard', 'editNannyProfile', 'multimedia', 'editPublicProfile', 'jobBoard', 'reservationHistory'];
-  if (rutasNinera.includes(solicitada)) {
-    if (rol === 'NINERA') return solicitada;
-    return rol === 'ADMIN' ? 'adminDashboard' : 'familyDashboard';
-  }
-
-  // Rutas de ADMIN
-  if (solicitada === 'adminDashboard') {
-    if (rol === 'ADMIN') return 'adminDashboard';
-    return rol === 'NINERA' ? 'nannyDashboard' : 'familyDashboard';
-  }
-
   if (rol === 'ADMIN') return 'adminDashboard';
   if (rol === 'NINERA') return 'nannyDashboard';
   return 'familyDashboard';
 };
 
+/**
+ * Protección de rutas y control de acceso (Guards)
+ * - Si no hay token/usuario autenticado, bloquea rutas privadas y manda directo a landing sin parpadeo.
+ * - Elimina por completo 404 para usuarios no autenticados en cualquier módulo.
+ * - Si hay usuario, valida roles (FAMILIA, NINERA, ADMIN).
+ */
+const resolverPantallaPermitida = (solicitadaRaw, user, token) => {
+  const sesionActiva = tieneSesionValida(user, token);
+  const solicitada = normalizarRuta(solicitadaRaw);
+
+  // CASO 1: USUARIO SIN SESIÓN (O TOKEN INVÁLIDO)
+  // Regla estricta: Si no tiene token/sesión, NUNCA debe ver pantallas privadas ni caer en 404.
+  // Cualquier intento de acceder a un módulo privado o ruta inexistente sin auth lo redirige directo a landing sin parpadeo.
+  if (!sesionActiva) {
+    if (solicitada && RUTAS_PUBLICAS.includes(solicitada)) {
+      return solicitada;
+    }
+    return 'landing';
+  }
+
+  // CASO 2: USUARIO CON SESIÓN VÁLIDA
+  if (!solicitada) {
+    return getDashboardPorRol(user);
+  }
+
+  // Si la ruta solicitada no existe en la app, mostrar 404
+  if (solicitada === 'notFound' || !TODAS_LAS_RUTAS_VALIDAS.includes(solicitada)) {
+    return 'notFound';
+  }
+
+  const rol = user?.rol || user?.tipo_usuario;
+
+  // Redirigir fuera de vistas públicas si ya tiene sesión
+  if (['login', 'registerFamily', 'registerNanny', 'landing'].includes(solicitada)) {
+    return getDashboardPorRol(user);
+  }
+
+  // Chat, perfil público (HU12) y notificaciones (HU18) accesibles por todos los usuarios autenticados
+  if (['chat', 'nannyPublicProfile', 'notificaciones'].includes(solicitada)) {
+    return solicitada;
+  }
+
+  // Búsqueda de niñeras
+  if (solicitada === 'searchNannies') {
+    return 'searchNannies';
+  }
+
+  // HU18 - Valoraciones exclusivas de familias
+  if (solicitada === 'valoracion') {
+    return rol === 'FAMILIA' ? 'valoracion' : getDashboardPorRol(user);
+  }
+
+  // Historial de reservas compartido por familias y niñeras
+  if (solicitada === 'reservationHistory') {
+    if (rol === 'FAMILIA' || rol === 'NINERA') return 'reservationHistory';
+    return 'adminDashboard';
+  }
+
+  // Rutas exclusivas de FAMILIA
+  const rutasFamilia = [
+    'familyDashboard',
+    'editFamilyProfile',
+    'familyChildren',
+    'childForm',
+    'nannyAvailability',
+    'requestReservation',
+    'publishJobOffer',
+  ];
+  if (rutasFamilia.includes(solicitada)) {
+    return rol === 'FAMILIA' ? solicitada : getDashboardPorRol(user);
+  }
+
+  // Rutas exclusivas de NINERA
+  const rutasNinera = [
+    'nannyDashboard',
+    'editNannyProfile',
+    'multimedia',
+    'editPublicProfile',
+    'jobBoard',
+  ];
+  if (rutasNinera.includes(solicitada)) {
+    return rol === 'NINERA' ? solicitada : getDashboardPorRol(user);
+  }
+
+  // Rutas de ADMIN
+  if (solicitada === 'adminDashboard') {
+    return rol === 'ADMIN' ? 'adminDashboard' : getDashboardPorRol(user);
+  }
+
+  return getDashboardPorRol(user);
+};
+
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('landing');
-  const [currentUser, setCurrentUser] = useState(null);
-  const currentUserRef = useRef(null);
-  const [authToken, setAuthToken] = useState(null);
+  const sesionInicial = obtenerSesionInicial();
+  const rutaInicialUrl = obtenerRutaDesdeNavegador();
+  const rutaInicialDeseada = rutaInicialUrl || sesionInicial.savedScreen || 'landing';
+  const pantallaInicial = resolverPantallaPermitida(
+    rutaInicialDeseada,
+    sesionInicial.user,
+    sesionInicial.token
+  );
+
+  const [currentScreen, setCurrentScreen] = useState(() => (
+    pantallaInicial === 'nannyPublicProfile' ? 'landing' : pantallaInicial
+  ));
+  const [currentUser, setCurrentUser] = useState(() => sesionInicial.user);
+  const currentUserRef = useRef(sesionInicial.user);
+  const [authToken, setAuthToken] = useState(() => sesionInicial.token);
   const [logoutLoading, setLogoutLoading] = useState(false);
-  const [selectedChild, setSelectedChild] = useState(null);
+  const [selectedChild, setSelectedChild] = useState(() => sesionInicial.child);
   // HU12: niñera cuyo perfil público se está viendo y pantalla a la que se vuelve
   const [perfilVisto, setPerfilVisto] = useState({ idNinera: null, volverA: 'landing' });
   // HU Reservas: bloque elegido en el calendario de disponibilidad
@@ -265,7 +316,7 @@ export default function App() {
   };
 
   const navegar = (pantalla, hijo = null) => {
-    const permitida = resolverPantallaPermitida(pantalla, currentUser);
+    const permitida = resolverPantallaPermitida(pantalla, currentUser, authToken);
     setCurrentScreen(permitida);
     setSelectedChild(hijo);
     guardarSesionLocal(authToken, currentUser, permitida, hijo);
@@ -274,34 +325,22 @@ export default function App() {
 
   // Inicialización y manejo de recarga / historial del navegador
   useEffect(() => {
-    const sesion = obtenerSesionInicial();
-    let userActivo = sesion.user;
-    let tokenActivo = sesion.token;
+    // Sincronizar URL inicial sin parpadeo
+    sincronizarHash(currentScreen);
 
-    if (tokenActivo && userActivo) {
-      currentUserRef.current = userActivo;
-      setCurrentUser(userActivo);
-      setAuthToken(tokenActivo);
-      if (sesion.child) setSelectedChild(sesion.child);
-      cargarFotoPerfil(tokenActivo);
+    if (authToken && currentUser) {
+      currentUserRef.current = currentUser;
+      cargarFotoPerfil(authToken);
+      registrarNotificaciones(authToken).catch(() => {});
     }
-
-    const rutaUrl = obtenerRutaDesdeNavegador();
-    const pantallaDeseada = rutaUrl || sesion.savedScreen || 'landing';
-    let permitida = resolverPantallaPermitida(pantallaDeseada, userActivo);
-    // HU12: al recargar se pierde qué perfil se veía, así que se vuelve al panel
-    if (permitida === 'nannyPublicProfile') {
-      permitida = resolverPantallaPermitida('landing', userActivo);
-    }
-    setCurrentScreen(permitida);
-    sincronizarHash(permitida === 'notFound' ? pantallaDeseada : permitida);
 
     // Manejar retroceso y avance en el navegador sin cerrar sesión ni regresar a landing
     const handleUrlChange = () => {
       const nuevaRuta = obtenerRutaDesdeNavegador() || 'landing';
       const sesionActual = obtenerSesionInicial();
       const userRef = sesionActual.user || currentUserRef.current;
-      const destino = resolverPantallaPermitida(nuevaRuta, userRef);
+      const tokenRef = sesionActual.token || authToken;
+      const destino = resolverPantallaPermitida(nuevaRuta, userRef, tokenRef);
       setCurrentScreen(destino);
       sincronizarHash(destino === 'notFound' ? nuevaRuta : destino);
     };
@@ -360,14 +399,12 @@ export default function App() {
     navegar('nannyPublicProfile');
   };
   const navigateToHomeOrDashboard = () => {
-    if (!currentUser) {
+    if (!currentUser || !authToken) {
       navegar('landing');
       return;
     }
-    const rol = currentUser?.rol || currentUser?.tipo_usuario;
-    if (rol === 'ADMIN') navegar('adminDashboard');
-    else if (rol === 'NINERA') navegar('nannyDashboard');
-    else navegar('familyDashboard');
+    const destino = getDashboardPorRol(currentUser);
+    navegar(destino);
   };
 
   // Callback al iniciar sesión exitosamente
@@ -386,13 +423,7 @@ export default function App() {
 
     cargarFotoPerfil(token);
 
-    let destino = 'familyDashboard';
-    if (user?.rol === 'ADMIN' || user?.tipo_usuario === 'ADMIN') {
-      destino = 'adminDashboard';
-    } else if (user?.rol === 'NINERA' || user?.tipo_usuario === 'NINERA') {
-      destino = 'nannyDashboard';
-    }
-
+    const destino = getDashboardPorRol(user);
     setCurrentScreen(destino);
     guardarSesionLocal(token, user, destino, null);
     sincronizarHash(destino);
@@ -464,6 +495,21 @@ export default function App() {
 
 
   const renderPantalla = () => {
+    const tieneSesion = tieneSesionValida(currentUser, authToken);
+
+    // Protección estricta en el render: Si no tiene sesión y la ruta no es pública,
+    // se devuelve directamente el LandingScreen sin parpadeo y sin caer en 404
+    if (!tieneSesion && !RUTAS_PUBLICAS.includes(currentScreen)) {
+      return (
+        <LandingScreen
+          onNavigateToLogin={navigateToLogin}
+          onNavigateToRegisterFamily={navigateToRegisterFamily}
+          onNavigateToRegisterNanny={navigateToRegisterNanny}
+          onExploreNannies={navigateToSearchNannies}
+        />
+      );
+    }
+
     if (currentScreen === 'notificaciones' && currentUser) {
       return (
         <NotificacionesScreen
@@ -537,6 +583,8 @@ export default function App() {
           initialUser={currentUser}
           onBack={navigateToNannyDashboard}
           onProfileUpdated={handleProfileUpdated}
+          onLogout={handleLogout}
+          logoutLoading={logoutLoading}
         />
       );
     }
@@ -677,6 +725,8 @@ export default function App() {
           initialUser={currentUser}
           onBack={navigateToFamilyDashboard}
           onProfileUpdated={handleProfileUpdated}
+          onLogout={handleLogout}
+          logoutLoading={logoutLoading}
         />
       );
     }
@@ -762,6 +812,18 @@ export default function App() {
     }
 
     // Fallback seguro ante cualquier estado no contemplado
+    // Si no tiene sesión, jamás mostrar 404; enviar directo a LandingScreen sin parpadeo
+    if (!tieneSesion) {
+      return (
+        <LandingScreen
+          onNavigateToLogin={navigateToLogin}
+          onNavigateToRegisterFamily={navigateToRegisterFamily}
+          onNavigateToRegisterNanny={navigateToRegisterNanny}
+          onExploreNannies={navigateToSearchNannies}
+        />
+      );
+    }
+
     return (
       <NotFoundScreen
         user={currentUser}

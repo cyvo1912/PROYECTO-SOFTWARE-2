@@ -51,6 +51,8 @@ export default function EditNannyProfileScreen({
   initialUser,
   onBack,
   onProfileUpdated,
+  onLogout,
+  logoutLoading = false,
 }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
@@ -616,6 +618,19 @@ export default function EditNannyProfileScreen({
                   </>
                 )}
               </TouchableOpacity>
+
+              {/* Botón Cerrar Sesión en Perfil */}
+              {onLogout && (
+                <TouchableOpacity
+                  style={styles.logoutButton}
+                  onPress={onLogout}
+                  disabled={logoutLoading}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+                  <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -959,5 +974,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.primary,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  logoutButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });

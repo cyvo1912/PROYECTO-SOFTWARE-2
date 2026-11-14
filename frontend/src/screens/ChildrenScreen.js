@@ -99,27 +99,30 @@ export default function ChildrenScreen({
               </Text>
             )}
 
-            {onNavigateToChat && (
-              <TouchableOpacity
-                style={styles.chatNavBtn}
-                onPress={onNavigateToChat}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
-                {!isMobile && <Text style={styles.chatNavBtnText}>Mensajes</Text>}
-              </TouchableOpacity>
+            {!isMobile && (
+              <>
+                {onNavigateToChat && (
+                  <TouchableOpacity
+                    style={styles.chatNavBtn}
+                    onPress={onNavigateToChat}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
+                    <Text style={styles.chatNavBtnText}>Mensajes</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={styles.logoutNavBtn}
+                  onPress={onLogout}
+                  disabled={logoutLoading}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+                  <Text style={styles.logoutNavBtnText}>Cerrar Sesión</Text>
+                </TouchableOpacity>
+              </>
             )}
-
-            <TouchableOpacity
-              style={styles.logoutNavBtn}
-
-              onPress={onLogout}
-              disabled={logoutLoading}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
-              {!isMobile && <Text style={styles.logoutNavBtnText}>Cerrar Sesión</Text>}
-            </TouchableOpacity>
           </View>
         </View>
       </View>

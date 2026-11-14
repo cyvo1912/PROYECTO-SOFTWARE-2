@@ -5,6 +5,8 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
+  StatusBar,
+  Platform,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
@@ -186,10 +188,13 @@ export default function NotificacionesScreen({ token, onBack }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF8FF" />
       <View style={styles.header}>
         <TouchableOpacity
           onPress={onBack}
           style={styles.backButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
         >
           <Ionicons
             name="arrow-back"
@@ -270,6 +275,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8F7FC',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 16) : 0,
   },
   header: {
     flexDirection: 'row',

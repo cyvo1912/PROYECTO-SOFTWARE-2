@@ -13,6 +13,8 @@ import {
   Modal,
   ScrollView,
   Image,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import io from 'socket.io-client';
@@ -315,21 +317,28 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.contenedorPrincipal}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* Encabezado Mockup Figura 32 */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.botonVolver} onPress={onBack}>
-          <Ionicons name="arrow-back" size={18} color="#1E1B4B" />
-          <Text style={styles.textoVolver}>Volver</Text>
-        </TouchableOpacity>
-        <View style={styles.tituloHeaderContenedor}>
-          <Ionicons name="chatbubbles" size={20} color={colors.primary} style={{ marginRight: 6 }} />
-          <Text style={styles.tituloHeader}>Mensajes</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF8FF" />
+      <KeyboardAvoidingView
+        style={styles.contenedorPrincipal}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* Encabezado */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.botonVolver}
+            onPress={onBack}
+            activeOpacity={0.7}
+            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          >
+            <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
+            <Text style={styles.textoVolver}>Volver</Text>
+          </TouchableOpacity>
+          <View style={styles.tituloHeaderContenedor}>
+            <Ionicons name="chatbubbles" size={20} color={colors.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.tituloHeader}>Mensajes</Text>
+          </View>
         </View>
-      </View>
 
       <View style={styles.cuerpo}>
         {/* Panel Izquierdo: Lista de Conversaciones */}
@@ -664,10 +673,16 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
         </View>
       </Modal>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FAF8FF',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 16) : 0,
+  },
   contenedorPrincipal: {
     flex: 1,
     backgroundColor: colors.background,
@@ -677,20 +692,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#F1EEF9',
   },
   botonVolver: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 8,
+    backgroundColor: '#F3F4F6',
   },
   textoVolver: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#1E1B4B',
   },

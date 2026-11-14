@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  StatusBar,
+  Platform,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
@@ -249,8 +251,14 @@ export default function ReservationRequestScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF8FF" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+        >
           <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
           <Text style={styles.backBtnText}>Volver</Text>
         </TouchableOpacity>
@@ -435,7 +443,11 @@ export default function ReservationRequestScreen({
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 16) : 0,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

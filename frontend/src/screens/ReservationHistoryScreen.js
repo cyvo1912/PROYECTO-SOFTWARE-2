@@ -1,5 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { listarMisReservas, cambiarEstadoReserva, crearValoracion, obtenerValoracionPorReserva, } from '../services/reservaService';
 import { colors } from '../theme/colors';
@@ -154,8 +166,19 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
     }
   };
 
-  return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.container}>
-    <TouchableOpacity onPress={onBack} style={styles.back}><Ionicons name="arrow-back" size={22} color={colors.primary} /><Text style={styles.backText}>Volver</Text></TouchableOpacity>
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF8FF" />
+      <ScrollView contentContainerStyle={styles.container}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.back}
+          activeOpacity={0.7}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+        >
+          <Ionicons name="arrow-back" size={22} color={colors.primary} />
+          <Text style={styles.backText}>Volver</Text>
+        </TouchableOpacity>
     <Text style={styles.title}>{esNinera ? 'Mis servicios' : 'Mis reservas'}</Text>
     <Text style={styles.subtitle}>{esNinera ? 'Acepta, rechaza o completa servicios asignados.' : 'Revisa solicitudes y valora servicios terminados.'}</Text>
     {loading ? <ActivityIndicator color={colors.primary} size="large" style={styles.loader} /> : reservas.length === 0 ? <View style={styles.empty}><Text>No hay reservas registradas.</Text></View> : reservas.map((reserva) => {
@@ -179,17 +202,23 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
       </View>;
     })}
   </ScrollView>
-  <ModalPasarelaPago
-    visible={Boolean(reservaParaPagar)}
-    reserva={reservaParaPagar}
-    token={token}
-    onClose={() => setReservaParaPagar(null)}
-    onPagoExitoso={() => {
-      setReservaParaPagar(null);
-      cargar();
-    }}
-  />
-</SafeAreaView>;
+    <ModalPasarelaPago
+      visible={Boolean(reservaParaPagar)}
+      reserva={reservaParaPagar}
+      token={token}
+      onClose={() => setReservaParaPagar(null)}
+      onPagoExitoso={() => {
+        setReservaParaPagar(null);
+        cargar();
+      }}
+    />
+  </SafeAreaView>
+  );
 }
 function Action({ label, color = colors.primary, onPress }) { return <TouchableOpacity onPress={onPress} style={[styles.action, { borderColor: color }]}><Text style={[styles.actionText, { color }]}>{label}</Text></TouchableOpacity>; }
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: '#F8FAFC' }, container: { padding: 20, paddingBottom: 40 }, back: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }, backText: { color: colors.primary, fontWeight: '700' }, title: { fontSize: 28, fontWeight: '800', color: '#172033' }, subtitle: { color: '#64748B', marginTop: 6, marginBottom: 20 }, loader: { marginTop: 40 }, empty: { alignItems: 'center', padding: 40, backgroundColor: '#FFF', borderRadius: 16 }, card: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 1 }, row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 }, date: { fontWeight: '700', color: '#172033', flex: 1 }, status: { color: colors.primary, fontWeight: '700' }, detail: { marginTop: 10, color: '#475569' }, address: { marginTop: 4, color: '#64748B' }, actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, action: { borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 11 }, actionText: { fontWeight: '700' }, review: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }, reviewTitle: { fontWeight: '700', color: '#172033' }, stars: { flexDirection: 'row', marginVertical: 8 }, input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, minHeight: 70, textAlignVertical: 'top', marginBottom: 10 } });
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 16) : 0,
+  }, container: { padding: 20, paddingBottom: 40 }, back: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }, backText: { color: colors.primary, fontWeight: '700' }, title: { fontSize: 28, fontWeight: '800', color: '#172033' }, subtitle: { color: '#64748B', marginTop: 6, marginBottom: 20 }, loader: { marginTop: 40 }, empty: { alignItems: 'center', padding: 40, backgroundColor: '#FFF', borderRadius: 16 }, card: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 1 }, row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 }, date: { fontWeight: '700', color: '#172033', flex: 1 }, status: { color: colors.primary, fontWeight: '700' }, detail: { marginTop: 10, color: '#475569' }, address: { marginTop: 4, color: '#64748B' }, actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, action: { borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 11 }, actionText: { fontWeight: '700' }, review: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }, reviewTitle: { fontWeight: '700', color: '#172033' }, stars: { flexDirection: 'row', marginVertical: 8 }, input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, minHeight: 70, textAlignVertical: 'top', marginBottom: 10 } });

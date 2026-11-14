@@ -49,7 +49,7 @@ export default function HeroSection({ onRegisterFamily, onRegisterNanny, onExplo
             activeOpacity={0.88}
           >
             <Ionicons name="search" size={17} color={colors.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.exploreButtonText}>Explorar niñeras disponibles</Text>
+            <Text style={styles.exploreButtonText}>Explorar</Text>
           </TouchableOpacity>
         ) : null}
       </View>

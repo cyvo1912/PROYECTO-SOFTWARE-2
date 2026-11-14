@@ -109,48 +109,51 @@ export default function NannyDashboardScreen({
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.profileNavBtn}
-              onPress={onNavigateToEditProfile}
-              activeOpacity={0.7}
-              accessibilityLabel="Mi Perfil"
-            >
-              <Ionicons name="person-circle-outline" size={20} color="#1E1B4B" />
-              {!isMobile && <Text style={styles.profileNavBtnText}>Mi Perfil</Text>}
-            </TouchableOpacity>
+            {!isMobile && (
+              <>
+                <TouchableOpacity
+                  style={styles.profileNavBtn}
+                  onPress={onNavigateToEditProfile}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Mi Perfil"
+                >
+                  <Ionicons name="person-circle-outline" size={20} color="#1E1B4B" />
+                  <Text style={styles.profileNavBtnText}>Mi Perfil</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.profileNavBtn}
-              onPress={onNavigateToReservations}
-              activeOpacity={0.7}
-              accessibilityLabel="Mis servicios"
-            >
-              <Ionicons name="calendar-outline" size={19} color="#1E1B4B" />
-              {!isMobile && <Text style={styles.profileNavBtnText}>Mis servicios</Text>}
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.profileNavBtn}
+                  onPress={onNavigateToReservations}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Mis servicios"
+                >
+                  <Ionicons name="calendar-outline" size={19} color="#1E1B4B" />
+                  <Text style={styles.profileNavBtnText}>Mis servicios</Text>
+                </TouchableOpacity>
 
-            {onNavigateToChat && (
-              <TouchableOpacity
-                style={styles.profileNavBtn}
-                onPress={onNavigateToChat}
-                activeOpacity={0.7}
-                accessibilityLabel="Mensajes"
-              >
-                <Ionicons name="chatbubbles-outline" size={19} color="#1E1B4B" />
-                {!isMobile && <Text style={styles.profileNavBtnText}>Mensajes</Text>}
-              </TouchableOpacity>
+                {onNavigateToChat && (
+                  <TouchableOpacity
+                    style={styles.profileNavBtn}
+                    onPress={onNavigateToChat}
+                    activeOpacity={0.7}
+                    accessibilityLabel="Mensajes"
+                  >
+                    <Ionicons name="chatbubbles-outline" size={19} color="#1E1B4B" />
+                    <Text style={styles.profileNavBtnText}>Mensajes</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={styles.logoutNavBtn}
+                  onPress={onLogout}
+                  disabled={logoutLoading}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+                  <Text style={styles.logoutNavBtnText}>Cerrar Sesión</Text>
+                </TouchableOpacity>
+              </>
             )}
-
-
-            <TouchableOpacity
-              style={styles.logoutNavBtn}
-              onPress={onLogout}
-              disabled={logoutLoading}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
-              {!isMobile && <Text style={styles.logoutNavBtnText}>Cerrar Sesión</Text>}
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -324,6 +327,19 @@ export default function NannyDashboardScreen({
               ))
             )}
           </View>
+
+          {/* Cierre de sesión en móvil */}
+          {isMobile && onLogout ? (
+            <TouchableOpacity
+              style={styles.mobileLogoutBtn}
+              onPress={onLogout}
+              disabled={logoutLoading}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+              <Text style={styles.mobileLogoutBtnText}>Cerrar Sesión</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -412,6 +428,25 @@ const styles = StyleSheet.create({
   },
   logoutNavBtnText: {
     fontSize: 13,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  mobileLogoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 18,
+    marginBottom: 40,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  mobileLogoutBtnText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#DC2626',
   },
