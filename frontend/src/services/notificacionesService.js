@@ -1,17 +1,24 @@
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { API_BASE_URL } from '../config/api';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+if (Platform.OS !== 'web' && Notifications && typeof Notifications.setNotificationHandler === 'function') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 export async function registrarNotificaciones(tokenUsuario) {
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
   if (!Device.isDevice) {
     console.log('Las notificaciones push requieren un dispositivo físico.');
     return null;
