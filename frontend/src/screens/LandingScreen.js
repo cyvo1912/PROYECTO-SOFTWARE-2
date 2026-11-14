@@ -10,7 +10,12 @@ import Footer from '../components/Footer';
 import ActionModal from '../components/ActionModal';
 import { colors } from '../theme/colors';
 
-export default function LandingScreen({ onNavigateToLogin, onNavigateToRegisterFamily, onNavigateToRegisterNanny }) {
+export default function LandingScreen({
+  onNavigateToLogin,
+  onNavigateToRegisterFamily,
+  onNavigateToRegisterNanny,
+  onExploreNannies,
+}) {
   const [modalConfig, setModalConfig] = useState({ visible: false, type: null });
 
   const handleOpenModal = (type) => {
@@ -39,6 +44,7 @@ export default function LandingScreen({ onNavigateToLogin, onNavigateToRegisterF
         <HeroSection 
           onRegisterFamily={onNavigateToRegisterFamily || (() => handleOpenModal('family'))} 
           onRegisterNanny={onNavigateToRegisterNanny || (() => handleOpenModal('nanny'))} 
+          onExploreNannies={onExploreNannies}
         />
 
         {/* 3. Métricas y Estadísticas de Confianza */}

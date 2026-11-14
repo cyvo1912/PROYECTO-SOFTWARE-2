@@ -418,7 +418,8 @@ const styles = StyleSheet.create({
   scrollContainer: {
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingTop: 24,
+    paddingBottom: 80,
   },
   contentCard: {
     width: '100%',

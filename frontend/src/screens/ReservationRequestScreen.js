@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { cotizarReserva, solicitarReserva, listarHijos } from '../services/reservaService';
 import ModalPasarelaPago from '../components/ModalPasarelaPago';
+import { API_BASE_URL } from '../config/api';
 
 const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -48,6 +49,54 @@ export default function ReservationRequestScreen({
   const [reservaCreada, setReservaCreada] = useState(null);
   const [segundosRestantes, setSegundosRestantes] = useState(0);
   const [mostrarPasarela, setMostrarPasarela] = useState(false);
+
+  // Registro de hijo directo en la reserva
+  const [mostrandoFormHijo, setMostrandoFormHijo] = useState(false);
+  const [nuevoNombreHijo, setNuevoNombreHijo] = useState('');
+  const [nuevaEdadHijo, setNuevaEdadHijo] = useState('');
+  const [guardandoHijo, setGuardandoHijo] = useState(false);
+  const [errorHijo, setErrorHijo] = useState('');
+
+  const handleGuardarHijoRapido = async () => {
+    if (!nuevoNombreHijo.trim()) {
+      setErrorHijo('Ingresa el nombre del niño.');
+      return;
+    }
+    const edadNum = Number(nuevaEdadHijo);
+    if (!nuevaEdadHijo.trim() || !Number.isInteger(edadNum) || edadNum < 0 || edadNum > 17) {
+      setErrorHijo('Ingresa una edad entre 0 y 17 años.');
+      return;
+    }
+    setGuardandoHijo(true);
+    setErrorHijo('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/hijos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nombre: nuevoNombreHijo.trim(),
+          edad: edadNum,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setHijos((prev) => [...prev, data.data]);
+        setIdHijo(data.data.id);
+        setNuevoNombreHijo('');
+        setNuevaEdadHijo('');
+        setMostrandoFormHijo(false);
+      } else {
+        setErrorHijo(data.message || 'No se pudo registrar el niño.');
+      }
+    } catch (e) {
+      setErrorHijo('Error de conexión.');
+    } finally {
+      setGuardandoHijo(false);
+    }
+  };
 
   // Cuenta regresiva de los 10 minutos para pagar
   useEffect(() => {
@@ -233,24 +282,97 @@ export default function ReservationRequestScreen({
           </View>
         </View>
 
+        <View style={styles.childHeaderRow}>
+          <Text style={styles.sectionTitle}>¿A quién cuidará?</Text>
+          {hijos.length > 0 && hijos.length < 5 && !mostrandoFormHijo ? (
+            <TouchableOpacity
+              onPress={() => setMostrandoFormHijo(true)}
+              style={styles.addChildInlineBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={15} color={colors.primary} />
+              <Text style={styles.addChildInlineBtnText}>Agregar niño</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
         {hijos.length > 0 ? (
-          <>
-            <Text style={styles.sectionTitle}>¿A quién cuidará?</Text>
-            <View style={styles.chips}>
-              {hijos.map((h) => (
-                <TouchableOpacity
-                  key={h.id}
-                  style={[styles.chip, idHijo === h.id && styles.chipActive]}
-                  onPress={() => setIdHijo(idHijo === h.id ? null : h.id)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.chipText, idHijo === h.id && styles.chipTextActive]}>
-                    {h.nombre} ({h.edad} años)
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          <View style={styles.chips}>
+            {hijos.map((h) => (
+              <TouchableOpacity
+                key={h.id}
+                style={[styles.chip, idHijo === h.id && styles.chipActive]}
+                onPress={() => setIdHijo(idHijo === h.id ? null : h.id)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.chipText, idHijo === h.id && styles.chipTextActive]}>
+                  {h.nombre} ({h.edad} años)
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Registro rápido de hijo dentro de la reserva */}
+        {hijos.length === 0 || mostrandoFormHijo ? (
+          <View style={styles.quickChildCard}>
+            <Text style={styles.quickChildTitle}>
+              {hijos.length === 0 ? 'Registra los datos de tu hijo' : 'Agregar otro niño'}
+            </Text>
+            <View style={styles.row}>
+              <View style={{ flex: 2 }}>
+                <Text style={styles.label}>Nombre</Text>
+                <TextInput
+                  style={styles.input}
+                  value={nuevoNombreHijo}
+                  onChangeText={setNuevoNombreHijo}
+                  placeholder="Ej.: Sofía"
+                  placeholderTextColor="#B6B9C2"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Edad (años)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={nuevaEdadHijo}
+                  onChangeText={(t) => setNuevaEdadHijo(t.replace(/[^0-9]/g, '').slice(0, 2))}
+                  placeholder="4"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholderTextColor="#B6B9C2"
+                />
+              </View>
             </View>
-          </>
+
+            {errorHijo ? <Text style={styles.fieldError}>{errorHijo}</Text> : null}
+
+            <View style={styles.quickChildActions}>
+              {hijos.length > 0 ? (
+                <TouchableOpacity
+                  style={styles.cancelQuickChildBtn}
+                  onPress={() => {
+                    setMostrandoFormHijo(false);
+                    setErrorHijo('');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.cancelQuickChildBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                style={styles.saveQuickChildBtn}
+                onPress={handleGuardarHijoRapido}
+                disabled={guardandoHijo}
+                activeOpacity={0.85}
+              >
+                {guardandoHijo ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveQuickChildBtnText}>Guardar niño</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
         ) : null}
 
         <Text style={styles.sectionTitle}>Dirección del cuidado</Text>
@@ -409,4 +531,69 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: colors.textLight, fontWeight: '700', fontSize: 16 },
   successBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   title: { fontSize: 22, fontWeight: '800', color: colors.textTitle },
+  childHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  addChildInlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EEF2FF',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  addChildInlineBtnText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  quickChildCard: {
+    backgroundColor: '#FAF5FF',
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  quickChildTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B21A8',
+    marginBottom: 8,
+  },
+  quickChildActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+  },
+  cancelQuickChildBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  cancelQuickChildBtnText: {
+    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  saveQuickChildBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveQuickChildBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function HeroSection({ onRegisterFamily, onRegisterNanny }) {
+export default function HeroSection({ onRegisterFamily, onRegisterNanny, onExploreNannies }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
@@ -41,6 +41,17 @@ export default function HeroSection({ onRegisterFamily, onRegisterNanny }) {
           <Ionicons name="heart-outline" size={18} color="#1E1B4B" style={{ marginRight: 8 }} />
           <Text style={styles.secondaryButtonText}>Registrarse como Niñera</Text>
         </TouchableOpacity>
+
+        {onExploreNannies ? (
+          <TouchableOpacity
+            style={[styles.exploreButton, isMobile && styles.fullWidthButton]}
+            onPress={onExploreNannies}
+            activeOpacity={0.88}
+          >
+            <Ionicons name="search" size={17} color={colors.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.exploreButtonText}>Explorar niñeras disponibles</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Trust & Guarantee points */}
@@ -198,6 +209,23 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#0F172A',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  exploreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    minWidth: 230,
+  },
+  exploreButtonText: {
+    color: colors.primary,
+    fontSize: 15,
     fontWeight: '700',
   },
   trustRow: {

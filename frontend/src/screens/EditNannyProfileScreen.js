@@ -579,8 +579,8 @@ export default function EditNannyProfileScreen({
                   />
                   <Text style={styles.locationStatusText}>
                     {ubicacion.latitud !== null
-                      ? `Ubicación guardada (${Number(ubicacion.latitud).toFixed(4)}, ${Number(ubicacion.longitud).toFixed(4)})`
-                      : 'Aún no has compartido tu ubicación'}
+                      ? 'Ubicación vinculada'
+                      : 'Sin ubicación registrada'}
                   </Text>
                 </View>
                 <TouchableOpacity

@@ -21,28 +21,73 @@ import { BUSQUEDA_API_URL, GOOGLE_MAPS_API_KEY } from '../config/api';
 const RADIOS_KM = [5, 10, 15, 25, 50];
 const MAX_MARCADORES_MAPA = 10;
 
+const DISTRITOS_LIMA = [
+  { id: 'cerca', label: 'Cerca de ti', latitud: null, longitud: null },
+  { id: 'surco', label: 'Surco', latitud: -12.1390, longitud: -76.9916 },
+  { id: 'miraflores', label: 'Miraflores', latitud: -12.1217, longitud: -77.0298 },
+  { id: 'san_isidro', label: 'San Isidro', latitud: -12.0977, longitud: -77.0345 },
+  { id: 'san_borja', label: 'San Borja', latitud: -12.0942, longitud: -77.0019 },
+  { id: 'la_molina', label: 'La Molina', latitud: -12.0864, longitud: -76.9458 },
+  { id: 'san_miguel', label: 'San Miguel', latitud: -12.0772, longitud: -77.0861 },
+];
+
+const NINERAS_DEMO = [
+  {
+    id: 1,
+    nombre: 'Ana Paula Silva',
+    distanciaKm: 1.2,
+    tarifaHora: 22,
+    experiencia: '4 años cuidando bebés y niños de 1 a 6 años. Certificada en primeros auxilios.',
+    anosExperiencia: 4,
+    calificacionPromedio: 4.9,
+    verificada: true,
+    zona: 'Surco / Miraflores',
+  },
+  {
+    id: 2,
+    nombre: 'Claudia Ramos',
+    distanciaKm: 2.5,
+    tarifaHora: 20,
+    experiencia: 'Educadora inicial con 5 años de experiencia. Especialista en juegos didácticos y apoyo escolar.',
+    anosExperiencia: 5,
+    calificacionPromedio: 4.8,
+    verificada: true,
+    zona: 'San Borja / San Isidro',
+  },
+  {
+    id: 3,
+    nombre: 'Lucía Mendoza',
+    distanciaKm: 3.4,
+    tarifaHora: 25,
+    experiencia: 'Enfermera técnica pediátrica con 6 años de trayectoria. Atención a recién nacidos y horarios nocturnos.',
+    anosExperiencia: 6,
+    calificacionPromedio: 5.0,
+    verificada: true,
+    zona: 'Miraflores / San Isidro',
+  },
+];
+
 /**
  * Pantalla: Buscar Niñeras (HU11)
  * "Como familia, quiero buscar niñeras filtrando por proximidad geográfica,
  * tarifa y experiencia para ubicar candidatas en mi zona."
  * Tecnología asignada: Google Maps API + React Native.
  *
- * - La ubicación de la familia se obtiene con el GPS del celular (expo-location).
- * - La distancia a cada niñera se calcula en el backend (fórmula de Haversine)
- *   a partir de la ubicación que cada niñera guardó en su perfil.
- * - El mapa se dibuja con la API de Google Maps Static Maps (una imagen con
- *   marcadores): no requiere un módulo nativo de mapas, por lo que funciona
- *   igual en Android, iOS y Web, como el resto de esta app Expo. Si no hay
- *   una clave configurada (EXPO_PUBLIC_GOOGLE_MAPS_API_KEY), la búsqueda
- *   sigue funcionando en modo lista, sin la imagen del mapa.
+ * - La ubicación de la familia se obtiene con el GPS del celular (expo-location)
+ *   o seleccionando un distrito clave de Lima.
+ * - La distancia a cada niñera se calcula en el backend (fórmula de Haversine).
+ * - Vista conmutable Lista / Mapa para navegación ágil en móvil.
+ * - Modo invitado para explorar antes de registrarse.
  */
-export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
+export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuthRequired }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
 
   const [radioKm, setRadioKm] = useState(15);
   const [tarifaMaxima, setTarifaMaxima] = useState('');
   const [experienciaMinima, setExperienciaMinima] = useState('');
+  const [distritoSeleccionado, setDistritoSeleccionado] = useState('cerca');
+  const [vistaMapa, setVistaMapa] = useState(false);
 
   const [ubicacion, setUbicacion] = useState(null); // { latitud, longitud }
   const [obteniendoUbicacion, setObteniendoUbicacion] = useState(false);
@@ -52,6 +97,14 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
   const [resultados, setResultados] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Cargar niñeras iniciales en modo invitado
+  React.useEffect(() => {
+    if (!token) {
+      setYaBusco(true);
+      setResultados(NINERAS_DEMO);
+    }
+  }, [token]);
 
   const obtenerUbicacionActual = useCallback(async () => {
     setErrorMessage('');
@@ -90,6 +143,19 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
       setBuscando(true);
       setYaBusco(true);
       try {
+        if (!token) {
+          // Modo invitado: filtrar la lista de demostración
+          let demo = [...NINERAS_DEMO];
+          if (tarifaMaxima.trim() !== '') {
+            demo = demo.filter((n) => n.tarifaHora <= Number(tarifaMaxima));
+          }
+          if (experienciaMinima.trim() !== '') {
+            demo = demo.filter((n) => n.anosExperiencia >= Number(experienciaMinima));
+          }
+          setResultados(demo);
+          return;
+        }
+
         const params = new URLSearchParams({
           latitud: String(origen.latitud),
           longitud: String(origen.longitud),
@@ -223,6 +289,45 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
               ))}
             </View>
 
+            <Text style={styles.label}>Distrito o zona de Lima</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.districtChipsRow}
+            >
+              {DISTRITOS_LIMA.map((d) => {
+                const activo = distritoSeleccionado === d.id;
+                return (
+                  <TouchableOpacity
+                    key={d.id}
+                    style={[styles.districtChip, activo && styles.districtChipActive]}
+                    onPress={() => {
+                      setDistritoSeleccionado(d.id);
+                      if (d.latitud && d.longitud) {
+                        const nuevaUbicacion = { latitud: d.latitud, longitud: d.longitud };
+                        setUbicacion(nuevaUbicacion);
+                        buscarNineras(nuevaUbicacion);
+                      } else {
+                        obtenerUbicacionActual().then((loc) => {
+                          if (loc) buscarNineras(loc);
+                        });
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={d.id === 'cerca' ? 'navigate-outline' : 'business-outline'}
+                      size={13}
+                      color={activo ? '#FFFFFF' : colors.primary}
+                    />
+                    <Text style={[styles.districtChipText, activo && styles.districtChipTextActive]}>
+                      {d.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
             <View style={styles.row}>
               <View style={[styles.col, { flex: 1 }]}>
                 <Field
@@ -256,7 +361,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
               <View style={styles.locationBadge}>
                 <Ionicons name="location" size={14} color={colors.primary} />
                 <Text style={styles.locationBadgeText}>
-                  Buscando desde ({ubicacion.latitud.toFixed(4)}, {ubicacion.longitud.toFixed(4)})
+                  Zona: {DISTRITOS_LIMA.find((d) => d.id === distritoSeleccionado)?.label || 'Detectada'}
                 </Text>
               </View>
             ) : null}
@@ -278,35 +383,33 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <Ionicons name="navigate" size={18} color="#FFFFFF" />
+                  <Ionicons name="search" size={18} color="#FFFFFF" />
                   <Text style={styles.searchButtonText}>
-                    {ubicacion ? 'Buscar niñeras cerca de mí' : 'Usar mi ubicación y buscar'}
+                    {token ? 'Buscar niñeras en la zona' : 'Explorar niñeras'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
 
-          {/* Mapa (Google Maps Static API) */}
-          {mapaUrl ? (
-            <View style={styles.mapCard}>
-              <Image source={{ uri: mapaUrl }} style={styles.mapImage} resizeMode="cover" />
-              <Text style={styles.mapCaption}>
-                <Ionicons name="pin" size={12} color={colors.primary} /> Tu ubicación ·{' '}
-                <Ionicons name="pin" size={12} color="#DC2626" /> Niñeras encontradas (máx. {MAX_MARCADORES_MAPA})
-              </Text>
-            </View>
-          ) : ubicacion && !GOOGLE_MAPS_API_KEY ? (
-            <View style={styles.mapPlaceholder}>
-              <Ionicons name="map-outline" size={22} color="#9CA3AF" />
-              <Text style={styles.mapPlaceholderText}>
-                Configura EXPO_PUBLIC_GOOGLE_MAPS_API_KEY para ver el mapa. Mientras tanto, los resultados se
-                muestran en la lista de abajo, ordenados por distancia.
-              </Text>
+          {/* Banner de modo invitado */}
+          {!token ? (
+            <View style={styles.guestBanner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.guestBannerTitle}>Estás explorando como invitado</Text>
+                <Text style={styles.guestBannerSubtitle}>
+                  Inicia sesión o regístrate como familia para agendar o chatear con una niñera.
+                </Text>
+              </View>
+              {onAuthRequired ? (
+                <TouchableOpacity style={styles.guestBannerBtn} onPress={() => onAuthRequired()} activeOpacity={0.8}>
+                  <Text style={styles.guestBannerBtnText}>Acceder</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : null}
 
-          {/* Resultados */}
+          {/* Resultados y conmutador Lista / Mapa */}
           {yaBusco && !buscando ? (
             resultados.length === 0 ? (
               <View style={styles.emptyBox}>
@@ -332,17 +435,64 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil }) {
             ) : (
               <View style={styles.resultsHeaderRow}>
                 <Text style={styles.resultsCount}>
-                  {resultados.length} {resultados.length === 1 ? 'niñera encontrada' : 'niñeras encontradas'}
+                  {resultados.length} {resultados.length === 1 ? 'niñera disponible' : 'niñeras disponibles'}
                 </Text>
+                {mapaUrl ? (
+                  <TouchableOpacity
+                    style={styles.viewToggleInline}
+                    onPress={() => setVistaMapa((v) => !v)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name={vistaMapa ? 'list-outline' : 'map-outline'} size={15} color={colors.primary} />
+                    <Text style={styles.viewToggleInlineText}>{vistaMapa ? 'Ver lista' : 'Ver mapa'}</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             )
           ) : null}
 
-          {resultados.map((ninera) => (
-            <NannyCard key={ninera.id} ninera={ninera} onVerPerfil={onVerPerfil} />
-          ))}
+          {/* Renderizado conmutable: Mapa o Lista de Niñeras */}
+          {vistaMapa && mapaUrl ? (
+            <View style={styles.mapCard}>
+              <Image source={{ uri: mapaUrl }} style={styles.mapImage} resizeMode="cover" />
+              <Text style={styles.mapCaption}>
+                <Ionicons name="pin" size={12} color={colors.primary} /> Tu zona ·{' '}
+                <Ionicons name="pin" size={12} color="#DC2626" /> Niñeras encontradas
+              </Text>
+            </View>
+          ) : (
+            resultados.map((ninera) => (
+              <NannyCard
+                key={ninera.id}
+                ninera={ninera}
+                onVerPerfil={() => {
+                  if (!token && onAuthRequired) {
+                    onAuthRequired(ninera);
+                  } else if (onVerPerfil) {
+                    onVerPerfil(ninera.id);
+                  }
+                }}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
+
+      {/* Botón flotante para alternar Mapa/Lista en móviles */}
+      {yaBusco && !buscando && resultados.length > 0 && mapaUrl ? (
+        <View style={styles.floatingToggleContainer} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.floatingToggleBtn}
+            onPress={() => setVistaMapa((v) => !v)}
+            activeOpacity={0.88}
+          >
+            <Ionicons name={vistaMapa ? 'list' : 'map'} size={17} color="#FFFFFF" />
+            <Text style={styles.floatingToggleText}>
+              {vistaMapa ? 'Ver lista' : 'Ver mapa'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -508,7 +658,8 @@ const styles = StyleSheet.create({
   scrollContainer: {
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingTop: 24,
+    paddingBottom: 80,
   },
   content: {
     width: '100%',
@@ -698,7 +849,24 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   resultsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 10,
+  },
+  viewToggleInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+  },
+  viewToggleInlineText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   resultsCount: {
     fontSize: 14,
@@ -856,5 +1024,102 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     marginTop: 10,
     lineHeight: 18,
+  },
+  districtChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  districtChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  districtChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  districtChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  districtChipTextActive: {
+    color: '#FFFFFF',
+  },
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+  },
+  guestBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    marginBottom: 2,
+  },
+  guestBannerSubtitle: {
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 16,
+  },
+  guestBannerBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  guestBannerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  floatingToggleContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1E1B4B',
+    paddingVertical: 11,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
+      },
+    }),
+  },
+  floatingToggleText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

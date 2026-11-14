@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
 import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterFamilyScreen from './src/screens/RegisterFamilyScreen';
@@ -26,6 +26,7 @@ import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
 import NotificacionesScreen from './src/screens/NotificacionesScreen';
 import ValoracionScreen from './src/screens/ValoracionScreen';
 import { registrarNotificaciones } from './src/services/notificacionesService';
+import BottomNavBar from './src/components/BottomNavBar';
 
 // Constantes para persistencia local de sesión
 const STORAGE_TOKEN_KEY = 'minana_auth_token';
@@ -33,7 +34,7 @@ const STORAGE_USER_KEY = 'minana_user';
 const STORAGE_SCREEN_KEY = 'minana_screen';
 const STORAGE_CHILD_KEY = 'minana_selected_child';
 
-const RUTAS_PUBLICAS = ['landing', 'login', 'registerFamily', 'registerNanny'];
+const RUTAS_PUBLICAS = ['landing', 'login', 'registerFamily', 'registerNanny', 'searchNannies'];
 const TODAS_LAS_RUTAS_VALIDAS = [
   'landing',
   'login',
@@ -462,190 +463,182 @@ export default function App() {
   };
 
 
-  if (currentScreen === 'notificaciones' && currentUser) {
-    return (
-      <NotificacionesScreen
-        token={authToken}
-        onBack={volverPantallaAnterior}
-      />
-    );
-  }
+  const renderPantalla = () => {
+    if (currentScreen === 'notificaciones' && currentUser) {
+      return (
+        <NotificacionesScreen
+          token={authToken}
+          onBack={volverPantallaAnterior}
+        />
+      );
+    }
 
-  if (currentScreen === 'valoracion' && currentUser && reservaParaValorar) {
-    return (
-      <ValoracionScreen
-        token={authToken}
-        reserva={reservaParaValorar}
-        onBack={volverPantallaAnterior}
-        onSuccess={valoracionExitosa}
-      />
-    );
-  }
+    if (currentScreen === 'valoracion' && currentUser && reservaParaValorar) {
+      return (
+        <ValoracionScreen
+          token={authToken}
+          reserva={reservaParaValorar}
+          onBack={volverPantallaAnterior}
+          onSuccess={valoracionExitosa}
+        />
+      );
+    }
 
-  if (currentScreen === 'adminDashboard' && currentUser) {
-    return (
-      <AdminDashboardScreen
-        user={currentUser}
-        token={authToken}
-        onLogout={handleLogout}
-      />
-    );
-  }
+    if (currentScreen === 'adminDashboard' && currentUser) {
+      return (
+        <AdminDashboardScreen
+          user={currentUser}
+          token={authToken}
+          onLogout={handleLogout}
+        />
+      );
+    }
 
-  if (currentScreen === 'nannyDashboard' && currentUser) {
-    return (
-      <NannyDashboardScreen
-        user={currentUser}
-        token={authToken}
-        onNavigateToJobBoard={navigateToJobBoard}
-        onNavigateToReservations={navigateToReservationHistory}
-        onNavigateToEditProfile={navigateToEditNannyProfile}
-        onNavigateToMultimedia={navigateToMultimedia}
-        onNavigateToPublicProfile={navigateToEditPublicProfile}
-        onLogout={handleLogout}
-        logoutLoading={logoutLoading}
-        onNotificaciones={abrirNotificaciones}
-        onNavigateToChat={navigateToChat}
-      />
-    );
-  }
+    if (currentScreen === 'nannyDashboard' && currentUser) {
+      return (
+        <NannyDashboardScreen
+          user={currentUser}
+          token={authToken}
+          onNavigateToJobBoard={navigateToJobBoard}
+          onNavigateToReservations={navigateToReservationHistory}
+          onNavigateToEditProfile={navigateToEditNannyProfile}
+          onNavigateToMultimedia={navigateToMultimedia}
+          onNavigateToPublicProfile={navigateToEditPublicProfile}
+          onLogout={handleLogout}
+          logoutLoading={logoutLoading}
+          onNotificaciones={abrirNotificaciones}
+          onNavigateToChat={navigateToChat}
+        />
+      );
+    }
 
-  if (currentScreen === 'chat' && currentUser) {
-    return (
-      <PantallaChat
-        token={authToken}
-        user={currentUser}
-        onBack={() => {
-          if (currentUser.rol === 'NINERA' || currentUser.tipo_usuario === 'NINERA') {
-            navigateToNannyDashboard();
-          } else if (currentUser.rol === 'ADMIN' || currentUser.tipo_usuario === 'ADMIN') {
-            navegar('adminDashboard');
-          } else {
-            navigateToFamilyDashboard();
-          }
-        }}
-      />
-    );
-  }
+    if (currentScreen === 'chat' && currentUser) {
+      return (
+        <PantallaChat
+          token={authToken}
+          user={currentUser}
+          onBack={() => {
+            if (currentUser.rol === 'NINERA' || currentUser.tipo_usuario === 'NINERA') {
+              navigateToNannyDashboard();
+            } else if (currentUser.rol === 'ADMIN' || currentUser.tipo_usuario === 'ADMIN') {
+              navegar('adminDashboard');
+            } else {
+              navigateToFamilyDashboard();
+            }
+          }}
+        />
+      );
+    }
 
-  if (currentScreen === 'editNannyProfile' && currentUser) {
-    return (
-      <EditNannyProfileScreen
-        token={authToken}
-        initialUser={currentUser}
-        onBack={navigateToNannyDashboard}
-        onProfileUpdated={handleProfileUpdated}
-      />
-    );
-  }
+    if (currentScreen === 'editNannyProfile' && currentUser) {
+      return (
+        <EditNannyProfileScreen
+          token={authToken}
+          initialUser={currentUser}
+          onBack={navigateToNannyDashboard}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      );
+    }
 
-  if (currentScreen === 'multimedia' && currentUser) {
-    return (
-      <MultimediaScreen
-        token={authToken}
-        user={currentUser}
-        onBack={navigateToNannyDashboard}
-        onFotoActualizada={handleFotoActualizada}
-      />
-    );
-  }
+    if (currentScreen === 'multimedia' && currentUser) {
+      return (
+        <MultimediaScreen
+          token={authToken}
+          user={currentUser}
+          onBack={navigateToNannyDashboard}
+          onFotoActualizada={handleFotoActualizada}
+        />
+      );
+    }
 
-  // HU14: la niñera explora la bolsa de trabajo y se postula
-  if (currentScreen === 'jobBoard' && currentUser) {
-    return (
-      <JobBoardScreen
-        token={authToken}
-        onBack={navigateToNannyDashboard}
-      />
-    );
-  }
+    // HU14: la niñera explora la bolsa de trabajo y se postula
+    if (currentScreen === 'jobBoard' && currentUser) {
+      return (
+        <JobBoardScreen
+          token={authToken}
+          onBack={navigateToNannyDashboard}
+        />
+      );
+    }
 
-  // HU14: la familia publica ofertas en la bolsa de trabajo
-  if (currentScreen === 'publishJobOffer' && currentUser) {
-    return (
-      <PublishJobOfferScreen
-        token={authToken}
-        user={currentUser}
-        onBack={navigateToFamilyDashboard}
-      />
-    );
-  }
+    // HU14: la familia publica ofertas en la bolsa de trabajo
+    if (currentScreen === 'publishJobOffer' && currentUser) {
+      return (
+        <PublishJobOfferScreen
+          token={authToken}
+          user={currentUser}
+          onBack={navigateToFamilyDashboard}
+        />
+      );
+    }
 
-  if (currentScreen === 'reservationHistory' && currentUser) {
-    return <ReservationHistoryScreen token={authToken} user={currentUser} onBack={navigateToHomeOrDashboard} />;
-  }
+    if (currentScreen === 'reservationHistory' && currentUser) {
+      return <ReservationHistoryScreen token={authToken} user={currentUser} onBack={navigateToHomeOrDashboard} />;
+    }
 
-  // HU12: la niñera completa su perfil público (formulario de 5 campos)
-  if (currentScreen === 'editPublicProfile' && currentUser) {
-    return (
-      <EditPublicProfileScreen
-        token={authToken}
-        onBack={navigateToNannyDashboard}
-        onVerPerfil={() => navigateToNannyPublicProfile(currentUser.id, 'editPublicProfile')}
-      />
-    );
-  }
+    // HU12: la niñera completa su perfil público (formulario de 5 campos)
+    if (currentScreen === 'editPublicProfile' && currentUser) {
+      return (
+        <EditPublicProfileScreen
+          token={authToken}
+          onBack={navigateToNannyDashboard}
+          onVerPerfil={() => navigateToNannyPublicProfile(currentUser.id, 'editPublicProfile')}
+        />
+      );
+    }
 
-  // HU12: perfil público ampliado (lo ve la familia; la niñera lo ve como vista previa)
-  if (currentScreen === 'nannyPublicProfile' && currentUser && perfilVisto.idNinera) {
-    return (
-      <NannyPublicProfileScreen
-        token={authToken}
-        idNinera={perfilVisto.idNinera}
-        onBack={() => navegar(perfilVisto.volverA)}
-      />
-    );
-  }
+    // HU12: perfil público ampliado (lo ve la familia; la niñera lo ve como vista previa)
+    if (currentScreen === 'nannyPublicProfile' && currentUser && perfilVisto.idNinera) {
+      return (
+        <NannyPublicProfileScreen
+          token={authToken}
+          idNinera={perfilVisto.idNinera}
+          onBack={() => navegar(perfilVisto.volverA)}
+        />
+      );
+    }
 
-  // HU6: Panel principal de la familia
-  if (currentScreen === 'familyDashboard' && currentUser) {
-    return (
-      <FamilyDashboardScreen
-        token={authToken}
-        user={currentUser}
-        onNavigateToEditProfile={navigateToEditFamilyProfile}
-        onNavigateToChildren={navigateToFamilyChildren}
-        onNavigateToNannyAvailability={navigateToNannyAvailability}
-        onAddChild={() => navigateToChildForm(null)}
-        onEditChild={navigateToChildForm}
-        onNavigateToSearch={navigateToSearchNannies}
-        onNavigateToPublishOffer={navigateToPublishJobOffer}
-        onNavigateToReservations={navigateToReservationHistory}
-        onLogout={handleLogout}
-        logoutLoading={logoutLoading}
-        onNavigateToNotifications={abrirNotificaciones}
-        onValorar={abrirValoracion}
-        onNavigateToChat={navigateToChat}
-      />
-    );
-  }
+    // HU6: Panel principal de la familia
+    if (currentScreen === 'familyDashboard' && currentUser) {
+      return (
+        <FamilyDashboardScreen
+          token={authToken}
+          user={currentUser}
+          onNavigateToEditProfile={navigateToEditFamilyProfile}
+          onNavigateToChildren={navigateToFamilyChildren}
+          onNavigateToNannyAvailability={navigateToNannyAvailability}
+          onAddChild={() => navigateToChildForm(null)}
+          onEditChild={navigateToChildForm}
+          onNavigateToSearch={navigateToSearchNannies}
+          onNavigateToPublishOffer={navigateToPublishJobOffer}
+          onNavigateToReservations={navigateToReservationHistory}
+          onLogout={handleLogout}
+          logoutLoading={logoutLoading}
+          onNavigateToNotifications={abrirNotificaciones}
+          onValorar={abrirValoracion}
+          onNavigateToChat={navigateToChat}
+        />
+      );
+    }
 
-  // HU11: Búsqueda de niñeras por proximidad, tarifa y experiencia
-  if (currentScreen === 'searchNannies' && currentUser) {
-    return (
-      <SearchNanniesScreen
-        token={authToken}
-        onBack={navigateToFamilyDashboard}
-        onVerPerfil={(idNinera) => navigateToNannyPublicProfile(idNinera, 'searchNannies')}
-      />
-    );
-  }
+    // HU11: Búsqueda de niñeras por proximidad, tarifa y experiencia (permite modo invitado)
+    if (currentScreen === 'searchNannies') {
+      return (
+        <SearchNanniesScreen
+          token={authToken}
+          onBack={currentUser ? navigateToFamilyDashboard : navigateToLanding}
+          onVerPerfil={(idNinera) => {
+            if (!currentUser) navigateToLogin();
+            else navigateToNannyPublicProfile(idNinera, 'searchNannies');
+          }}
+          onAuthRequired={navigateToLogin}
+        />
+      );
+    }
 
-  // HU13: Consultar disponibilidad de niñera
-  if (currentScreen === 'nannyAvailability' && currentUser) {
-    return (
-      <NannyAvailabilityCalendarScreen
-        token={authToken}
-        onBack={navigateToFamilyDashboard}
-        onSelectSlot={navigateToRequestReservation}
-      />
-    );
-  }
-
-  // HU Reservas: solicitar reserva con cálculo de tarifa
-  if (currentScreen === 'requestReservation' && currentUser) {
-    if (!slotReserva) {
-      // Si se recargó la página se pierde el bloque elegido: volver al calendario
+    // HU13: Consultar disponibilidad de niñera
+    if (currentScreen === 'nannyAvailability' && currentUser) {
       return (
         <NannyAvailabilityCalendarScreen
           token={authToken}
@@ -654,87 +647,121 @@ export default function App() {
         />
       );
     }
-    return (
-      <ReservationRequestScreen
-        token={authToken}
-        slot={slotReserva}
-        onBack={navigateToNannyAvailability}
-        onReservaCreada={navigateToFamilyDashboard}
-      />
-    );
-  }
 
-  if (currentScreen === 'editFamilyProfile' && currentUser) {
-    return (
-      <EditFamilyProfileScreen
-        token={authToken}
-        initialUser={currentUser}
-        onBack={navigateToFamilyDashboard}
-        onProfileUpdated={handleProfileUpdated}
-      />
-    );
-  }
+    // HU Reservas: solicitar reserva con cálculo de tarifa
+    if (currentScreen === 'requestReservation' && currentUser) {
+      if (!slotReserva) {
+        // Si se recargó la página se pierde el bloque elegido: volver al calendario
+        return (
+          <NannyAvailabilityCalendarScreen
+            token={authToken}
+            onBack={navigateToFamilyDashboard}
+            onSelectSlot={navigateToRequestReservation}
+          />
+        );
+      }
+      return (
+        <ReservationRequestScreen
+          token={authToken}
+          slot={slotReserva}
+          onBack={navigateToNannyAvailability}
+          onReservaCreada={navigateToFamilyDashboard}
+        />
+      );
+    }
 
-  if (currentScreen === 'familyChildren' && currentUser) {
-    return (
-      <ChildrenScreen
-        token={authToken}
-        user={currentUser}
-        onBack={navigateToFamilyDashboard}
-        onNavigateToNannyAvailability={navigateToNannyAvailability}
-        onAddChild={() => navigateToChildForm(null)}
-        onEditChild={navigateToChildForm}
-        onLogout={handleLogout}
-        logoutLoading={logoutLoading}
-        onNavigateToChat={navigateToChat}
-      />
-    );
-  }
+    if (currentScreen === 'editFamilyProfile' && currentUser) {
+      return (
+        <EditFamilyProfileScreen
+          token={authToken}
+          initialUser={currentUser}
+          onBack={navigateToFamilyDashboard}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      );
+    }
 
-  if (currentScreen === 'childForm' && currentUser) {
-    return (
-      <ChildFormScreen
-        key={selectedChild ? selectedChild.id : 'nuevo'}
-        token={authToken}
-        child={selectedChild}
-        onBack={navigateToFamilyChildren}
-        onSaved={navigateToFamilyChildren}
-      />
-    );
-  }
+    if (currentScreen === 'familyChildren' && currentUser) {
+      return (
+        <ChildrenScreen
+          token={authToken}
+          user={currentUser}
+          onBack={navigateToFamilyDashboard}
+          onNavigateToNannyAvailability={navigateToNannyAvailability}
+          onAddChild={() => navigateToChildForm(null)}
+          onEditChild={navigateToChildForm}
+          onLogout={handleLogout}
+          logoutLoading={logoutLoading}
+          onNavigateToChat={navigateToChat}
+        />
+      );
+    }
 
-  if (currentScreen === 'login') {
-    return (
-      <LoginScreen
-        onBack={navigateToLanding}
-        onNavigateToRegisterFamily={navigateToRegisterFamily}
-        onNavigateToRegisterNanny={navigateToRegisterNanny}
-        onLoginSuccess={handleLoginSuccess}
-      />
-    );
-  }
+    if (currentScreen === 'childForm' && currentUser) {
+      return (
+        <ChildFormScreen
+          key={selectedChild ? selectedChild.id : 'nuevo'}
+          token={authToken}
+          child={selectedChild}
+          onBack={navigateToFamilyChildren}
+          onSaved={navigateToFamilyChildren}
+        />
+      );
+    }
 
-  if (currentScreen === 'registerFamily') {
-    return (
-      <RegisterFamilyScreen
-        onBack={navigateToLanding}
-        onNavigateToLogin={navigateToLogin}
-        onRegistered={handleLoginSuccess}
-      />
-    );
-  }
+    if (currentScreen === 'login') {
+      return (
+        <LoginScreen
+          onBack={navigateToLanding}
+          onNavigateToRegisterFamily={navigateToRegisterFamily}
+          onNavigateToRegisterNanny={navigateToRegisterNanny}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      );
+    }
 
-  if (currentScreen === 'registerNanny') {
-    return (
-      <RegisterNannyScreen
-        onBack={navigateToLanding}
-        onNavigateToLogin={navigateToLogin}
-        onRegistered={handleLoginSuccess}
-      />
-    );
-  }
+    if (currentScreen === 'registerFamily') {
+      return (
+        <RegisterFamilyScreen
+          onBack={navigateToLanding}
+          onNavigateToLogin={navigateToLogin}
+          onRegistered={handleLoginSuccess}
+        />
+      );
+    }
 
-  if (currentScreen === 'notFound') {
+    if (currentScreen === 'registerNanny') {
+      return (
+        <RegisterNannyScreen
+          onBack={navigateToLanding}
+          onNavigateToLogin={navigateToLogin}
+          onRegistered={handleLoginSuccess}
+        />
+      );
+    }
+
+    if (currentScreen === 'notFound') {
+      return (
+        <NotFoundScreen
+          user={currentUser}
+          onGoHome={navigateToHomeOrDashboard}
+          onGoBack={navigateToHomeOrDashboard}
+        />
+      );
+    }
+
+    if (currentScreen === 'landing') {
+      return (
+        <LandingScreen
+          onNavigateToLogin={navigateToLogin}
+          onNavigateToRegisterFamily={navigateToRegisterFamily}
+          onNavigateToRegisterNanny={navigateToRegisterNanny}
+          onExploreNannies={navigateToSearchNannies}
+        />
+      );
+    }
+
+    // Fallback seguro ante cualquier estado no contemplado
     return (
       <NotFoundScreen
         user={currentUser}
@@ -742,24 +769,42 @@ export default function App() {
         onGoBack={navigateToHomeOrDashboard}
       />
     );
-  }
+  };
 
-  if (currentScreen === 'landing') {
-    return (
-      <LandingScreen
-        onNavigateToLogin={navigateToLogin}
-        onNavigateToRegisterFamily={navigateToRegisterFamily}
-        onNavigateToRegisterNanny={navigateToRegisterNanny}
-      />
-    );
-  }
+  const pantallasConBottomNav = [
+    'familyDashboard',
+    'nannyDashboard',
+    'searchNannies',
+    'jobBoard',
+    'publishJobOffer',
+    'chat',
+    'reservationHistory',
+    'familyChildren',
+    'editFamilyProfile',
+    'editNannyProfile',
+    'nannyAvailability',
+    'notificaciones',
+  ];
 
-  // Fallback seguro ante cualquier estado no contemplado
+  const debeMostrarBottomNav = Boolean(currentUser) && pantallasConBottomNav.includes(currentScreen);
+
   return (
-    <NotFoundScreen
-      user={currentUser}
-      onGoHome={navigateToHomeOrDashboard}
-      onGoBack={navigateToHomeOrDashboard}
-    />
+    <View style={styles.appRoot}>
+      {renderPantalla()}
+      {debeMostrarBottomNav && (
+        <BottomNavBar
+          currentScreen={currentScreen}
+          user={currentUser}
+          onNavigate={(pantalla) => navegar(pantalla)}
+        />
+      )}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+    backgroundColor: '#FAF8FF',
+  },
+});
