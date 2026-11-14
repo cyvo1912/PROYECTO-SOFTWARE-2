@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, T
 import { Ionicons } from '@expo/vector-icons';
 import { listarMisReservas, cambiarEstadoReserva, crearValoracion, obtenerValoracionPorReserva, } from '../services/reservaService';
 import { colors } from '../theme/colors';
+import ModalPasarelaPago from '../components/ModalPasarelaPago';
 
 
 const estadoNormalizado = (estado) => String(estado || 'Pendiente').toUpperCase();
@@ -15,6 +16,7 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
   const [calificacion, setCalificacion] = useState(5);
   const [comentario, setComentario] = useState('');
   const [reservasValoradas, setReservasValoradas] = useState({});
+  const [reservaParaPagar, setReservaParaPagar] = useState(null);
   const esNinera = (user?.rol || user?.tipo_usuario) === 'NINERA';
 
   const cargar = useCallback(async () => {
@@ -162,6 +164,7 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
         <View style={styles.row}><Text style={styles.date}>{reserva.fechaReserva} · {reserva.horaInicio}–{reserva.horaFin}</Text><Text style={styles.status}>{reserva.estadoReserva}</Text></View>
         <Text style={styles.detail}>Reserva #{reserva.id} · S/. {Number(reserva.montoTotal || 0).toFixed(2)}</Text><Text style={styles.address}>{reserva.direccion}</Text>
         {procesando === reserva.id ? <ActivityIndicator color={colors.primary} /> : <View style={styles.actions}>
+          {!esNinera && estado === 'PENDIENTE' && <Action label="Pagar ahora" color="#059669" onPress={() => setReservaParaPagar(reserva)} />}
           {!esNinera && ['PENDIENTE', 'ACEPTADA'].includes(estado) && <Action label="Cancelar" color="#DC2626" onPress={() => actualizar(reserva, 'CANCELADA')} />}
           {esNinera && estado === 'PENDIENTE' && <><Action label="Aceptar" onPress={() => actualizar(reserva, 'ACEPTADA')} /><Action label="Rechazar" color="#DC2626" onPress={() => actualizar(reserva, 'RECHAZADA')} /></>}
           {esNinera && estado === 'ACEPTADA' && <Action label="Marcar completada" onPress={() => actualizar(reserva, 'COMPLETADA')} />}
@@ -175,7 +178,18 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
         {valorando === reserva.id && reservasValoradas[reserva.id] === false && (<View style={styles.review}><Text style={styles.reviewTitle}>¿Cómo fue el servicio?</Text><View style={styles.stars}>{[1, 2, 3, 4, 5].map((n) => <TouchableOpacity key={n} onPress={() => setCalificacion(n)}><Ionicons name={n <= calificacion ? 'star' : 'star-outline'} size={30} color="#F59E0B" /></TouchableOpacity>)}</View><TextInput value={comentario} onChangeText={setComentario} placeholder="Comentario opcional" multiline style={styles.input} maxLength={1000} /><Action label="Publicar reseña" onPress={() => publicar(reserva)} /></View>)}
       </View>;
     })}
-  </ScrollView></SafeAreaView>;
+  </ScrollView>
+  <ModalPasarelaPago
+    visible={Boolean(reservaParaPagar)}
+    reserva={reservaParaPagar}
+    token={token}
+    onClose={() => setReservaParaPagar(null)}
+    onPagoExitoso={() => {
+      setReservaParaPagar(null);
+      cargar();
+    }}
+  />
+</SafeAreaView>;
 }
 function Action({ label, color = colors.primary, onPress }) { return <TouchableOpacity onPress={onPress} style={[styles.action, { borderColor: color }]}><Text style={[styles.actionText, { color }]}>{label}</Text></TouchableOpacity>; }
 const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: '#F8FAFC' }, container: { padding: 20, paddingBottom: 40 }, back: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }, backText: { color: colors.primary, fontWeight: '700' }, title: { fontSize: 28, fontWeight: '800', color: '#172033' }, subtitle: { color: '#64748B', marginTop: 6, marginBottom: 20 }, loader: { marginTop: 40 }, empty: { alignItems: 'center', padding: 40, backgroundColor: '#FFF', borderRadius: 16 }, card: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 1 }, row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 }, date: { fontWeight: '700', color: '#172033', flex: 1 }, status: { color: colors.primary, fontWeight: '700' }, detail: { marginTop: 10, color: '#475569' }, address: { marginTop: 4, color: '#64748B' }, actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, action: { borderWidth: 1, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 11 }, actionText: { fontWeight: '700' }, review: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }, reviewTitle: { fontWeight: '700', color: '#172033' }, stars: { flexDirection: 'row', marginVertical: 8 }, input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, minHeight: 70, textAlignVertical: 'top', marginBottom: 10 } });

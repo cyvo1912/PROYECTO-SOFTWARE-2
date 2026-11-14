@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { cotizarReserva, solicitarReserva, listarHijos } from '../services/reservaService';
+import ModalPasarelaPago from '../components/ModalPasarelaPago';
 
 const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -46,6 +47,7 @@ export default function ReservationRequestScreen({
   const [fieldErrors, setFieldErrors] = useState({});
   const [reservaCreada, setReservaCreada] = useState(null);
   const [segundosRestantes, setSegundosRestantes] = useState(0);
+  const [mostrarPasarela, setMostrarPasarela] = useState(false);
 
   // Cuenta regresiva de los 10 minutos para pagar
   useEffect(() => {
@@ -148,11 +150,17 @@ export default function ReservationRequestScreen({
 
           {!vencida ? (
             <TouchableOpacity
-              style={[styles.primaryBtn, styles.fullWidth, !onContinuarAPago && styles.primaryBtnDisabled]}
-              onPress={() => onContinuarAPago && onContinuarAPago(reservaCreada)}
-              disabled={!onContinuarAPago}
+              style={[styles.primaryBtn, styles.fullWidth, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]}
+              onPress={() => {
+                if (onContinuarAPago) {
+                  onContinuarAPago(reservaCreada);
+                } else {
+                  setMostrarPasarela(true);
+                }
+              }}
               activeOpacity={0.8}
             >
+              <Ionicons name="card-outline" size={18} color="#FFFFFF" />
               <Text style={styles.primaryBtnText}>Ir a pagar</Text>
             </TouchableOpacity>
           ) : (
@@ -173,6 +181,17 @@ export default function ReservationRequestScreen({
             <Text style={styles.secondaryBtnText}>Volver al panel</Text>
           </TouchableOpacity>
         </View>
+
+        <ModalPasarelaPago
+          visible={mostrarPasarela}
+          reserva={reservaCreada}
+          token={token}
+          onClose={() => setMostrarPasarela(false)}
+          onPagoExitoso={() => {
+            setMostrarPasarela(false);
+            if (onReservaCreada) onReservaCreada();
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -183,9 +202,10 @@ export default function ReservationRequestScreen({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={22} color={colors.textTitle} />
+          <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
+          <Text style={styles.backBtnText}>Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Solicitar reserva</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>Solicitar reserva</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -294,9 +314,29 @@ export default function ReservationRequestScreen({
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  backBtn: { padding: 6 },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: colors.textTitle },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EEF9',
+    backgroundColor: '#FFFFFF',
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E1B4B',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: colors.textTitle },
   content: { padding: 16, paddingBottom: 40 },
   card: {
     backgroundColor: colors.surface,

@@ -52,6 +52,20 @@ class ReservaController {
       return responderError(res, error);
     }
   }
+
+  /** POST /api/reservas/:id/pagar - Simulación de pasarela de pago */
+  async pagar(req, res) {
+    try {
+      const data = await this.servicioReserva.pagar(req.user, req.params.id, req.body || {});
+      return res.status(200).json({
+        success: true,
+        message: 'Pago simulado procesado exitosamente. Tu reserva ha sido confirmada.',
+        data,
+      });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
 }
 
 module.exports = ReservaController;

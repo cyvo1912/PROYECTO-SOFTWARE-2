@@ -130,7 +130,8 @@ class PostgresReservaRepository extends ReservaRepositoryPort {
 
   async actualizarEstado(idReserva, estadoReserva, estadosEsperados) {
     const result = await this.pool.query(
-      `UPDATE reserva SET estado_reserva = $2
+      `UPDATE reserva SET estado_reserva = $2,
+              expira_en = CASE WHEN LOWER($2) IN ('aceptada', 'confirmada', 'completada') THEN NULL ELSE expira_en END
        WHERE id_reserva = $1
          AND LOWER(COALESCE(estado_reserva, 'pendiente')) = ANY($3::text[])
        RETURNING ${COLUMNAS};`,

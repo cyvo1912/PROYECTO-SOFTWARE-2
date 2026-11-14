@@ -300,6 +300,54 @@ class ServicioReserva {
   }
 
   /**
+   * Simulación de Pasarela de Pago: confirma el pago de una reserva pendiente
+   * dentro de sus 10 minutos de vigencia, marcándola como Aceptada y liberando
+   * la expiración para activar la mensajería y el servicio.
+   */
+  async pagar(usuario, idReservaParam, datosPago = {}) {
+    this._exigirFamilia(usuario);
+    const idReserva = Number(idReservaParam);
+    if (!Number.isInteger(idReserva) || idReserva <= 0) {
+      throw new ValidationError('El identificador de reserva no es válido.');
+    }
+    const reserva = await this.reservaRepository.buscarPorId(idReserva);
+    if (!reserva) {
+      throw new NotFoundError('La reserva no existe.');
+    }
+    if (Number(reserva.idPadre) !== Number(usuario.id)) {
+      throw new ForbiddenError('No tienes permiso para pagar esta reserva.');
+    }
+    if (reserva.estaExpirada(this.reloj())) {
+      throw new ConflictError('El plazo de 10 minutos para pagar esta reserva ha expirado.');
+    }
+    const actual = String(reserva.estadoReserva || '').trim().toUpperCase();
+    if (actual !== 'PENDIENTE') {
+      throw new ConflictError(`La reserva ya se encuentra en estado ${reserva.estadoReserva}.`);
+    }
+
+    const actualizada = await this._actualizarEstadoSiVigente(
+      idReserva,
+      'Aceptada',
+      ['Pendiente', 'PENDIENTE']
+    );
+
+    // Notificar a la niñera que la reserva fue confirmada y pagada
+    await this._notificarCambio(actualizada, reserva.idNinera);
+
+    const metodo = (datosPago.metodoPago || 'TARJETA').toUpperCase();
+    return {
+      reserva: actualizada,
+      pago: {
+        idTransaccion: `TXN-${Date.now().toString(36).toUpperCase()}`,
+        monto: Number(reserva.montoTotal || 0),
+        metodo,
+        estado: 'APROBADO',
+        fechaPago: new Date().toISOString(),
+      },
+    };
+  }
+
+  /**
    * HU18 - Notifica a la familia y a la niñera
    * cuando se registra una nueva solicitud de reserva.
    */

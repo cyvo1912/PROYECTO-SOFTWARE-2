@@ -319,7 +319,7 @@ export default function EditNannyProfileScreen({
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
-            <Text style={styles.backButtonText}>Volver al Panel</Text>
+            <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
 
           <View style={styles.navBrand}>
@@ -434,11 +434,13 @@ export default function EditNannyProfileScreen({
                 label="Teléfono / Celular *"
                 value={celular}
                 onChangeText={(t) => {
-                  setCelular(t);
+                  const cleaned = t.replace(/[^0-9]/g, '').slice(0, 9);
+                  setCelular(cleaned);
                   if (fieldErrors.celular) setFieldErrors((p) => ({ ...p, celular: undefined }));
                 }}
-                placeholder="+51 987654321"
-                keyboardType="phone-pad"
+                placeholder="987654321"
+                keyboardType="numeric"
+                maxLength={9}
                 error={fieldErrors.celular}
               />
 

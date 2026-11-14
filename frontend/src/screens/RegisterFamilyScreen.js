@@ -151,7 +151,20 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
               <Text style={styles.sectionLabel}>Tu familia</Text>
               <Field label="Nombre de la Familia" value={nombreFamilia} onChangeText={updateField(setNombreFamilia, 'nombreFamilia')} error={fieldErrors.nombreFamilia} placeholder="Familia García" />
               <Field label="Dirección" value={direccion} onChangeText={updateField(setDireccion, 'direccion')} error={fieldErrors.direccion} placeholder="Calle Principal 123, Surco" />
-              <Field label="Número de Niños" value={numeroNinos} onChangeText={updateField(setNumeroNinos, 'numeroNinos')} error={fieldErrors.numeroNinos} keyboardType="number-pad" />
+              <Field
+                label="Número de Niños"
+                value={numeroNinos}
+                onChangeText={(t) => {
+                  const cleaned = t.replace(/[^0-9]/g, '').slice(0, 1);
+                  if (cleaned === '' || (Number(cleaned) >= 1 && Number(cleaned) <= 5)) {
+                    updateField(setNumeroNinos, 'numeroNinos')(cleaned);
+                  }
+                }}
+                error={fieldErrors.numeroNinos}
+                placeholder="1 a 5"
+                keyboardType="number-pad"
+                maxLength={1}
+              />
               <Field label="Edades de los Niños" value={edadesNinos} onChangeText={updateField(setEdadesNinos, 'edadesNinos')} error={fieldErrors.edadesNinos} placeholder="3, 5" />
 
               {errorMessage ? (

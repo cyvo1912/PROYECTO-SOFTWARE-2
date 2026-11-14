@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -92,9 +93,11 @@ export default function ChildrenScreen({
           </View>
 
           <View style={styles.navActions}>
-            <Text style={styles.userGreetingText}>
-              Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
-            </Text>
+            {!isMobile && (
+              <Text style={styles.userGreetingText}>
+                Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
+              </Text>
+            )}
 
             {onNavigateToChat && (
               <TouchableOpacity
@@ -125,16 +128,35 @@ export default function ChildrenScreen({
         <View style={styles.content}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.screenTitle}>Mis Hijos</Text>
+              <View style={styles.titleContainer}>
+                <Text style={styles.screenTitle}>Mis Hijos</Text>
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>{hijos.length}/5</Text>
+                </View>
+              </View>
               <Text style={styles.screenSubtitle}>
                 Registra sus edades, alergias y cuidados médicos para que las niñeras conozcan sus requerimientos.
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.addButton} onPress={onAddChild} activeOpacity={0.85}>
-            <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Agregar hijo</Text>
+          <TouchableOpacity
+            style={[styles.addButton, hijos.length >= 5 && styles.addButtonDisabled]}
+            onPress={
+              hijos.length >= 5
+                ? () => Alert.alert('Límite alcanzado', 'Puedes registrar un máximo de 5 hijos en tu cuenta.')
+                : onAddChild
+            }
+            activeOpacity={hijos.length >= 5 ? 0.9 : 0.85}
+          >
+            <Ionicons
+              name={hijos.length >= 5 ? 'checkmark-circle-outline' : 'add-circle-outline'}
+              size={20}
+              color={hijos.length >= 5 ? '#6B7280' : '#FFFFFF'}
+            />
+            <Text style={[styles.addButtonText, hijos.length >= 5 && styles.addButtonTextDisabled]}>
+              {hijos.length >= 5 ? 'Límite alcanzado (5/5)' : 'Agregar hijo'}
+            </Text>
           </TouchableOpacity>
 
           {onNavigateToNannyAvailability ? (
@@ -314,7 +336,25 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     color: '#1E1B4B',
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 6,
+  },
+  countBadge: {
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   screenSubtitle: {
     fontSize: 13,
@@ -331,10 +371,18 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
+  addButtonDisabled: {
+    backgroundColor: '#E5E7EB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  addButtonTextDisabled: {
+    color: '#6B7280',
   },
   errorBanner: {
     flexDirection: 'row',

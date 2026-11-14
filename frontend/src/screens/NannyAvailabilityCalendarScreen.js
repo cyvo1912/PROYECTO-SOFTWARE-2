@@ -71,10 +71,10 @@ export default function NannyAvailabilityCalendarScreen({
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={20} color={colors.textTitle} />
-          <Text style={styles.backBtnText}>Volver al Panel</Text>
+          <Text style={styles.backBtnText}>Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Disponibilidad de Niñera</Text>
-        <View style={{ width: 90 }} />
+        <Text style={styles.headerTitle} numberOfLines={1}>Disponibilidad</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

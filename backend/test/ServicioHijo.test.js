@@ -132,4 +132,14 @@ describe('ServicioHijo', () => {
     await assert.rejects(servicio.actualizarHijo(ID_FAMILIA, 999, { nombre: 'X', edad: 1 }), NotFoundError);
     await assert.rejects(servicio.actualizarHijo(ID_FAMILIA, 'abc', { nombre: 'X', edad: 1 }), NotFoundError);
   });
+
+  test('rechaza registrar más de 5 hijos por familia', async () => {
+    for (let i = 1; i <= 5; i++) {
+      await servicio.registrarHijo(ID_FAMILIA, { nombre: `Hijo ${i}`, edad: i });
+    }
+    await assert.rejects(
+      servicio.registrarHijo(ID_FAMILIA, { nombre: 'Hijo 6', edad: 6 }),
+      (err) => err instanceof ValidationError && err.message.includes('límite máximo de 5 hijos')
+    );
+  });
 });

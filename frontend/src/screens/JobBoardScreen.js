@@ -147,9 +147,7 @@ export default function JobBoardScreen({ token, onBack }) {
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
-            <Text style={styles.backButtonText}>
-              {ofertaSeleccionada ? 'Volver a las ofertas' : 'Volver al panel'}
-            </Text>
+            <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
           <View style={styles.navBrand}>
             <Ionicons name="heart" size={22} color={colors.primary} />

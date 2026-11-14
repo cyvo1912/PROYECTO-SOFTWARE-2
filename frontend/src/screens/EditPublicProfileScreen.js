@@ -142,7 +142,7 @@ export default function EditPublicProfileScreen({ token, onBack, onVerPerfil }) 
       <View style={styles.navBar}>
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
-          <Text style={styles.backButtonText}>Volver al Panel</Text>
+          <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
         <View style={styles.navBrand}>
           <Ionicons name="heart" size={22} color={colors.primary} />

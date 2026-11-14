@@ -296,4 +296,27 @@ describe('ServicioReserva', () => {
 
     await assert.rejects(() => servicio.cambiarEstado(ninera, creada.id, 'ACEPTADA'), ConflictError);
   });
+
+  test('permite pagar una reserva pendiente dentro del tiempo de expiración', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    assert.equal(creada.estadoReserva, 'Pendiente');
+
+    const resultado = await servicio.pagar(FAMILIA, creada.id, {
+      metodoPago: 'TARJETA',
+      marcaTarjeta: 'visa',
+      ultimos4: '4242',
+    });
+    assert.equal(resultado.reserva.estadoReserva, 'Aceptada');
+    assert.equal(resultado.pago.estado, 'APROBADO');
+    assert.equal(resultado.pago.metodo, 'TARJETA');
+  });
+
+  test('rechaza pagar una reserva ajena o ya expirada', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    minutosTranscurridos = 15; // expiró
+    await assert.rejects(
+      () => servicio.pagar(FAMILIA, creada.id, { metodoPago: 'YAPE' }),
+      ConflictError,
+    );
+  });
 });

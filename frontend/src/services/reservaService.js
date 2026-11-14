@@ -42,6 +42,15 @@ export function cambiarEstadoReserva({ token, idReserva, estado }) {
   return llamar(`/reservas/${idReserva}/estado`, { token, method: 'PATCH', body: { estado } });
 }
 
+/** Simulación de pasarela de pago para confirmar reserva */
+export function pagarReserva({ token, idReserva, metodoPago = 'TARJETA', datosPago = {} }) {
+  return llamar(`/reservas/${idReserva}/pagar`, {
+    token,
+    method: 'POST',
+    body: { metodoPago, datosPago },
+  });
+}
+
 export function crearValoracion({ token, idReserva, calificacion, comentario }) {
   return llamar('/valoraciones', { token, method: 'POST', body: { idReserva, calificacion, comentario } });
 }

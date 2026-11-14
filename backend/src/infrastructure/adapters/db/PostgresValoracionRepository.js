@@ -24,6 +24,31 @@ class PostgresValoracionRepository extends ValoracionRepositoryPort {
 
   // Registrar una valoración y actualizar el promedio
   async crear(datos) {
+    if (typeof this.pool.connect !== 'function') {
+      const result = await this.pool.query(
+        `
+        INSERT INTO valoracion (
+          id_reserva,
+          id_padre,
+          id_ninera,
+          calificacion,
+          comentario
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (id_reserva) DO NOTHING
+        RETURNING *;
+        `,
+        [
+          datos.idReserva,
+          datos.idPadre,
+          datos.idNinera,
+          datos.calificacion,
+          datos.comentario,
+        ]
+      );
+      return result.rows && result.rows.length > 0 ? result.rows[0] : null;
+    }
+
     const client = await this.pool.connect();
 
     try {

@@ -28,6 +28,10 @@ class ServicioHijo {
 
   async registrarHijo(idPadre, datos) {
     this._exigirSesion(idPadre);
+    const hijosExistentes = await this.hijoRepository.listarPorPadre(idPadre);
+    if (hijosExistentes && hijosExistentes.length >= 5) {
+      throw new ValidationError('Has alcanzado el límite máximo de 5 hijos registrados.');
+    }
     const datosValidos = this._validar(datos);
     const hijo = await this.hijoRepository.crear(idPadre, datosValidos);
     return aRespuesta(hijo);

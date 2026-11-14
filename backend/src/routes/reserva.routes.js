@@ -26,4 +26,9 @@ router.patch('/:id/estado', autenticar, (req, res) =>
   container.reservaController.cambiarEstado(req, res),
 );
 
+// POST /api/reservas/:id/pagar - Confirmar pago (simulación pasarela de pago)
+router.post('/:id/pagar', autenticar, soloFamilia, (req, res) =>
+  container.reservaController.pagar(req, res),
+);
+
 module.exports = router;

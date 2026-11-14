@@ -110,7 +110,7 @@ export default function ChildFormScreen({ token, child, onBack, onSaved }) {
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
-            <Text style={styles.backButtonText}>Volver a Mis Hijos</Text>
+            <Text style={styles.backButtonText}>Volver</Text>
           </TouchableOpacity>
 
           <View style={styles.navBrand}>
@@ -158,7 +158,7 @@ export default function ChildFormScreen({ token, child, onBack, onSaved }) {
               <Field
                 label="Edad (años) *"
                 value={edad}
-                onChangeText={updateField(setEdad, 'edad')}
+                onChangeText={(t) => updateField(setEdad, 'edad')(t.replace(/[^0-9]/g, '').slice(0, 2))}
                 placeholder="4"
                 keyboardType="number-pad"
                 maxLength={2}

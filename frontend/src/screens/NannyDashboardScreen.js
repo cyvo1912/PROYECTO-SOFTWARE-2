@@ -87,11 +87,13 @@ export default function NannyDashboardScreen({
 
           {/* Acciones de Cabecera */}
           <View style={styles.navActions}>
-            <View style={styles.userGreeting}>
-              <Text style={styles.userGreetingText}>
-                Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
-              </Text>
-            </View>
+            {!isMobile && (
+              <View style={styles.userGreeting}>
+                <Text style={styles.userGreetingText}>
+                  Hola, <Text style={styles.userNameText}>{nombreUsuario}</Text>
+                </Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={styles.notificationNavBtn}
@@ -111,18 +113,20 @@ export default function NannyDashboardScreen({
               style={styles.profileNavBtn}
               onPress={onNavigateToEditProfile}
               activeOpacity={0.7}
+              accessibilityLabel="Mi Perfil"
             >
-              <Ionicons name="person-circle-outline" size={18} color="#1E1B4B" />
-              <Text style={styles.profileNavBtnText}>Mi Perfil</Text>
+              <Ionicons name="person-circle-outline" size={20} color="#1E1B4B" />
+              {!isMobile && <Text style={styles.profileNavBtnText}>Mi Perfil</Text>}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.profileNavBtn}
               onPress={onNavigateToReservations}
               activeOpacity={0.7}
+              accessibilityLabel="Mis servicios"
             >
-              <Ionicons name="calendar-outline" size={18} color="#1E1B4B" />
-              <Text style={styles.profileNavBtnText}>Mis servicios</Text>
+              <Ionicons name="calendar-outline" size={19} color="#1E1B4B" />
+              {!isMobile && <Text style={styles.profileNavBtnText}>Mis servicios</Text>}
             </TouchableOpacity>
 
             {onNavigateToChat && (
@@ -130,9 +134,10 @@ export default function NannyDashboardScreen({
                 style={styles.profileNavBtn}
                 onPress={onNavigateToChat}
                 activeOpacity={0.7}
+                accessibilityLabel="Mensajes"
               >
-                <Ionicons name="chatbubbles-outline" size={18} color="#1E1B4B" />
-                <Text style={styles.profileNavBtnText}>Mensajes</Text>
+                <Ionicons name="chatbubbles-outline" size={19} color="#1E1B4B" />
+                {!isMobile && <Text style={styles.profileNavBtnText}>Mensajes</Text>}
               </TouchableOpacity>
             )}
 
