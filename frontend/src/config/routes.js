@@ -23,8 +23,8 @@ export const CONFIG_RUTAS = {
     mostrarBottomNav: false,
   },
   searchNannies: {
-    publica: true, // Modo invitado permitido
-    roles: ['FAMILIA', 'NINERA', 'ADMIN'],
+    publica: true, // Modo invitado permitido. Con sesión, solo la familia puede buscar.
+    roles: ['FAMILIA'],
     mostrarBottomNav: true,
   },
 
