@@ -556,7 +556,7 @@ export default function EditNannyProfileScreen({
                 <Text style={styles.sectionTitle}>Ubicación para Búsquedas Cercanas</Text>
               </View>
               <Text style={styles.helperText}>
-                Comparte tu ubicación actual para aparecer cuando una familia busque niñeras cerca de su zona (Google Maps).
+                Tu perfil aparece en “Todas verificadas”. Comparte tu ubicación para aparecer primero cuando una familia busque niñeras cerca de su zona.
               </Text>
 
               {ubicacionMensaje ? (
@@ -581,8 +581,8 @@ export default function EditNannyProfileScreen({
                   />
                   <Text style={styles.locationStatusText}>
                     {ubicacion.latitud !== null
-                      ? 'Ubicación vinculada'
-                      : 'Sin ubicación registrada'}
+                      ? 'Ubicación vinculada para búsquedas cercanas'
+                      : 'Aún no apareces en búsquedas por cercanía'}
                   </Text>
                 </View>
                 <TouchableOpacity

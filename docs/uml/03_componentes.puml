@@ -1,0 +1,52 @@
+@startuml 03_componentes
+' MiNana - Vista de implementación: diagrama de componentes
+' Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+title Diagrama de componentes – MiNana
+
+component "App móvil MiNana\n(Expo / React Native)" as APP
+component "API REST\n(Express 5, routes + controllers,\nautenticar)" as API
+component "Canal de tiempo real\n(Socket.IO, ChatSocketController)" as WS
+component "Servicios de aplicación\n(Servicio*)" as SRV
+component "Dominio\n(entidades, validadores,\nestrategias, errores)" as DOM
+component "Contenedor IoC\n(container.js)" as IOC
+component "Seguridad\n(BcryptPasswordHasher,\nJwtTokenService)" as SEC
+component "Persistencia\n(Postgres*Repository, pg Pool)" as PER
+component "Almacenamiento\n(CloudinaryAlmacenamiento)" as ALM
+component "Notificaciones\n(SocketIoRealtimeNotifier,\nExpoNotificationAdapter)" as NOT
+database "PostgreSQL\n(Neon)" as DB
+cloud "Cloudinary" as CLD
+cloud "Expo Push Service" as EXP
+
+interface "REST /api" as IREST
+interface "WebSocket" as IWS
+interface "*RepositoryPort" as IREP
+interface "PasswordHasherPort /\nTokenServicePort" as ISEC
+interface "AlmacenamientoArchivosPort" as IALM
+interface "RealtimeNotifierPort /\nNotificacionServicePort" as INOT
+
+API - IREST
+WS - IWS
+APP ..> IREST : HTTP/JSON
+APP ..> IWS : chat
+API ..> SRV : usa
+WS ..> SRV : usa
+SRV ..> DOM : usa
+SRV ..> IREP
+SRV ..> ISEC
+SRV ..> IALM
+SRV ..> INOT
+PER - IREP
+SEC - ISEC
+ALM - IALM
+NOT - INOT
+PER ..> DB : SQL / TLS
+ALM ..> CLD : HTTPS (SDK)
+NOT ..> EXP : HTTPS
+IOC ..> SRV : crea e inyecta
+IOC ..> PER : crea
+IOC ..> SEC : crea
+IOC ..> ALM : crea
+IOC ..> NOT : crea
+@enduml

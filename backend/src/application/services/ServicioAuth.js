@@ -50,9 +50,34 @@ class ServicioAuth {
       throw new RoleMismatchError(usuario.tipoUsuario);
     }
 
-    // 4. Criterio HU4 Escenario 2: Cuenta pendiente de validación
+    // 4. Una niñera pendiente solo recibe una sesión limitada para completar
+    // su expediente (foto y certificados). No puede acceder a funciones de trabajo.
     if (usuario.estaPendienteVerificacion()) {
-      throw new AccountPendingError('Cuenta pendiente de verificación.');
+      if (usuario.tipoUsuario !== 'NINERA') {
+        throw new AccountPendingError('Cuenta pendiente de verificación.');
+      }
+
+      const token = this.tokenService.generateToken({
+        id: usuario.id,
+        correo: usuario.correo,
+        tipo_usuario: usuario.tipoUsuario,
+        accesoLimitado: true,
+      });
+
+      return {
+        token,
+        usuario: {
+          id: usuario.id,
+          nombre: usuario.nombreCompleto,
+          nombreUsuario: usuario.nombre,
+          apellidoUsuario: usuario.apellido,
+          correo: usuario.correo,
+          rol: usuario.tipoUsuario,
+          estado: usuario.estadoCuenta,
+          accesoLimitado: true,
+          detalles: null,
+        },
+      };
     }
 
     if (!usuario.estaActivo()) {

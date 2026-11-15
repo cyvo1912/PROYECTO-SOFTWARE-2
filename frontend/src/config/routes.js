@@ -75,6 +75,10 @@ export const CONFIG_RUTAS = {
     roles: ['NINERA'],
     mostrarBottomNav: false,
   },
+  verificationOnboarding: {
+    roles: ['NINERA'],
+    mostrarBottomNav: false,
+  },
   editPublicProfile: {
     roles: ['NINERA'],
     mostrarBottomNav: false,
@@ -131,6 +135,9 @@ export function normalizarRuta(rutaRaw) {
  */
 export function getDashboardPorRol(user) {
   const rol = user?.rol || user?.tipo_usuario;
+  if (rol === 'NINERA' && user?.estado === 'PENDIENTE_VERIFICACION') {
+    return 'verificationOnboarding';
+  }
   if (rol === 'ADMIN') return 'adminDashboard';
   if (rol === 'NINERA') return 'nannyDashboard';
   return 'familyDashboard';
@@ -174,6 +181,10 @@ export function resolverPantallaPermitida(solicitadaRaw, user, token) {
   }
 
   const rol = user?.rol || user?.tipo_usuario;
+
+  if (rol === 'NINERA' && user?.estado === 'PENDIENTE_VERIFICACION') {
+    return 'verificationOnboarding';
+  }
 
   // Si la ruta requiere un rol específico y el usuario no lo posee, redirigir a su Dashboard
   if (configuracion.roles && !configuracion.roles.includes(rol)) {

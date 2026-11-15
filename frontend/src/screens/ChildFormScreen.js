@@ -225,7 +225,7 @@ export default function ChildFormScreen({ token, child, onBack, onSaved }) {
   );
 }
 
-function Field({ label, error, multiline, ...inputProps }) {
+function Field({ label, error, multiline, maxLength, value = '', ...inputProps }) {
   return (
     <View style={styles.formGroup}>
       <Text style={styles.label}>{label}</Text>
@@ -235,10 +235,15 @@ function Field({ label, error, multiline, ...inputProps }) {
           placeholderTextColor="#9CA3AF"
           autoCorrect={false}
           multiline={multiline}
+          maxLength={maxLength}
+          value={value}
           {...inputProps}
         />
       </View>
       {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
+      {multiline && maxLength ? (
+        <Text style={styles.characterCount}>{value.length}/{maxLength}</Text>
+      ) : null}
     </View>
   );
 }
@@ -396,6 +401,12 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     marginTop: 4,
     fontWeight: '500',
+  },
+  characterCount: {
+    alignSelf: 'flex-end',
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 4,
   },
   divider: {
     height: 1,

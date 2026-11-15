@@ -153,7 +153,7 @@ class PostgresMensajeRepository extends MensajeRepositoryPort {
          (id_padre = $1 AND id_ninera = $2)
          OR (id_padre = $2 AND id_ninera = $1)
        )
-       AND LOWER(estado_reserva) IN ('pagada', 'confirmada', 'aceptada', 'completada')
+       AND LOWER(estado_reserva) IN ('aceptada', 'completada')
        LIMIT 1;`,
       [userA, userB]
     );

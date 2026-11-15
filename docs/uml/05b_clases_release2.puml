@@ -1,0 +1,191 @@
+@startuml 05b_clases_release2
+' MiNana - Diagrama de clases de diseño (Release 2)
+' Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+title Diagrama de clases de diseño – MiNana (Release 2)
+
+package domain {
+  class Ninera {
+    - zona: string
+    - tarifaHora: decimal
+    - verificada: boolean
+    - latitud: decimal
+    - longitud: decimal
+    - anosExperiencia: int
+    - habilidades: string[]
+    - idiomas: string[]
+    - distritos: string[]
+    - calificacionPromedio: decimal
+  }
+  class Padre
+  class Hijo
+  class Disponibilidad {
+    - id: int
+    - idNinera: int
+    - fecha: date
+    - diaSemana: string
+    - horaInicio: time
+    - horaFin: time
+    - estado: string
+  }
+  class Reserva {
+    - id: int
+    - idPadre: int
+    - idNinera: int
+    - idHijo: int
+    - fechaReserva: date
+    - horaInicio: time
+    - horaFin: time
+    - direccion: string
+    - estadoReserva: string
+    - tarifaHora: decimal
+    - horas: decimal
+    - montoTotal: decimal
+  }
+  class OfertaTrabajo {
+    - id: int
+    - idPadre: int
+    - titulo: string
+    - distrito: string
+    - fechaInicio: date
+    - tarifaHora: decimal
+    - estado: string
+  }
+  class Postulacion {
+    - id: int
+    - idOferta: int
+    - idNinera: int
+    - mensaje: string
+    - estado: string
+  }
+  class Mensaje {
+    - id: int
+    - idEmisor: int
+    - idReceptor: int
+    - contenido: string
+    - leido: boolean
+  }
+  abstract class EstrategiaCalculoDisponibilidad
+  class EstrategiaDisponibilidadRangoFechas
+  abstract class EstrategiaCalculoTarifa
+  class TarifaPorHora
+  class ValidadorPerfilPublico
+  class ValidadorMensaje
+}
+
+package application {
+  class ServicioBusqueda <<service>> {
+    + buscarNineras(usuario, filtros)
+  }
+  class ServicioPerfilPublico <<service>> {
+    + verPerfilPublico(usuario, idNinera)
+    + obtenerMiPerfilPublico(usuario)
+    + actualizarMiPerfilPublico(usuario, datos)
+  }
+  class ServicioDisponibilidad <<service>> {
+    + listarNinerasDisponibles(usuario, filtros)
+    + consultarDisponibilidad(usuario, idNinera, rango)
+  }
+  class ServicioBolsaTrabajo <<service>> {
+    + publicarOferta(usuario, datos)
+    + explorarOfertas(usuario)
+    + postular(usuario, idOferta, datos)
+    + listarMisOfertas(usuario)
+    + listarMisPostulaciones(usuario)
+  }
+  class ServicioReserva <<service>> {
+    + cotizar(usuario, datos)
+    + solicitar(usuario, datos)
+    + listarMisReservas(usuario)
+    + cambiarEstado(usuario, idReserva, estado)
+  }
+  class ServicioMensajes <<service>> {
+    + enviarMensaje(usuario, datos)
+    + obtenerConversacion(usuario, idContacto)
+    + obtenerConversaciones(usuario)
+    + marcarLeido(usuario, idContacto)
+  }
+  class ServicioNotificacion <<service>> {
+    + registrarToken(usuario, token)
+    + listarNotificaciones(usuario)
+    + marcarComoLeida(usuario, id)
+    + enviarNotificacion(datos)
+  }
+  class ServicioValoracion <<service>> {
+    + crear(usuario, datos)
+    + listarPorNinera(idNinera)
+    + obtenerPorReserva(idReserva)
+  }
+  interface UserRepositoryPort {
+    + buscarNinerasCercanas(filtros)
+    + actualizarUbicacionNinera(id, ubicacion)
+  }
+  interface PerfilPublicoRepositoryPort
+  interface DisponibilidadRepositoryPort
+  interface OfertaTrabajoRepositoryPort
+  interface ReservaRepositoryPort {
+    + crearSiNoHaySolapamiento(datos)
+    + actualizarEstado(id, estado, estadoAnterior)
+  }
+  interface MensajeRepositoryPort
+  interface RealtimeNotifierPort
+  interface NotificacionRepositoryPort
+  interface NotificacionServicePort
+  interface ValoracionRepositoryPort
+}
+
+package infrastructure {
+  class PostgresPerfilPublicoRepository
+  class PostgresDisponibilidadRepository
+  class PostgresOfertaTrabajoRepository
+  class PostgresReservaRepository
+  class PostgresMensajeRepository
+  class PostgresNotificacionRepository
+  class PostgresNotificacionService
+  class PostgresValoracionRepository
+  class SocketIoRealtimeNotifier
+  class ExpoNotificationAdapter
+}
+
+Ninera "1" -- "0..*" Disponibilidad
+Padre "1" -- "0..*" Reserva
+Ninera "1" -- "0..*" Reserva
+Hijo "1" -- "0..*" Reserva
+Padre "1" -- "0..*" OfertaTrabajo
+OfertaTrabajo "1" -- "0..*" Postulacion
+Ninera "1" -- "0..*" Postulacion
+EstrategiaCalculoDisponibilidad <|-- EstrategiaDisponibilidadRangoFechas
+EstrategiaCalculoTarifa <|-- TarifaPorHora
+
+ServicioBusqueda ..> UserRepositoryPort
+ServicioPerfilPublico ..> PerfilPublicoRepositoryPort
+ServicioPerfilPublico ..> ValidadorPerfilPublico
+ServicioDisponibilidad ..> DisponibilidadRepositoryPort
+ServicioDisponibilidad ..> EstrategiaCalculoDisponibilidad
+ServicioBolsaTrabajo ..> OfertaTrabajoRepositoryPort
+ServicioReserva ..> ReservaRepositoryPort
+ServicioReserva ..> EstrategiaCalculoTarifa
+ServicioReserva ..> ServicioNotificacion
+ServicioReserva ..> NotificacionServicePort
+ServicioReserva ..> DisponibilidadRepositoryPort
+ServicioReserva ..> EstrategiaCalculoDisponibilidad
+ServicioMensajes ..> MensajeRepositoryPort
+ServicioMensajes ..> RealtimeNotifierPort
+ServicioMensajes ..> ValidadorMensaje
+ServicioMensajes ..> NotificacionServicePort
+ServicioNotificacion ..> NotificacionRepositoryPort
+ServicioNotificacion ..> ExpoNotificationAdapter
+ServicioValoracion ..> ValoracionRepositoryPort
+
+PostgresPerfilPublicoRepository ..|> PerfilPublicoRepositoryPort
+PostgresDisponibilidadRepository ..|> DisponibilidadRepositoryPort
+PostgresOfertaTrabajoRepository ..|> OfertaTrabajoRepositoryPort
+PostgresReservaRepository ..|> ReservaRepositoryPort
+PostgresMensajeRepository ..|> MensajeRepositoryPort
+PostgresNotificacionRepository ..|> NotificacionRepositoryPort
+PostgresNotificacionService ..|> NotificacionServicePort
+PostgresValoracionRepository ..|> ValoracionRepositoryPort
+SocketIoRealtimeNotifier ..|> RealtimeNotifierPort
+@enduml

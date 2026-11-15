@@ -118,4 +118,24 @@ describe('ServicioAdministrador HU10', () => {
       { name: 'NotFoundError', statusCode: 404 },
     );
   });
+
+  test('no activa una niñera si falta foto o certificado aprobado', async () => {
+    await assert.rejects(
+      crearServicio({
+        activarNinera: async () => ({
+          bloqueadoPorExpediente: true,
+          faltantes: {
+            foto: 'Debe subir una foto de perfil.',
+            certificado: 'Debe contar con al menos un certificado aprobado y vigente.',
+          },
+        }),
+      }).activarNinera(admin, 2),
+      (error) =>
+        Boolean(
+          error.name === 'ValidationError' &&
+          error.fields.foto &&
+          error.fields.certificado,
+        ),
+    );
+  });
 });

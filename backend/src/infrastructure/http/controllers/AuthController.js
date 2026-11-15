@@ -57,7 +57,8 @@ class AuthController {
 
       return res.status(201).json({
         success: true,
-        message: 'Registro recibido. Un administrador revisará tus datos antes de activar tu cuenta.',
+        message: 'Registro recibido. Completa tu foto y certificado para que un administrador revise tu expediente.',
+        token: resultado.token,
         user: resultado.usuario,
         usuario: resultado.usuario,
       });

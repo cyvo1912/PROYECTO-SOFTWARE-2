@@ -1,0 +1,183 @@
+@startuml 05_clases_release1
+' MiNana - Diagrama de clases de diseño (Release 1)
+' Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+title Diagrama de clases de diseño – MiNana (Release 1)
+
+package domain {
+  class Usuario {
+    - id: int
+    - nombre: string
+    - apellido: string
+    - correo: string
+    - contrasenaHash: string
+    - dni: string
+    - celular: string
+    - tipoUsuario: TipoUsuario
+    - estadoCuenta: EstadoCuenta
+    + nombreCompleto(): string
+    + estaActivo(): boolean
+    + estaPendienteVerificacion(): boolean
+    + coincideConRol(rol): boolean
+  }
+  class Padre {
+    - nombreFamilia: string
+    - direccion: string
+    - numeroNinos: int
+    - edadesNinos: int[]
+  }
+  class Ninera {
+    - zona: string
+    - experiencia: string
+    - tarifaHora: decimal
+    - descripcion: string
+    - verificada: boolean
+  }
+  class Hijo {
+    - id: int
+    - idPadre: int
+    - nombre: string
+    - edad: int
+    - alergias: string
+    - condicionesMedicas: string
+    - notas: string
+    + perteneceA(idPadre): boolean
+  }
+  class Certificado {
+    - id: int
+    - idNinera: int
+    - tipo: TipoCertificado
+    - nombre: string
+    - institucion: string
+    - fechaEmision: date
+    - fechaVencimiento: date
+    - archivoPublicId: string
+    - estadoRevision: EstadoRevision
+    + perteneceA(idNinera): boolean
+  }
+  class ValidadorMultimedia {
+    + validarArchivo(archivo, tipo): string
+  }
+}
+
+package application {
+  class ServicioAuth <<service>> {
+    + iniciarSesion(correo, contrasena, rol)
+    + cerrarSesion(token)
+  }
+  class ServicioRegistro <<service>> {
+    + registrarPadre(datos)
+    + registrarNinera(datos)
+    - _validarIdentidad(datos, errores)
+  }
+  class ServicioUsuario <<service>> {
+    + obtenerPerfilNinera(id)
+    + actualizarPerfilNinera(idAut, id, datos)
+    + obtenerPerfilPadre(id)
+    + actualizarPerfilPadre(idAut, id, datos)
+  }
+  class ServicioHijo <<service>> {
+    + listarHijos(idPadre)
+    + registrarHijo(idPadre, datos)
+    + actualizarHijo(idPadre, idHijo, datos)
+    - _validar(datos)
+  }
+  class ServicioMultimedia <<service>> {
+    + obtenerMultimedia(usuario)
+    + actualizarFotoPerfil(usuario, archivo)
+    + subirCertificado(usuario, datos, archivo)
+    + eliminarCertificado(usuario, id)
+  }
+  class ServicioAdministrador <<service>> {
+    + listarNinerasPendientes(admin)
+    + obtenerNinera(admin, id)
+    + aprobarCertificado(admin, id)
+    + rechazarCertificado(admin, id)
+    + activarNinera(admin, id)
+    + listarUsuarios(admin)
+    + actualizarEstadoCuenta(admin, id, estado)
+  }
+  interface UserRepositoryPort {
+    + findByEmail(correo)
+    + findByDni(dni)
+    + findById(id)
+    + crearPadre(datos)
+    + crearNinera(datos)
+    + actualizarPerfilNinera(id, datos)
+    + actualizarPerfilPadre(id, datos)
+  }
+  interface PasswordHasherPort {
+    + hash(texto)
+    + compare(texto, hash)
+  }
+  interface TokenServicePort {
+    + generateToken(payload)
+    + verifyToken(token)
+    + invalidateToken(token)
+  }
+  interface HijoRepositoryPort {
+    + listarPorPadre(idPadre)
+    + findById(id)
+    + crear(idPadre, datos)
+    + actualizar(id, datos)
+  }
+  interface MultimediaRepositoryPort {
+    + obtenerFoto(id)
+    + guardarFoto(id, foto)
+    + contarCertificados(idNinera)
+    + listarCertificados(idNinera)
+    + crearCertificado(datos)
+    + eliminarCertificado(id)
+  }
+  interface AlmacenamientoArchivosPort {
+    + subir(archivo, opciones)
+    + eliminar(referencia)
+  }
+  interface AdministradorRepositoryPort {
+    + listarNinerasPendientes()
+    + listarUsuarios(filtros)
+    + actualizarEstadoCuenta(id, estado)
+    + obtenerNinera(id)
+    + actualizarEstadoCertificado(id, estado)
+    + activarNinera(id)
+  }
+}
+
+package infrastructure {
+  class PostgresUserRepository
+  class PostgresHijoRepository
+  class PostgresMultimediaRepository
+  class PostgresAdministradorRepository
+  class BcryptPasswordHasher
+  class JwtTokenService
+  class CloudinaryAlmacenamiento
+}
+
+Usuario <|-- Padre
+Usuario <|-- Ninera
+Padre "1" -- "0..*" Hijo
+Ninera "1" -- "0..10" Certificado
+
+ServicioAuth ..> UserRepositoryPort
+ServicioAuth ..> PasswordHasherPort
+ServicioAuth ..> TokenServicePort
+ServicioRegistro ..> UserRepositoryPort
+ServicioRegistro ..> PasswordHasherPort
+ServicioUsuario ..> UserRepositoryPort
+ServicioHijo ..> HijoRepositoryPort
+ServicioMultimedia ..> MultimediaRepositoryPort
+ServicioMultimedia ..> AlmacenamientoArchivosPort
+ServicioMultimedia ..> ValidadorMultimedia
+ServicioAdministrador ..> AdministradorRepositoryPort
+ServicioAdministrador ..> AlmacenamientoArchivosPort
+
+PostgresUserRepository ..|> UserRepositoryPort
+PostgresHijoRepository ..|> HijoRepositoryPort
+PostgresMultimediaRepository ..|> MultimediaRepositoryPort
+PostgresAdministradorRepository ..|> AdministradorRepositoryPort
+BcryptPasswordHasher ..|> PasswordHasherPort
+JwtTokenService ..|> TokenServicePort
+CloudinaryAlmacenamiento ..|> AlmacenamientoArchivosPort
+@enduml

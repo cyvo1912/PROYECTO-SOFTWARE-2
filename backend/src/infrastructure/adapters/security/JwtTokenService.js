@@ -32,6 +32,7 @@ class JwtTokenService extends TokenServicePort {
       correo: userEmail,
       role: userRole,
       tipo_usuario: userRole,
+      accesoLimitado: payload.accesoLimitado === true,
       jti: `t_${userId}_${Date.now()}`,
     };
 

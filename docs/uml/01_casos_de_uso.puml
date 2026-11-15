@@ -1,0 +1,74 @@
+@startuml 01_casos_de_uso
+' MiNana - Diagrama general de casos de uso (Release 1 y Release 2)
+' Archivo fuente editable (PlantUML). Para ver la imagen: pegar este texto en
+' https://www.plantuml.com/plantuml o abrirlo con la extension "PlantUML" de VS Code.
+skinparam shadowing false
+skinparam defaultFontName Arial
+left to right direction
+title Diagrama general de casos de uso – MiNana
+
+actor "Visitante" as V
+actor "Familia" as F
+actor "Niñera" as N
+actor "Administrador" as A
+actor "Cloudinary\n(sistema externo)" as CL
+actor "Expo Push\n(sistema externo)" as EX
+
+rectangle "Sistema MiNana" {
+  package "Release 1 (Sprint 1)" {
+    usecase "CU01 Ver landing y\npropuesta de valor" as CU01
+    usecase "CU02 Registrarse\ncomo familia" as CU02
+    usecase "CU03 Registrarse\ncomo niñera" as CU03
+    usecase "CU04 Iniciar y\ncerrar sesión" as CU04
+    usecase "CU05 Ver panel y editar\nperfil de niñera" as CU05
+    usecase "CU06 Ver panel y editar\nperfil de familia" as CU06
+    usecase "CU07 Gestionar\nperfiles de hijos" as CU07
+    usecase "CU08 Subir foto de\nperfil y certificados" as CU08
+    usecase "CU09 Verificar y\nactivar niñeras" as CU09
+    usecase "CU10 Consultar usuarios y\ncambiar estado de cuenta" as CU10
+  }
+  package "Release 2 (Sprint 2)" {
+    usecase "CU11 Buscar niñeras\npor proximidad" as CU11
+    usecase "CU12 Ver y editar\nperfil público" as CU12
+    usecase "CU13 Consultar\ndisponibilidad" as CU13
+    usecase "CU14 Bolsa de trabajo\n(publicar y postular)" as CU14
+    usecase "CU15 Solicitar\nreserva" as CU15
+    usecase "CU16 Historial y estado\nde reservas" as CU16
+    usecase "CU17 Chat interno\nen tiempo real" as CU17
+    usecase "CU18 Notificaciones\ny valoraciones" as CU18
+  }
+}
+
+V --> CU01
+V --> CU02
+V --> CU03
+F --> CU04
+N --> CU04
+A --> CU04
+N --> CU05
+F --> CU06
+F --> CU07
+F --> CU08
+N --> CU08
+A --> CU09
+A --> CU10
+F --> CU11
+F --> CU12
+N --> CU12
+F --> CU13
+F --> CU14
+N --> CU14
+F --> CU15
+F --> CU16
+N --> CU16
+F --> CU17
+N --> CU17
+F --> CU18
+N --> CU18
+
+CU08 --> CL
+CU09 --> CL
+CU18 --> EX
+CU12 ..> CU11 : <<extend>>
+CU15 ..> CU13 : <<include>>
+@enduml

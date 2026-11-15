@@ -1,0 +1,16 @@
+DIAGRAMAS UML EDITABLES DE MINANA (PlantUML)
+
+Cada archivo .puml es el código fuente editable de un diagrama del informe:
+01 casos de uso · 02 paquetes (vista lógica) · 03 componentes · 04 despliegue
+05 clases Release 1 · 05b clases Release 2 · 06 secuencia HU4 (login)
+07 secuencia HU8 (certificado) · 08 secuencia HU7 (hijo) · 09 modelo de BD
+11 secuencia HU12 (perfil público)
+
+Cómo ver o exportar la imagen (sin instalar nada):
+1. Abre el archivo .puml con el Bloc de notas y copia todo el texto.
+2. Entra a https://www.planttext.com (o https://www.plantuml.com/plantuml).
+3. Pega el texto y pulsa Refresh. Abajo aparece el diagrama.
+4. Para guardarlo, usa el enlace PNG o SVG.
+
+Para editar: cambia el texto (nombres, flechas, métodos) y vuelve a pegarlo.
+En VS Code también se puede instalar la extensión "PlantUML" (pide Java).

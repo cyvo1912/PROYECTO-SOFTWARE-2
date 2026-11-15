@@ -207,6 +207,13 @@ class ServicioAdministrador {
       throw new NotFoundError('Niñera no encontrada.');
     }
 
+    if (resultado.bloqueadoPorExpediente) {
+      throw new ValidationError(
+        'La niñera debe completar su expediente antes de ser activada.',
+        resultado.faltantes,
+      );
+    }
+
     return {
       id: resultado.id_usuario,
       estado: resultado.estado_cuenta,

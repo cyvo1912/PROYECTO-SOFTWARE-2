@@ -1,0 +1,58 @@
+@startuml 07_secuencia_certificado_HU8
+' MiNana - HU8: subir un certificado. Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequence {
+  ArrowColor #1F2937
+  LifeLineBorderColor #6B7280
+  ParticipantBorderColor #2563EB
+  ParticipantBackgroundColor #DBEAFE
+  ParticipantFontStyle bold
+}
+hide footbox
+title Diagrama de secuencia – HU8: subir un certificado
+
+actor "Niñera" as N
+participant "MultimediaScreen" as S
+participant "autenticar /\nsubirUnArchivo" as M
+participant "Multimedia\nController" as C
+participant "Servicio\nMultimedia" as SV
+participant "Validador\nMultimedia" as V
+participant "Multimedia\nRepositoryPort" as R
+participant "Almacenamiento\nArchivosPort" as A
+
+N -> S : 1: completa el formulario y elige el archivo
+S -> M : 2: POST /api/multimedia/certificados (JWT, multipart)
+M -> C : 3: next() con req.user y req.file
+C -> SV : 4: subirCertificado(usuario, datos, archivo)
+alt el usuario no es niñera
+  SV --> C : 4.1: ForbiddenError
+  C --> S : 4.2: 403
+else es niñera
+  SV -> V : 5: validarCertificado(datos, archivo, hoy)
+  V --> SV : 6: errores
+  alt datos o archivo inválidos
+    SV --> C : 6.1: ValidationError
+    C --> S : 6.2: 400 con fields
+  else datos válidos
+    SV -> R : 7: contarCertificados(idNinera)
+    R --> SV : 8: total
+    alt ya tiene 10 certificados
+      SV --> C : 8.1: ValidationError (400)
+    else menos de 10
+      SV -> A : 9: subir(archivo, { carpeta, privado: true })
+      A --> SV : 10: { publicId, formato, tipoRecurso }
+      SV -> R : 11: crearCertificado(datos)
+      alt falla la base de datos
+        SV -> A : 11.1: eliminar(subido) (compensación)
+        SV --> C : 11.2: error (500)
+      else guardado
+        R --> SV : 12: certificado (PENDIENTE)
+        SV --> C : 13: certificado con enlace temporal
+        C --> S : 14: 201 "Certificado registrado."
+        S --> N : 15: muestra el certificado en revisión
+      end
+    end
+  end
+end
+@enduml

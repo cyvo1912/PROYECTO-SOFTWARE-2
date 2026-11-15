@@ -1,0 +1,51 @@
+@startuml 06_secuencia_login_HU4
+' MiNana - HU4: iniciar sesión. Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequence {
+  ArrowColor #1F2937
+  LifeLineBorderColor #6B7280
+  ParticipantBorderColor #2563EB
+  ParticipantBackgroundColor #DBEAFE
+  ParticipantFontStyle bold
+}
+hide footbox
+title Diagrama de secuencia – HU4: iniciar sesión
+
+actor "Usuario" as U
+participant "LoginScreen" as S
+participant "AuthController" as C
+participant "ServicioAuth" as SV
+participant "UserRepository\nPort" as R
+participant "PasswordHasher\nPort" as H
+participant "TokenService\nPort" as T
+
+U -> S : 1: ingresa correo, contraseña y rol
+S -> C : 2: POST /api/auth/login
+C -> SV : 3: iniciarSesion(correo, contrasena, rol)
+alt correo o contraseña vacíos
+  SV --> C : 3.1: InvalidCredentialsError
+end
+SV -> R : 4: findByEmail(correo)
+R --> SV : 5: usuario | null
+SV -> H : 6: compare(contrasena, contrasenaHash)
+H --> SV : 7: true | false
+alt usuario inexistente o contraseña incorrecta
+  SV --> C : 7.1: InvalidCredentialsError
+  C --> S : 7.2: 401 "Credenciales inválidas."
+else rol distinto
+  SV --> C : 7.3: RoleMismatchError
+  C --> S : 7.4: 400 con el rol correcto
+else cuenta pendiente de verificación o inactiva
+  SV --> C : 7.5: AccountPendingError / AccountInactiveError
+  C --> S : 7.6: 403 con el mensaje
+else credenciales válidas
+  SV -> R : 8: findNineraDetails(id) o findPadreDetails(id)
+  R --> SV : 9: perfil del rol
+  SV -> T : 10: generateToken({ id, correo, tipo_usuario })
+  T --> SV : 11: token JWT
+  SV --> C : 12: { token, usuario }
+  C --> S : 13: 200 { success, token, usuario }
+  S --> U : 14: abre el panel según el rol
+end
+@enduml

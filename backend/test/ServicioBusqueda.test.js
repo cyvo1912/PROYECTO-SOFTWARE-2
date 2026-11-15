@@ -12,32 +12,42 @@ const FAMILIA = { id: 10, tipo_usuario: 'FAMILIA' };
 
 function crearServicio() {
   let filtrosRecibidos;
+  let filtrosListado;
+  const fila = {
+    id_usuario: 7,
+    nombre_usuario: 'Lucía',
+    apellido_usuario: 'Valdez',
+    correo: 'privado@minana.com',
+    celular: '999999999',
+    foto_url: null,
+    zona: 'Miraflores',
+    experiencia: 'Cuidado infantil',
+    anos_experiencia: 5,
+    tarifa_hora: '30.00',
+    descripcion: 'Niñera verificada.',
+    verificada: true,
+    calificacion_promedio: '4.8',
+    latitud: '-12.121',
+    longitud: '-77.030',
+    distancia_km: '2.345',
+  };
   const servicio = new ServicioBusqueda({
     userRepository: {
       async buscarNinerasCercanas(filtros) {
         filtrosRecibidos = filtros;
-        return [{
-          id_usuario: 7,
-          nombre_usuario: 'Lucía',
-          apellido_usuario: 'Valdez',
-          correo: 'privado@minana.com',
-          celular: '999999999',
-          foto_url: null,
-          zona: 'Miraflores',
-          experiencia: 'Cuidado infantil',
-          anos_experiencia: 5,
-          tarifa_hora: '30.00',
-          descripcion: 'Niñera verificada.',
-          verificada: true,
-          calificacion_promedio: '4.8',
-          latitud: '-12.121',
-          longitud: '-77.030',
-          distancia_km: '2.345',
-        }];
+        return [fila];
+      },
+      async listarNinerasDisponibles(filtros) {
+        filtrosListado = filtros;
+        return [{ ...fila, distancia_km: null }];
       },
     },
   });
-  return { servicio, obtenerFiltros: () => filtrosRecibidos };
+  return {
+    servicio,
+    obtenerFiltros: () => filtrosRecibidos,
+    obtenerFiltrosListado: () => filtrosListado,
+  };
 }
 
 describe('ServicioBusqueda HU11', () => {
@@ -76,5 +86,21 @@ describe('ServicioBusqueda HU11', () => {
       () => servicio.buscarNineras(FAMILIA, { latitud: 100, longitud: -77, radioKm: 101 }),
       ValidationError,
     );
+  });
+
+  test('permite explorar candidatas verificadas sin compartir la ubicación', async () => {
+    const { servicio, obtenerFiltrosListado } = crearServicio();
+    const resultado = await servicio.buscarNineras(FAMILIA, {
+      tarifaMaxima: 35,
+      experienciaMinima: 3,
+    });
+
+    assert.deepEqual(obtenerFiltrosListado(), {
+      tarifaMaxima: 35,
+      experienciaMinima: 3,
+    });
+    assert.equal(resultado.usaUbicacion, false);
+    assert.equal(resultado.radioKm, null);
+    assert.equal(resultado.resultados[0].distanciaKm, null);
   });
 });

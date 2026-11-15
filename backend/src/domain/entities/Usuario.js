@@ -43,9 +43,16 @@ class Usuario {
    */
   coincideConRol(rolSolicitado) {
     if (!rolSolicitado) return true;
-    const rolUpper = String(rolSolicitado).toUpperCase().trim();
-    return this.tipoUsuario.toUpperCase() === rolUpper;
+    return normalizarRol(this.tipoUsuario) === normalizarRol(rolSolicitado);
   }
+}
+
+function normalizarRol(rol) {
+  return String(rol)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
 }
 
 module.exports = Usuario;

@@ -76,7 +76,7 @@ export default function RegisterNannyScreen({ onBack, onRegistered, onNavigateTo
         if (data.fields) setFieldErrors(data.fields);
       } else {
         setRegisteredUser(data.user);
-        onRegistered && onRegistered({ user: data.user, message: data.message });
+        onRegistered && onRegistered({ user: data.user, token: data.token, message: data.message });
       }
     } catch (err) {
       setErrorMessage('No se pudo conectar con el servidor backend. Verifica tu conexión.');

@@ -10,6 +10,8 @@ import {
   Alert,
   Linking,
   Modal,
+  Platform,
+  StatusBar,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';

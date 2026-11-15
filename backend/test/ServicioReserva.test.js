@@ -258,6 +258,7 @@ describe('ServicioReserva', () => {
 
   test('HU16: la niñera acepta y completa; la familia puede consultar su historial', async () => {
     const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    await servicio.pagar(FAMILIA, creada.id, { metodoPago: 'TARJETA', ultimos4: '4242', titular: 'FAMILIA PRUEBA' });
     const ninera = { id: ID_NINERA, tipo_usuario: 'NINERA' };
     assert.equal((await servicio.cambiarEstado(ninera, creada.id, 'ACEPTADA')).estadoReserva, 'Aceptada');
     assert.equal((await servicio.cambiarEstado(ninera, creada.id, 'COMPLETADA')).estadoReserva, 'Completada');
@@ -291,6 +292,7 @@ describe('ServicioReserva', () => {
 
   test('HU16: rechaza una transición si otra acción cambió la reserva antes de guardarla', async () => {
     const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    await servicio.pagar(FAMILIA, creada.id, { metodoPago: 'TARJETA', ultimos4: '4242', titular: 'FAMILIA PRUEBA' });
     reservas.rechazarSiguienteCambioDeEstado = true;
     const ninera = { id: ID_NINERA, tipo_usuario: 'NINERA' };
 
@@ -306,7 +308,7 @@ describe('ServicioReserva', () => {
       ultimos4: '4242',
       titular: 'LUCIA VALDEZ',
     });
-    assert.equal(resultado.reserva.estadoReserva, 'Aceptada');
+    assert.equal(resultado.reserva.estadoReserva, 'Pagada');
     assert.equal(resultado.pago.estado, 'APROBADO');
     assert.equal(resultado.pago.metodo, 'TARJETA');
     assert.equal(resultado.pago.entorno, 'SIMULACION');

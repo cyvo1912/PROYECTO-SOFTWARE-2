@@ -16,6 +16,12 @@ function crearAuthMiddleware(tokenService) {
 
     try {
       const decoded = tokenService.verifyToken(token);
+      if (decoded.accesoLimitado && !req.baseUrl.startsWith('/api/multimedia')) {
+        return res.status(403).json({
+          success: false,
+          message: 'Tu expediente está pendiente de revisión. Solo puedes completar foto y certificados hasta que un administrador active tu cuenta.',
+        });
+      }
       req.user = decoded;
       req.token = token;
       return next();

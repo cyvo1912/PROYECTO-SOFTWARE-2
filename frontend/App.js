@@ -377,6 +377,18 @@ export default function App() {
       );
     }
 
+    if (currentScreen === 'verificationOnboarding' && currentUser) {
+      return (
+        <MultimediaScreen
+          token={authToken}
+          user={currentUser}
+          modoVerificacion
+          onBack={handleLogout}
+          onFotoActualizada={handleFotoActualizada}
+        />
+      );
+    }
+
     // HU14: la niñera explora la bolsa de trabajo y se postula
     if (currentScreen === 'jobBoard' && currentUser) {
       return (

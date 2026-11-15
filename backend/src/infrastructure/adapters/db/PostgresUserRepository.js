@@ -297,6 +297,42 @@ class PostgresUserRepository extends UserRepositoryPort {
     return result.rows;
   }
 
+  async listarNinerasDisponibles(filtros) {
+    const { tarifaMaxima, experienciaMinima } = filtros;
+    const condiciones = [
+      `u.tipo_usuario = 'NINERA'`,
+      `u.estado_cuenta = 'ACTIVA'`,
+      `n.verificada = TRUE`,
+    ];
+    const valores = [];
+
+    if (tarifaMaxima !== undefined && tarifaMaxima !== null) {
+      valores.push(tarifaMaxima);
+      condiciones.push(`n.tarifa_hora <= $${valores.length}`);
+    }
+    if (experienciaMinima !== undefined && experienciaMinima !== null) {
+      valores.push(experienciaMinima);
+      condiciones.push(`n.anos_experiencia IS NOT NULL AND n.anos_experiencia >= $${valores.length}`);
+    }
+
+    const result = await this.pool.query(
+      `
+      SELECT
+        u.id_usuario, u.nombre_usuario, u.apellido_usuario, u.foto_url,
+        n.zona, n.experiencia, n.anos_experiencia, n.tarifa_hora,
+        n.descripcion, n.verificada, n.calificacion_promedio, n.latitud, n.longitud,
+        NULL::numeric AS distancia_km
+      FROM ninera n
+      INNER JOIN usuario u ON u.id_usuario = n.id_ninera
+      WHERE ${condiciones.join(' AND ')}
+      ORDER BY n.calificacion_promedio DESC NULLS LAST, n.anos_experiencia DESC NULLS LAST,
+               u.nombre_usuario ASC;
+      `,
+      valores,
+    );
+    return result.rows;
+  }
+
   async actualizarPerfilPadre(idUsuario, datosUsuario, datosPadre) {
     const client = await this.pool.connect();
     try {

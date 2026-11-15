@@ -1,0 +1,39 @@
+@startuml 11_secuencia_perfil_publico_HU12
+' MiNana - Escenario E4 (HU12): la familia ve el perfil publico ampliado de una ninera.
+' Archivo fuente editable (PlantUML). Para generar la imagen: pegar este texto en
+' https://www.plantuml.com/plantuml o usar la extension "PlantUML" de VS Code.
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequence {
+  ArrowColor #1F2937
+  LifeLineBorderColor #6B7280
+  ParticipantBorderColor #2563EB
+  ParticipantBackgroundColor #DBEAFE
+  ParticipantFontStyle bold
+}
+hide footbox
+title Diagrama de secuencia E4 – HU12: ver el perfil público de una niñera
+
+participant "Familia" as F
+participant "NannyPublic\nProfileScreen" as S
+participant "PerfilPublico\nController" as C
+participant "ServicioPerfil\nPublico" as SV
+participant "PerfilPublico\nRepositoryPort" as R
+
+F -> S : 1: toca "Ver perfil" en la búsqueda
+S -> C : 2: GET /api/perfil-publico/:idNinera (JWT)
+C -> SV : 3: verPerfilPublico(usuario, idNinera)
+SV -> R : 4: buscarNinera(id)
+R --> SV : 5: ninera | null
+
+alt id inválido, no existe o no visible para la familia
+  SV --> C : 5.1: NotFoundError
+  C --> S : 5.2: 404 "Perfil no disponible."
+else perfil visible
+  SV -> R : 6: listarCertificadosAprobados(id)
+  SV -> R : 7: obtenerReputacion(id)
+  SV --> C : 8: perfil (solo datos públicos)
+  C --> S : 9: 200 { success, data }
+  S --> F : 10: muestra biografía, foto, certificados y reputación
+end
+@enduml

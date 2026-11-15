@@ -41,7 +41,6 @@ class NotificacionController {
         data
       });
     } catch (error) {
-      console.error('ERROR HU18 - LISTAR NOTIFICACIONES:', error);
       return responderError(res, error);
     }
   }

@@ -1,0 +1,53 @@
+@startuml 02_vista_logica_paquetes
+' MiNana - Vista lógica: diagrama de paquetes (arquitectura hexagonal)
+' Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+title Vista lógica – Diagrama de paquetes de MiNana
+
+package "frontend (Expo / React Native)" as FE {
+  package "src/screens" as SCR {
+    class "LoginScreen, Register*Screen,\nFamily/Nanny/AdminDashboardScreen,\nChildrenScreen, MultimediaScreen,\nSearchNanniesScreen, NannyPublicProfileScreen,\nReservation*Screen, JobBoardScreen,\nNotificacionesScreen, ValoracionScreen" as Pantallas << (S,#DBEAFE) >>
+  }
+  class "App.js\n(navegación y sesión)" as App << (A,#DBEAFE) >>
+}
+
+package "backend (Node.js / Express)" as BE {
+  package "infrastructure" as INF {
+    package "http" as HTTP {
+      class "routes/*.routes.js\ncontrollers (14)\nmiddlewares (autenticar, subidaArchivo)\nChatSocketController" as Http
+    }
+    package "adapters" as ADP {
+      class "db: Postgres*Repository (12)\nsecurity: BcryptPasswordHasher, JwtTokenService\nstorage: CloudinaryAlmacenamiento\nrealtime: SocketIoRealtimeNotifier\nnotifications: ExpoNotificationAdapter" as Adaptadores
+    }
+    class "container.js\n(raíz de composición)" as Container
+  }
+  package "application" as APP {
+    package "services" as SRV {
+      class "R1: ServicioAuth, ServicioRegistro, ServicioUsuario,\nServicioHijo, ServicioMultimedia, ServicioAdministrador\nR2: ServicioBusqueda, ServicioPerfilPublico,\nServicioDisponibilidad, ServicioBolsaTrabajo, ServicioReserva,\nServicioMensajes, ServicioNotificacion, ServicioValoracion" as Servicios
+    }
+    package "ports" as PRT {
+      interface "16 puertos: UserRepositoryPort, HijoRepositoryPort,\nMultimediaRepositoryPort, AdministradorRepositoryPort,\nAlmacenamientoArchivosPort, PasswordHasherPort, TokenServicePort,\nPerfilPublicoRepositoryPort, DisponibilidadRepositoryPort,\nOfertaTrabajoRepositoryPort, ReservaRepositoryPort,\nMensajeRepositoryPort, RealtimeNotifierPort,\nNotificacionRepositoryPort, NotificacionServicePort,\nValoracionRepositoryPort" as Puertos
+    }
+  }
+  package "domain" as DOM {
+    class "entities: Usuario, Padre, Ninera, Hijo, Certificado,\nDisponibilidad, Mensaje, OfertaTrabajo, Postulacion, Reserva\nvalidators: ValidadorMultimedia, ValidadorPerfilPublico, ValidadorMensaje\nstrategies: EstrategiaCalculoDisponibilidad, EstrategiaCalculoTarifa\nerrors: DomainErrors" as Dominio
+  }
+}
+
+hide members
+hide circle
+
+FE ..> HTTP : HTTP/JSON y WebSocket
+INF ..> APP
+APP ..> DOM
+Adaptadores ..|> Puertos : implementan
+Container ..> Adaptadores : crea
+Container ..> Servicios : inyecta
+
+note bottom of DOM
+  Regla de dependencias: infrastructure -> application -> domain.
+  El dominio no depende de ningún otro paquete (ADP sin ciclos; SDP y SAP).
+end note
+@enduml

@@ -29,15 +29,17 @@ class ServicioBusqueda {
 
     const errores = {};
     const { latitud, longitud, radioKm, tarifaMaxima, experienciaMinima } = filtros;
+    const tieneLatitud = latitud !== undefined && latitud !== null && latitud !== '';
+    const tieneLongitud = longitud !== undefined && longitud !== null && longitud !== '';
+    const usarUbicacion = tieneLatitud || tieneLongitud;
 
     const lat = Number(latitud);
-    if (latitud === undefined || latitud === null || latitud === '' || isNaN(lat) || lat < -90 || lat > 90) {
-      errores.latitud = 'Necesitamos tu ubicación actual para buscar niñeras cercanas.';
-    }
-
     const lng = Number(longitud);
-    if (longitud === undefined || longitud === null || longitud === '' || isNaN(lng) || lng < -180 || lng > 180) {
-      errores.longitud = 'Necesitamos tu ubicación actual para buscar niñeras cercanas.';
+    if (usarUbicacion && (!tieneLatitud || isNaN(lat) || lat < -90 || lat > 90)) {
+      errores.latitud = 'La latitud de búsqueda no es válida.';
+    }
+    if (usarUbicacion && (!tieneLongitud || isNaN(lng) || lng < -180 || lng > 180)) {
+      errores.longitud = 'La longitud de búsqueda no es válida.';
     }
 
     let radio = RADIO_KM_DEFECTO;
@@ -74,16 +76,22 @@ class ServicioBusqueda {
       throw new ValidationError('Revisa los filtros de búsqueda.', errores);
     }
 
-    const filas = await this.userRepository.buscarNinerasCercanas({
-      latitud: lat,
-      longitud: lng,
-      radioKm: radio,
+    const filtrosNormalizados = {
       tarifaMaxima: tarifaMaximaValida,
       experienciaMinima: experienciaMinimaValida,
-    });
+    };
+    const filas = usarUbicacion
+      ? await this.userRepository.buscarNinerasCercanas({
+        ...filtrosNormalizados,
+        latitud: lat,
+        longitud: lng,
+        radioKm: radio,
+      })
+      : await this.userRepository.listarNinerasDisponibles(filtrosNormalizados);
 
     return {
-      radioKm: radio,
+      radioKm: usarUbicacion ? radio : null,
+      usaUbicacion: usarUbicacion,
       total: filas.length,
       resultados: filas.map(aResultadoBusqueda),
     };
@@ -107,7 +115,9 @@ function aResultadoBusqueda(fila) {
     latitud: Number(fila.latitud),
     longitud: Number(fila.longitud),
     // Redondeado a 2 decimales para mostrar en la tarjeta (ej. "2.37 km").
-    distanciaKm: Math.round(Number(fila.distancia_km) * 100) / 100,
+    distanciaKm: fila.distancia_km === null || fila.distancia_km === undefined
+      ? null
+      : Math.round(Number(fila.distancia_km) * 100) / 100,
   };
 }
 

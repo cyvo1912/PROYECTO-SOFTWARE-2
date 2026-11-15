@@ -23,6 +23,7 @@ const RADIOS_KM = [5, 10, 15, 25, 50];
 const MAX_MARCADORES_MAPA = 10;
 
 const DISTRITOS_LIMA = [
+  { id: 'todas', label: 'Todas verificadas', latitud: null, longitud: null },
   { id: 'cerca', label: 'Cerca de ti', latitud: null, longitud: null },
   { id: 'surco', label: 'Surco', latitud: -12.1390, longitud: -76.9916 },
   { id: 'miraflores', label: 'Miraflores', latitud: -12.1217, longitud: -77.0298 },
@@ -87,7 +88,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
   const [radioKm, setRadioKm] = useState(15);
   const [tarifaMaxima, setTarifaMaxima] = useState('');
   const [experienciaMinima, setExperienciaMinima] = useState('');
-  const [distritoSeleccionado, setDistritoSeleccionado] = useState('cerca');
+  const [distritoSeleccionado, setDistritoSeleccionado] = useState('todas');
   const [vistaMapa, setVistaMapa] = useState(false);
 
   const [ubicacion, setUbicacion] = useState(null); // { latitud, longitud }
@@ -98,14 +99,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
   const [resultados, setResultados] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
-
-  // Cargar niñeras iniciales en modo invitado
-  React.useEffect(() => {
-    if (!token) {
-      setYaBusco(true);
-      setResultados(NINERAS_DEMO);
-    }
-  }, [token]);
+  const buscaPorZona = distritoSeleccionado !== 'todas' || Boolean(ubicacion);
 
   const obtenerUbicacionActual = useCallback(async () => {
     setErrorMessage('');
@@ -138,8 +132,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
       setErrorMessage('');
       setFieldErrors({});
 
-      const origen = ubicacionForzada || ubicacion || (await obtenerUbicacionActual());
-      if (!origen) return;
+      const origen = ubicacionForzada || ubicacion;
 
       setBuscando(true);
       setYaBusco(true);
@@ -161,11 +154,12 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
           return;
         }
 
-        const params = new URLSearchParams({
-          latitud: String(origen.latitud),
-          longitud: String(origen.longitud),
-          radioKm: String(radioAplicado),
-        });
+        const params = new URLSearchParams();
+        if (origen) {
+          params.set('latitud', String(origen.latitud));
+          params.set('longitud', String(origen.longitud));
+          params.set('radioKm', String(radioAplicado));
+        }
         if (tarifaAplicada.trim() !== '') params.append('tarifaMaxima', tarifaAplicada.trim());
         if (experienciaAplicada.trim() !== '') params.append('experienciaMinima', experienciaAplicada.trim());
 
@@ -190,6 +184,16 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
     },
     [ubicacion, radioKm, tarifaMaxima, experienciaMinima, obtenerUbicacionActual, token]
   );
+
+  // Mostrar candidatas verificadas desde el inicio, incluso sin GPS.
+  React.useEffect(() => {
+    if (!token) {
+      setYaBusco(true);
+      setResultados(NINERAS_DEMO);
+      return;
+    }
+    buscarNineras(null);
+  }, [token, buscarNineras]);
 
   const mapaUrl = construirUrlMapa(ubicacion, resultados);
 
@@ -218,9 +222,13 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={[styles.content, isMobile ? styles.contentMobile : styles.contentDesktop]}>
           <View style={styles.headerBlock}>
-            <Text style={styles.screenTitle}>Buscar Niñeras Cerca de Ti</Text>
+            <Text style={styles.screenTitle}>
+              {buscaPorZona ? 'Buscar niñeras cerca de ti' : 'Buscar niñeras verificadas'}
+            </Text>
             <Text style={styles.screenSubtitle}>
-              Filtra por distancia, tarifa y experiencia para encontrar candidatas verificadas en tu zona
+              {buscaPorZona
+                ? 'Filtra por distancia, tarifa y experiencia para encontrar candidatas verificadas en tu zona'
+                : 'Explora perfiles verificados y filtra por tarifa o experiencia, sin activar tu ubicación'}
             </Text>
           </View>
 
@@ -312,10 +320,13 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
                         const nuevaUbicacion = { latitud: d.latitud, longitud: d.longitud };
                         setUbicacion(nuevaUbicacion);
                         buscarNineras(nuevaUbicacion);
-                      } else {
+                      } else if (d.id === 'cerca') {
                         obtenerUbicacionActual().then((loc) => {
                           if (loc) buscarNineras(loc);
                         });
+                      } else {
+                        setUbicacion(null);
+                        buscarNineras(null);
                       }
                     }}
                     activeOpacity={0.8}
@@ -333,7 +344,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
               })}
             </ScrollView>
 
-            <View style={styles.row}>
+            <View style={isMobile ? styles.filterInputsMobile : styles.row}>
               <View style={[styles.col, { flex: 1 }]}>
                 <Field
                   label="Tarifa máxima (S/ por hora)"
@@ -390,7 +401,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
                 <>
                   <Ionicons name="search" size={18} color="#FFFFFF" />
                   <Text style={styles.searchButtonText}>
-                    {token ? 'Buscar niñeras en la zona' : 'Explorar niñeras'}
+                    {token ? 'Buscar niñeras' : 'Explorar niñeras'}
                   </Text>
                 </>
               )}
@@ -426,7 +437,9 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
                 <Ionicons name="search-outline" size={36} color={colors.primary} />
                 <Text style={styles.emptyTitle}>No encontramos niñeras con estos filtros</Text>
                 <Text style={styles.emptyText}>
-                  No hay candidatas disponibles en {radioKm} km con las condiciones seleccionadas. Evita callejones sin salida con estas opciones de 1 toque:
+                  {ubicacion
+                    ? `No hay candidatas disponibles en ${radioKm} km con las condiciones seleccionadas.`
+                    : 'No hay candidatas verificadas con las condiciones seleccionadas.'} Prueba estas opciones de 1 toque:
                 </Text>
 
                 <View style={styles.quickEmptyActions}>
@@ -468,8 +481,9 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
                       setRadioKm(15);
                       setTarifaMaxima('');
                       setExperienciaMinima('');
-                      setDistritoSeleccionado('cerca');
-                      buscarNineras(ubicacion, {
+                      setDistritoSeleccionado('todas');
+                      setUbicacion(null);
+                      buscarNineras(null, {
                         radioKm: 15,
                         tarifaMaxima: '',
                         experienciaMinima: '',
@@ -570,7 +584,10 @@ function NannyCard({ ninera, onVerPerfil }) {
           <View style={styles.nannyInfoRow}>
             <Ionicons name="location-outline" size={13} color="#6B7280" />
             <Text style={styles.nannyInfoText}>
-              {ninera.zona || 'Zona no especificada'} · {ninera.distanciaKm} km
+              {ninera.zona || 'Zona no especificada'}
+              {ninera.distanciaKm !== null && ninera.distanciaKm !== undefined
+                ? ` · ${ninera.distanciaKm} km`
+                : ''}
             </Text>
           </View>
         </View>
@@ -789,6 +806,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 12,
+  },
+  filterInputsMobile: {
+    gap: 0,
   },
   col: {
     marginBottom: 0,

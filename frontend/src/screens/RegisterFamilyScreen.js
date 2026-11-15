@@ -152,7 +152,7 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
               <Field label="Nombre de la Familia" value={nombreFamilia} onChangeText={updateField(setNombreFamilia, 'nombreFamilia')} error={fieldErrors.nombreFamilia} placeholder="Familia García" />
               <Field label="Dirección" value={direccion} onChangeText={updateField(setDireccion, 'direccion')} error={fieldErrors.direccion} placeholder="Calle Principal 123, Surco" />
               <Field
-                label="Número de Niños"
+                label="Número de hijos (1 a 5)"
                 value={numeroNinos}
                 onChangeText={(t) => {
                   const cleaned = t.replace(/[^0-9]/g, '').slice(0, 1);
@@ -164,8 +164,18 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
                 placeholder="1 a 5"
                 keyboardType="number-pad"
                 maxLength={1}
+                helpText="Podrás completar sus perfiles de cuidado al entrar a la app."
               />
-              <Field label="Edades de los Niños" value={edadesNinos} onChangeText={updateField(setEdadesNinos, 'edadesNinos')} error={fieldErrors.edadesNinos} placeholder="3, 5" />
+              <Field
+                label="Edades de los hijos"
+                value={edadesNinos}
+                onChangeText={(texto) => updateField(setEdadesNinos, 'edadesNinos')(texto.replace(/[^0-9,\s]/g, '').slice(0, 14))}
+                error={fieldErrors.edadesNinos}
+                placeholder="3, 5"
+                keyboardType="number-pad"
+                maxLength={14}
+                helpText="Escribe una edad por hijo, separadas por comas. Ej.: 3, 5."
+              />
 
               {errorMessage ? (
                 <View style={styles.errorContainer}>
@@ -192,7 +202,7 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
   );
 }
 
-function Field({ label, error, ...inputProps }) {
+function Field({ label, error, helpText, ...inputProps }) {
   return (
     <View style={styles.formGroup}>
       <Text style={styles.label}>{label}</Text>
@@ -200,6 +210,7 @@ function Field({ label, error, ...inputProps }) {
         <TextInput style={styles.input} placeholderTextColor="#9CA3AF" autoCorrect={false} {...inputProps} />
       </View>
       {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
+      {!error && helpText ? <Text style={styles.fieldHelpText}>{helpText}</Text> : null}
     </View>
   );
 }
@@ -265,6 +276,7 @@ const styles = StyleSheet.create({
   passwordWrapper: { flexDirection: 'row', alignItems: 'center' },
   eyeButton: { padding: 6 },
   fieldErrorText: { fontSize: 12, color: '#DC2626', marginTop: 4, fontWeight: '500' },
+  fieldHelpText: { fontSize: 12, color: '#6B7280', marginTop: 5, lineHeight: 17 },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -52,6 +52,10 @@ class UserRepositoryPort {
   async buscarNinerasCercanas(filtros) {
     throw new Error('Método buscarNinerasCercanas no implementado');
   }
+
+  async listarNinerasDisponibles(filtros) {
+    throw new Error('Método listarNinerasDisponibles no implementado');
+  }
 }
 
 module.exports = UserRepositoryPort;

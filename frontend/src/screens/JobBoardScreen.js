@@ -158,7 +158,7 @@ export default function JobBoardScreen({ token, onBack }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={[styles.scrollContainer, isMobile && styles.scrollContainerMobile]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -174,7 +174,7 @@ export default function JobBoardScreen({ token, onBack }) {
               <View style={styles.headerBlock}>
                 <Text style={styles.screenTitle}>Bolsa de trabajo</Text>
                 <Text style={styles.screenSubtitle}>
-                  Explora las ofertas publicadas por familias y postúlate a las que encajan contigo.
+                  Ofertas disponibles según tu perfil.
                 </Text>
               </View>
 
@@ -448,7 +448,7 @@ function OfferDetail({ token, oferta, onPostulado }) {
         </View>
       ) : (
         <>
-          <Text style={styles.detailSectionTitle}>Mensaje para la familia (opcional)</Text>
+          <Text style={styles.detailSectionTitle}>Mensaje (opcional)</Text>
           <View style={[styles.textareaWrapper, mensajeError && styles.inputError]}>
             <TextInput
               style={styles.textarea}
@@ -718,6 +718,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 24,
+  },
+  scrollContainerMobile: {
+    paddingBottom: 116,
   },
   content: {
     width: '100%',

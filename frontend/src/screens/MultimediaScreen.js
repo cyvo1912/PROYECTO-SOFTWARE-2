@@ -71,7 +71,7 @@ async function adjuntarArchivo(form, campo, archivo) {
  * - Familia y niñera: foto de perfil (JPG, PNG o WEBP, máx. 2 MB).
  * - Niñera: certificados (PDF, JPG o PNG, máx. 5 MB) que el administrador revisa en HU9.
  */
-export default function MultimediaScreen({ token, user, onBack, onFotoActualizada }) {
+export default function MultimediaScreen({ token, user, onBack, onFotoActualizada, modoVerificacion = false }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
   const esNinera = user?.rol === 'NINERA';
@@ -280,7 +280,7 @@ export default function MultimediaScreen({ token, user, onBack, onFotoActualizad
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Ionicons name="arrow-back" size={20} color="#1E1B4B" />
-            <Text style={styles.backButtonText}>Volver</Text>
+            <Text style={styles.backButtonText}>{modoVerificacion ? 'Cerrar sesión' : 'Volver'}</Text>
           </TouchableOpacity>
           <View style={styles.navBrand}>
             <Ionicons name="heart" size={22} color={colors.primary} />
@@ -291,9 +291,13 @@ export default function MultimediaScreen({ token, user, onBack, onFotoActualizad
 
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
-          <Text style={styles.screenTitle}>Certificados Profesionales</Text>
+          <Text style={styles.screenTitle}>
+            {modoVerificacion ? 'Completa tu expediente' : 'Certificados Profesionales'}
+          </Text>
           <Text style={styles.screenSubtitle}>
-            Registra tus diplomas, capacitaciones y certificaciones para generar confianza en las familias
+            {modoVerificacion
+              ? 'Para que el administrador active tu cuenta, sube una foto de perfil y al menos un certificado. Podrás trabajar en la app cuando tu expediente sea aprobado.'
+              : 'Registra tus diplomas, capacitaciones y certificaciones para generar confianza en las familias'}
           </Text>
 
           {mensajeExito ? (
@@ -317,6 +321,40 @@ export default function MultimediaScreen({ token, user, onBack, onFotoActualizad
             <>
               {esNinera ? (
                 <>
+                  <View style={styles.requirementsBanner}>
+                    <Ionicons name="shield-checkmark-outline" size={20} color="#5B21B6" />
+                    <Text style={styles.requirementsText}>
+                      Requisitos de activación: foto de perfil y un certificado vigente aprobado por administración.
+                    </Text>
+                  </View>
+
+                  <View style={styles.photoBlock}>
+                    <View style={styles.photoCircle}>
+                      {fotoUrl ? (
+                        <Image source={{ uri: fotoUrl }} style={styles.photoImage} />
+                      ) : (
+                        <Ionicons name="person-outline" size={44} color={colors.primary} />
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.secondaryButton}
+                      onPress={elegirFoto}
+                      disabled={subiendoFoto}
+                      activeOpacity={0.8}
+                    >
+                      {subiendoFoto ? <ActivityIndicator color={colors.primary} /> : (
+                        <>
+                          <Ionicons name="camera-outline" size={18} color={colors.primary} />
+                          <Text style={styles.secondaryButtonText}>
+                            {fotoUrl ? 'Cambiar foto de perfil' : 'Subir foto de perfil'}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <Text style={styles.fieldHelpText}>JPG, PNG o WEBP. Máximo 2 MB.</Text>
+                  </View>
+
+                  <View style={styles.divider} />
                   {/* Formulario de certificado */}
                   <View style={styles.sectionHeader}>
                     <Ionicons name="ribbon-outline" size={20} color={colors.primary} />
@@ -488,6 +526,18 @@ const styles = StyleSheet.create({
   mainCardMobile: { maxWidth: '100%', padding: 20 },
   screenTitle: { fontSize: 22, fontWeight: '800', color: '#1E1B4B', textAlign: 'center', marginBottom: 6 },
   screenSubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19, marginBottom: 24 },
+  requirementsBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#F3E8FF',
+    borderColor: '#DDD6FE',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+  },
+  requirementsText: { flex: 1, color: '#5B21B6', fontSize: 13, lineHeight: 19, fontWeight: '600' },
   loadingBox: { paddingVertical: 40, alignItems: 'center' },
   successBanner: {
     flexDirection: 'row',

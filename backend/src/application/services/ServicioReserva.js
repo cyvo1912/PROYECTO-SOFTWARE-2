@@ -234,7 +234,7 @@ class ServicioReserva {
     if (
       esFamiliaPropietaria &&
       estado === 'CANCELADA' &&
-      ['PENDIENTE', 'ACEPTADA'].includes(actual)
+      ['PENDIENTE', 'PAGADA', 'ACEPTADA'].includes(actual)
     ) {
       if (!reserva.puedeCancelarse(this.reloj())) {
         throw new ValidationError(
@@ -248,20 +248,20 @@ class ServicioReserva {
     let estadoNuevo = null;
     let idReceptor = null;
 
-    // La familia puede cancelar una reserva pendiente o aceptada
+    // La familia puede cancelar antes de que el servicio se complete.
     if (
       esFamiliaPropietaria &&
       estado === 'CANCELADA' &&
-      ['PENDIENTE', 'ACEPTADA'].includes(actual)
+      ['PENDIENTE', 'PAGADA', 'ACEPTADA'].includes(actual)
     ) {
       estadoNuevo = 'Cancelada';
       idReceptor = reserva.idNinera;
     }
 
-    // La niñera puede aceptar o rechazar solicitudes pendientes
+    // La niñera decide únicamente después de que la familia confirmó el pago.
     else if (
       esNineraAsignada &&
-      actual === 'PENDIENTE' &&
+      actual === 'PAGADA' &&
       ['ACEPTADA', 'RECHAZADA'].includes(estado)
     ) {
       estadoNuevo = estado === 'ACEPTADA'
@@ -301,8 +301,8 @@ class ServicioReserva {
 
   /**
    * Simulación de Pasarela de Pago: confirma el pago de una reserva pendiente
-   * dentro de sus 10 minutos de vigencia, marcándola como Aceptada y liberando
-   * la expiración para activar la mensajería y el servicio.
+   * dentro de sus 10 minutos de vigencia. El pago deja la reserva pendiente de
+   * aceptación de la niñera; la mensajería se activa tras esa aceptación.
    */
   async pagar(usuario, idReservaParam, solicitudPago = {}) {
     this._exigirFamilia(usuario);
@@ -333,11 +333,11 @@ class ServicioReserva {
 
     const actualizada = await this._actualizarEstadoSiVigente(
       idReserva,
-      'Aceptada',
+      'Pagada',
       ['Pendiente', 'PENDIENTE']
     );
 
-    // Notificar a la niñera que la reserva fue confirmada y pagada
+    // La niñera recibe la solicitud ya pagada para aceptarla o rechazarla.
     await this._notificarCambio(actualizada, reserva.idNinera);
 
     return {
@@ -522,6 +522,10 @@ class ServicioReserva {
       .toUpperCase();
 
     const mensajes = {
+      PAGADA: {
+        titulo: 'Pago confirmado',
+        mensaje: `La reserva #${reserva.id} está lista para tu respuesta.`,
+      },
       ACEPTADA: {
         titulo: 'Reserva aceptada',
         mensaje: `Tu reserva #${reserva.id} fue aceptada.`,

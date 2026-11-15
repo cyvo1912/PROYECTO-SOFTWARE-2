@@ -44,21 +44,13 @@ class ServicioRegistro {
         'Tu cuenta fue creada correctamente. ' +
         'Ya puedes explorar nuestros servicios.';
 
-      const notificacion =
-        await this.servicioNotificacion.enviarNotificacion({
-          idUsuario,
-          idReserva: null,
-          titulo: '¡Bienvenido a Mi Nana!',
-          mensaje,
-          tipo: 'BIENVENIDA',
-        });
-
-      console.log(
-        'HU18: bienvenida creada para usuario:',
+      await this.servicioNotificacion.enviarNotificacion({
         idUsuario,
-        'Notificación:',
-        notificacion.id_notificacion
-      );
+        idReserva: null,
+        titulo: '¡Bienvenido a Mi Nana!',
+        mensaje,
+        tipo: 'BIENVENIDA',
+      });
     } catch (error) {
       // Una falla en notificaciones no debe impedir el registro.
       console.error(
@@ -105,8 +97,8 @@ class ServicioRegistro {
     const numNinos = Number(numeroNinos);
     if (numeroNinos === undefined || numeroNinos === null || numeroNinos === '' || isNaN(numNinos)) {
       errores.numeroNinos = 'El número de niños es obligatorio.';
-    } else if (!Number.isInteger(numNinos) || numNinos < 1 || numNinos > 10) {
-      errores.numeroNinos = 'Debe ser un número entero entre 1 y 10.';
+    } else if (!Number.isInteger(numNinos) || numNinos < 1 || numNinos > 5) {
+      errores.numeroNinos = 'Debe ser un número entero entre 1 y 5.';
     }
 
     const listaEdades = Array.isArray(edadesNinos) ? edadesNinos.map(Number) : [];
@@ -232,14 +224,24 @@ class ServicioRegistro {
       ninera.nombreCompleto,
       'NINERA'
     );
-    // Restricción 13: la cuenta queda PENDIENTE_VERIFICACION; no se emite token.
+    // La cuenta sigue pendiente, pero recibe una sesión limitada para adjuntar
+    // el expediente que el administrador deberá revisar.
+    const token = this.tokenService.generateToken({
+      id: ninera.id,
+      correo: ninera.correo,
+      tipo_usuario: ninera.tipoUsuario,
+      accesoLimitado: true,
+    });
+
     return {
+      token,
       usuario: {
         id: ninera.id,
         nombre: ninera.nombreCompleto,
         correo: ninera.correo,
         rol: ninera.tipoUsuario,
         estado: ninera.estadoCuenta,
+        accesoLimitado: true,
       },
     };
   }

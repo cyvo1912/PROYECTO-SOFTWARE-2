@@ -216,6 +216,45 @@ async listarNinerasPendientes() {
     try {
       await client.query('BEGIN');
 
+      const expedienteResult = await client.query(
+        `
+        SELECT
+          u.foto_url IS NOT NULL AND BTRIM(u.foto_url) <> '' AS tiene_foto,
+          EXISTS (
+            SELECT 1
+            FROM certificado c
+            WHERE c.id_ninera = n.id_ninera
+              AND c.estado_revision = 'APROBADO'
+              AND (c.fecha_vencimiento IS NULL OR c.fecha_vencimiento >= CURRENT_DATE)
+          ) AS tiene_certificado_aprobado
+        FROM usuario u
+        INNER JOIN ninera n ON n.id_ninera = u.id_usuario
+        WHERE u.id_usuario = $1
+          AND u.tipo_usuario = 'NINERA'
+        FOR UPDATE;
+        `,
+        [idNinera],
+      );
+
+      if (expedienteResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+
+      const expediente = expedienteResult.rows[0];
+      if (!expediente.tiene_foto || !expediente.tiene_certificado_aprobado) {
+        await client.query('ROLLBACK');
+        return {
+          bloqueadoPorExpediente: true,
+          faltantes: {
+            ...(expediente.tiene_foto ? {} : { foto: 'Debe subir una foto de perfil.' }),
+            ...(expediente.tiene_certificado_aprobado
+              ? {}
+              : { certificado: 'Debe contar con al menos un certificado aprobado y vigente.' }),
+          },
+        };
+      }
+
       const usuarioResult = await client.query(
         `
         UPDATE usuario
