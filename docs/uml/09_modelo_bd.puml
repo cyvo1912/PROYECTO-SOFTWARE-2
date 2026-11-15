@@ -1,0 +1,210 @@
+@startuml 09_modelo_bd
+' MiNana - Modelo de base de datos (schema.sql + migraciones 001 a 006)
+' Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+hide circle
+skinparam linetype ortho
+title Modelo de base de datos – MiNana (PostgreSQL en Neon)
+
+entity usuario {
+  * id_usuario : SERIAL <<PK>>
+  --
+  nombre_usuario : VARCHAR(100)
+  apellido_usuario : VARCHAR(100)
+  correo : VARCHAR(150) <<UNIQUE>>
+  dni : VARCHAR(20) <<UNIQUE>>
+  contrasena_hash : VARCHAR(255)
+  celular : VARCHAR(20)
+  tipo_usuario : VARCHAR(30)
+  estado_cuenta : VARCHAR(30)
+  fecha_registro : TIMESTAMP
+  foto_url : TEXT
+  foto_public_id : VARCHAR(255)
+}
+
+entity padre {
+  * id_padre : INT <<PK, FK>>
+  --
+  nombre_familia : VARCHAR(150)
+  direccion : VARCHAR(255)
+  numero_ninos : INT
+  edades_ninos : VARCHAR(100)
+  informacion_adicional : TEXT
+}
+
+entity ninera {
+  * id_ninera : INT <<PK, FK>>
+  --
+  zona : VARCHAR(100)
+  experiencia : TEXT
+  tarifa_hora : NUMERIC(10,2)
+  descripcion : TEXT
+  verificada : BOOLEAN
+  calificacion_promedio : NUMERIC(3,2)
+  habilidades : TEXT[]
+  idiomas : TEXT[]
+  distritos : TEXT[]
+  latitud : NUMERIC
+  longitud : NUMERIC
+  anos_experiencia : SMALLINT
+}
+
+entity hijo {
+  * id_hijo : SERIAL <<PK>>
+  --
+  id_padre : INT <<FK>>
+  nombre_hijo : VARCHAR(100)
+  edad : INT
+  alergias : TEXT
+  condiciones_medicas : TEXT
+  notas : TEXT
+}
+
+entity certificado {
+  * id_certificado : SERIAL <<PK>>
+  --
+  id_ninera : INT <<FK>>
+  tipo : VARCHAR(40)
+  nombre : VARCHAR(100)
+  institucion : VARCHAR(100)
+  fecha_emision : DATE
+  fecha_vencimiento : DATE
+  archivo_public_id : VARCHAR(255)
+  archivo_formato : VARCHAR(10)
+  archivo_tipo_recurso : VARCHAR(10)
+  estado_revision : VARCHAR(20)
+  fecha_subida : TIMESTAMP
+}
+
+entity disponibilidad {
+  * id_disponibilidad : SERIAL <<PK>>
+  --
+  id_ninera : INT <<FK>>
+  fecha : DATE
+  dia_semana : VARCHAR(20)
+  hora_inicio : TIME
+  hora_fin : TIME
+  estado : VARCHAR(30)
+}
+
+entity reserva {
+  * id_reserva : SERIAL <<PK>>
+  --
+  id_padre : INT <<FK>>
+  id_ninera : INT <<FK>>
+  id_hijo : INT <<FK>>
+  fecha_reserva : DATE
+  hora_inicio : TIME
+  hora_fin : TIME
+  direccion : VARCHAR(255)
+  estado_reserva : VARCHAR(30)
+  comentario : TEXT
+  tarifa_hora : NUMERIC(10,2)
+  horas : NUMERIC(5,2)
+  monto_total : NUMERIC(10,2)
+  fecha_creacion : TIMESTAMP
+  expira_en : TIMESTAMPTZ
+}
+
+entity valoracion {
+  * id_valoracion : SERIAL <<PK>>
+  --
+  id_reserva : INT <<FK, UNIQUE>>
+  id_padre : INT <<FK>>
+  id_ninera : INT <<FK>>
+  calificacion : INT
+  comentario : TEXT
+  fecha_creacion : TIMESTAMP
+}
+
+entity oferta_trabajo {
+  * id_oferta : SERIAL <<PK>>
+  --
+  id_padre : INT <<FK>>
+  titulo : VARCHAR(120)
+  descripcion : TEXT
+  distrito : VARCHAR(100)
+  fecha_inicio : DATE
+  hora_inicio : TIME
+  hora_fin : TIME
+  tarifa_hora : NUMERIC(10,2)
+  numero_ninos : INT
+  edades_ninos : VARCHAR(100)
+  requisitos : TEXT
+  estado : VARCHAR(20)
+  fecha_publicacion : TIMESTAMP
+}
+
+entity postulacion {
+  * id_postulacion : SERIAL <<PK>>
+  --
+  id_oferta : INT <<FK>>
+  id_ninera : INT <<FK>>
+  mensaje : TEXT
+  estado : VARCHAR(20)
+  fecha_postulacion : TIMESTAMP
+}
+
+entity mensaje {
+  * id_mensaje : SERIAL <<PK>>
+  --
+  id_usuario_emisor : INT <<FK>>
+  id_usuario_receptor : INT <<FK>>
+  asunto : VARCHAR(150)
+  contenido : TEXT
+  leido : BOOLEAN
+  fecha_lectura : TIMESTAMP
+  fecha_creacion : TIMESTAMP
+}
+
+entity notificacion {
+  * id_notificacion : SERIAL <<PK>>
+  --
+  id_usuario : INT <<FK>>
+  tipo_notificacion : VARCHAR(50)
+  titulo : VARCHAR(150)
+  mensaje : TEXT
+  leido : BOOLEAN
+  fecha_envio : TIMESTAMP
+}
+
+entity dispositivo_push {
+  * id_dispositivo : SERIAL <<PK>>
+  --
+  id_usuario : INT <<FK>>
+  expo_push_token : TEXT <<UNIQUE>>
+  plataforma : VARCHAR(20)
+  activo : BOOLEAN
+  fecha_registro : TIMESTAMP
+}
+
+entity favorito {
+  * id_favorito : SERIAL <<PK>>
+  --
+  id_padre : INT <<FK>>
+  id_ninera : INT <<FK>>
+  fecha_agregado : DATE
+}
+
+usuario ||--o| padre
+usuario ||--o| ninera
+padre ||--o{ hijo
+ninera ||--o{ certificado
+ninera ||--o{ disponibilidad
+padre ||--o{ reserva
+ninera ||--o{ reserva
+hijo ||--o{ reserva
+reserva ||--o| valoracion
+padre ||--o{ valoracion
+ninera ||--o{ valoracion
+padre ||--o{ oferta_trabajo
+oferta_trabajo ||--o{ postulacion
+ninera ||--o{ postulacion
+usuario ||--o{ mensaje : emisor
+usuario ||--o{ mensaje : receptor
+usuario ||--o{ notificacion
+usuario ||--o{ dispositivo_push
+padre ||--o{ favorito
+ninera ||--o{ favorito
+@enduml

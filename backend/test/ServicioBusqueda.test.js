@@ -65,16 +65,27 @@ describe('ServicioBusqueda HU11', () => {
     assert.equal(resultado.resultados[0].celular, undefined);
   });
 
-  test('protege el acceso y valida ubicación y filtros', async () => {
-    const { servicio } = crearServicio();
+  test('sin sesión responde UnauthorizedError y no consulta el repositorio', async () => {
+    const { servicio, obtenerFiltros } = crearServicio();
     await assert.rejects(() => servicio.buscarNineras(null, {}), UnauthorizedError);
+    assert.equal(obtenerFiltros(), undefined);
+  });
+
+  test('un usuario que no es familia recibe ForbiddenError', async () => {
+    const { servicio, obtenerFiltros } = crearServicio();
     await assert.rejects(
       () => servicio.buscarNineras({ id: 7, tipo_usuario: 'NINERA' }, { latitud: -12, longitud: -77 }),
       ForbiddenError,
     );
+    assert.equal(obtenerFiltros(), undefined);
+  });
+
+  test('ubicación o filtros inválidos responden ValidationError', async () => {
+    const { servicio, obtenerFiltros } = crearServicio();
     await assert.rejects(
       () => servicio.buscarNineras(FAMILIA, { latitud: 100, longitud: -77, radioKm: 101 }),
       ValidationError,
     );
+    assert.equal(obtenerFiltros(), undefined);
   });
 });

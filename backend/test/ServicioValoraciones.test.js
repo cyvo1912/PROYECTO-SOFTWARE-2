@@ -28,10 +28,16 @@ describe('ServicioValoraciones HU18', () => {
     assert.equal((await servicio.listarPorNinera(7)).length, 1);
   });
 
-  test('rechaza valoración duplicada, ajena o antes de completar el servicio', async () => {
+  test('rechaza una segunda valoración de la misma reserva (ConflictError)', async () => {
     await servicio.crear({ id: 10, tipo_usuario: 'FAMILIA' }, { idReserva: 1, calificacion: 4 });
     await assert.rejects(() => servicio.crear({ id: 10, tipo_usuario: 'FAMILIA' }, { idReserva: 1, calificacion: 4 }), ConflictError);
+  });
+
+  test('rechaza valorar una reserva de otra familia (ForbiddenError)', async () => {
     await assert.rejects(() => servicio.crear({ id: 11, tipo_usuario: 'FAMILIA' }, { idReserva: 1, calificacion: 4 }), ForbiddenError);
+  });
+
+  test('rechaza valorar antes de completar el servicio (ValidationError)', async () => {
     reservas.set(2, new Reserva({ id: 2, idPadre: 10, idNinera: 7, fechaReserva: '2026-11-20', horaInicio: '09:00', horaFin: '11:00', direccion: 'Av. Lima', estadoReserva: 'Aceptada' }));
     await assert.rejects(() => servicio.crear({ id: 10, tipo_usuario: 'FAMILIA' }, { idReserva: 2, calificacion: 5 }), ValidationError);
   });

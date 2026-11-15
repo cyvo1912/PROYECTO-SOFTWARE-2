@@ -1,0 +1,45 @@
+@startuml 04_despliegue
+' MiNana - Vista de despliegue
+' Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+title Diagrama de despliegue – MiNana
+
+node "Smartphone (Android / iOS)" as PHONE <<device>> {
+  node "Expo Go" <<execution environment>> {
+    artifact "app MiNana (JS bundle)" as BUNDLE
+  }
+}
+
+node "Servidor de aplicaciones" as SRV <<device>> {
+  node "Node.js 20 + Express 5 + Socket.IO" <<execution environment>> {
+    artifact "backend (server.js)" as BACK
+    artifact ".env (secretos)" as ENV
+  }
+}
+
+node "PC del desarrollador" as PC <<device>> {
+  artifact "Expo CLI (Metro bundler)" as METRO
+}
+
+cloud "Neon" as NEON {
+  database "PostgreSQL – BD MiNana" as DB
+}
+
+cloud "Cloudinary" as CLD {
+  storage "fotos públicas /\ncertificados privados" as FILES
+}
+
+cloud "Expo Push Service" as EXP
+
+BUNDLE --> BACK : HTTP/JSON (REST) :5000\nWebSocket (chat)
+BACK --> DB : TCP/TLS (pg)
+BACK --> FILES : HTTPS (SDK)
+BACK --> EXP : HTTPS (notificaciones push)
+METRO ..> BUNDLE : carga el bundle (LAN)
+
+note bottom of SRV
+  En desarrollo el backend se ejecuta en la PC de cada integrante.
+  Neon, Cloudinary y Expo Push son servicios administrados en la nube.
+end note
+@enduml

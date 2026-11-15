@@ -729,7 +729,6 @@ export default function App() {
       <RegisterNannyScreen
         onBack={navigateToLanding}
         onNavigateToLogin={navigateToLogin}
-        onRegistered={handleLoginSuccess}
       />
     );
   }

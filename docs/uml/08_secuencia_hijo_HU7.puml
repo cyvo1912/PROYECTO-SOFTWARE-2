@@ -1,0 +1,37 @@
+@startuml 08_secuencia_hijo_HU7
+' MiNana - HU7: registrar el perfil de un hijo. Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequence {
+  ArrowColor #1F2937
+  LifeLineBorderColor #6B7280
+  ParticipantBorderColor #2563EB
+  ParticipantBackgroundColor #DBEAFE
+  ParticipantFontStyle bold
+}
+hide footbox
+title Diagrama de secuencia – HU7: registrar el perfil de un hijo
+
+actor "Familia" as F
+participant "ChildFormScreen" as S
+participant "autenticar /\nsoloFamilia" as M
+participant "HijoController" as C
+participant "ServicioHijo" as SV
+participant "HijoRepository\nPort" as R
+
+F -> S : 1: ingresa nombre, edad, alergias, condiciones y notas
+S -> M : 2: POST /api/hijos (Bearer token)
+M -> C : 3: next() con req.user
+C -> SV : 4: registrarHijo(req.user.id, req.body)
+SV -> SV : 5: _exigirSesion(idPadre)\n_validar(datos)
+alt datos inválidos
+  SV --> C : 5.1: ValidationError
+  C --> S : 5.2: 400 con fields
+else datos válidos
+  SV -> R : 6: crear(idPadre, datosValidos)
+  R --> SV : 7: hijo
+  SV --> C : 8: aRespuesta(hijo)
+  C --> S : 9: 201 { success, data }
+  S --> F : 10: vuelve a la lista de hijos
+end
+@enduml

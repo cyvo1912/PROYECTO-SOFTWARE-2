@@ -107,7 +107,7 @@ describe('ServicioDisponibilidad', () => {
     assert.equal(resultado.disponibilidadPorFecha['2026-11-10'][0].horaInicio, '09:00');
   });
 
-  test('exige usuario autenticado y rechaza rangos o identificadores inválidos', async () => {
+  test('una niñera no puede consultar la disponibilidad (ForbiddenError)', async () => {
     await assert.rejects(
       servicio.consultarDisponibilidad({ id: ID_NINERA, tipo_usuario: 'NINERA' }, ID_NINERA, {
         desde: '2026-11-01',
@@ -115,7 +115,9 @@ describe('ServicioDisponibilidad', () => {
       }),
       ForbiddenError,
     );
+  });
 
+  test('sin sesión responde UnauthorizedError', async () => {
     await assert.rejects(
       servicio.consultarDisponibilidad(null, ID_NINERA, {
         desde: '2026-11-01',
@@ -123,7 +125,9 @@ describe('ServicioDisponibilidad', () => {
       }),
       UnauthorizedError,
     );
+  });
 
+  test('rechaza un identificador de niñera que no es numérico (ValidationError)', async () => {
     await assert.rejects(
       servicio.consultarDisponibilidad(USUARIO_FAMILIA, 'abc', {
         desde: '2026-11-01',
@@ -131,7 +135,9 @@ describe('ServicioDisponibilidad', () => {
       }),
       ValidationError,
     );
+  });
 
+  test('rechaza un rango de fechas invertido (ValidationError)', async () => {
     await assert.rejects(
       servicio.consultarDisponibilidad(USUARIO_FAMILIA, ID_NINERA, {
         desde: '2026-11-15',
@@ -139,7 +145,9 @@ describe('ServicioDisponibilidad', () => {
       }),
       ValidationError,
     );
+  });
 
+  test('responde NotFoundError si la niñera no existe', async () => {
     await assert.rejects(
       servicio.consultarDisponibilidad(USUARIO_FAMILIA, 999, {
         desde: '2026-11-01',

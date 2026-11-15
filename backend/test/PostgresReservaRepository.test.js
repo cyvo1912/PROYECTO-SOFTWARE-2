@@ -28,18 +28,35 @@ describe('PostgresReservaRepository', () => {
 
 describe('PostgresValoracionRepository', () => {
   test('convierte un conflicto único de valoración en resultado nulo para el servicio', async () => {
-    let ejecutada;
-    const repositorio = new PostgresValoracionRepository({
+    const ejecutadas = [];
+    let liberado = false;
+    // Doble del cliente transaccional que entrega pool.connect()
+    const cliente = {
       async query(sql, valores) {
-        ejecutada = { sql, valores };
+        ejecutadas.push({ sql, valores });
+        if (/FROM reserva/.test(sql)) {
+          return { rows: [{ id_reserva: 10, id_padre: 2, id_ninera: 3 }] };
+        }
+        // El INSERT ... ON CONFLICT DO NOTHING no devuelve filas: ya existía la valoración
         return { rows: [] };
+      },
+      release() {
+        liberado = true;
+      },
+    };
+    const repositorio = new PostgresValoracionRepository({
+      async connect() {
+        return cliente;
       },
     });
 
     const creada = await repositorio.crear({ idReserva: 10, idPadre: 2, idNinera: 3, calificacion: 5, comentario: null });
 
     assert.equal(creada, null);
-    assert.match(ejecutada.sql, /ON CONFLICT \(id_reserva\) DO NOTHING/);
-    assert.deepEqual(ejecutada.valores, [10, 2, 3, 5, null]);
+    const insercion = ejecutadas.find((e) => /INSERT INTO valoracion/.test(e.sql));
+    assert.match(insercion.sql, /ON CONFLICT \(id_reserva\) DO NOTHING/);
+    assert.deepEqual(insercion.valores, [10, 2, 3, 5, null]);
+    assert.ok(ejecutadas.some((e) => e.sql === 'ROLLBACK'));
+    assert.equal(liberado, true);
   });
 });
