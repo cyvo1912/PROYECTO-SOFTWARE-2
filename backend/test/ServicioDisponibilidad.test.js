@@ -107,46 +107,31 @@ describe('ServicioDisponibilidad', () => {
     assert.equal(resultado.disponibilidadPorFecha['2026-11-10'][0].horaInicio, '09:00');
   });
 
-  test('exige usuario autenticado y rechaza rangos o identificadores inválidos', async () => {
+  const RANGO = { desde: '2026-11-01', hasta: '2026-11-10' };
+
+  test('exige usuario autenticado', async () => {
+    await assert.rejects(servicio.consultarDisponibilidad(null, ID_NINERA, RANGO), UnauthorizedError);
+  });
+
+  test('una niñera no puede consultar la disponibilidad como familia', async () => {
     await assert.rejects(
-      servicio.consultarDisponibilidad({ id: ID_NINERA, tipo_usuario: 'NINERA' }, ID_NINERA, {
-        desde: '2026-11-01',
-        hasta: '2026-11-10',
-      }),
+      servicio.consultarDisponibilidad({ id: ID_NINERA, tipo_usuario: 'NINERA' }, ID_NINERA, RANGO),
       ForbiddenError,
     );
+  });
 
-    await assert.rejects(
-      servicio.consultarDisponibilidad(null, ID_NINERA, {
-        desde: '2026-11-01',
-        hasta: '2026-11-10',
-      }),
-      UnauthorizedError,
-    );
+  test('rechaza un identificador de niñera no numérico', async () => {
+    await assert.rejects(servicio.consultarDisponibilidad(USUARIO_FAMILIA, 'abc', RANGO), ValidationError);
+  });
 
+  test('rechaza un rango de fechas invertido', async () => {
     await assert.rejects(
-      servicio.consultarDisponibilidad(USUARIO_FAMILIA, 'abc', {
-        desde: '2026-11-01',
-        hasta: '2026-11-10',
-      }),
+      servicio.consultarDisponibilidad(USUARIO_FAMILIA, ID_NINERA, { desde: '2026-11-15', hasta: '2026-11-01' }),
       ValidationError,
-    );
-
-    await assert.rejects(
-      servicio.consultarDisponibilidad(USUARIO_FAMILIA, ID_NINERA, {
-        desde: '2026-11-15',
-        hasta: '2026-11-01',
-      }),
-      ValidationError,
-    );
-
-    await assert.rejects(
-      servicio.consultarDisponibilidad(USUARIO_FAMILIA, 999, {
-        desde: '2026-11-01',
-        hasta: '2026-11-10',
-      }),
-      NotFoundError,
     );
   });
-});
 
+  test('responde 404 si la niñera no existe', async () => {
+    await assert.rejects(servicio.consultarDisponibilidad(USUARIO_FAMILIA, 999, RANGO), NotFoundError);
+  });
+});

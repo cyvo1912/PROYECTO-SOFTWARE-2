@@ -75,13 +75,22 @@ describe('ServicioBusqueda HU11', () => {
     assert.equal(resultado.resultados[0].celular, undefined);
   });
 
-  test('protege el acceso y valida ubicación y filtros', async () => {
-    const { servicio } = crearServicio();
+  test('exige sesión y no consulta el repositorio sin usuario', async () => {
+    const { servicio, obtenerFiltros } = crearServicio();
     await assert.rejects(() => servicio.buscarNineras(null, {}), UnauthorizedError);
+    assert.equal(obtenerFiltros(), undefined);
+  });
+
+  test('solo una familia puede buscar niñeras', async () => {
+    const { servicio } = crearServicio();
     await assert.rejects(
       () => servicio.buscarNineras({ id: 7, tipo_usuario: 'NINERA' }, { latitud: -12, longitud: -77 }),
       ForbiddenError,
     );
+  });
+
+  test('rechaza una latitud fuera de rango y un radio mayor a 100 km', async () => {
+    const { servicio } = crearServicio();
     await assert.rejects(
       () => servicio.buscarNineras(FAMILIA, { latitud: 100, longitud: -77, radioKm: 101 }),
       ValidationError,

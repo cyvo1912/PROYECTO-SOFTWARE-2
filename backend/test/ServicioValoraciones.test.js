@@ -28,10 +28,16 @@ describe('ServicioValoracion HU18', () => {
     assert.equal((await servicio.listarPorNinera(7)).length, 1);
   });
 
-  test('rechaza valoración duplicada, ajena o antes de completar el servicio', async () => {
+  test('rechaza una segunda valoración de la misma reserva', async () => {
     await servicio.crear({ id: 10, tipo_usuario: 'FAMILIA' }, { idReserva: 1, calificacion: 4 });
     await assert.rejects(() => servicio.crear({ id: 10, tipo_usuario: 'FAMILIA' }, { idReserva: 1, calificacion: 4 }), ConflictError);
+  });
+
+  test('rechaza que una familia valore una reserva ajena', async () => {
     await assert.rejects(() => servicio.crear({ id: 11, tipo_usuario: 'FAMILIA' }, { idReserva: 1, calificacion: 4 }), ForbiddenError);
+  });
+
+  test('rechaza valorar un servicio que aún no se completó', async () => {
     reservas.set(2, new Reserva({ id: 2, idPadre: 10, idNinera: 7, fechaReserva: '2026-11-20', horaInicio: '09:00', horaFin: '11:00', direccion: 'Av. Lima', estadoReserva: 'Aceptada' }));
     await assert.rejects(() => servicio.crear({ id: 10, tipo_usuario: 'FAMILIA' }, { idReserva: 2, calificacion: 5 }), ValidationError);
   });
@@ -52,5 +58,12 @@ describe('ServicioValoracion HU18', () => {
       ),
       (error) => error instanceof ValidationError && Boolean(error.fields.comentario),
     );
+  });
+
+  test('rechaza una valoración realizada por una niñera', async () => {
+    const usuario = { id: 7, tipo_usuario: 'NINERA' };
+    const datos = { idReserva: 1, calificacion: 5, comentario: 'Excelente servicio.' };
+    await assert.rejects(() => servicio.crear(usuario, datos), ForbiddenError);
+    assert.equal(valoraciones.length, 0);
   });
 });
