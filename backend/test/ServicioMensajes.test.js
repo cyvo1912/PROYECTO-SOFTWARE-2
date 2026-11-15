@@ -5,7 +5,7 @@ const ServicioMensajes = require('../src/application/services/ServicioMensajes')
 const Mensaje = require('../src/domain/entities/Mensaje');
 const MensajeRepositoryPort = require('../src/application/ports/MensajeRepositoryPort');
 const RealtimeNotifierPort = require('../src/application/ports/RealtimeNotifierPort');
-const NotificacionServicePort = require('../src/application/ports/NotificacionServicePort');
+const NotificadorPort = require('../src/application/ports/NotificadorPort');
 const {
   ValidationError,
   ReservaNoPagadaError,
@@ -136,14 +136,14 @@ class RealtimeNotifierEnMemoria extends RealtimeNotifierPort {
 /**
  * Mock de Notificaciones según Figura 56.
  */
-class NotificacionServiceEnMemoria extends NotificacionServicePort {
+class NotificadorEnMemoria extends NotificadorPort {
   constructor() {
     super();
     this.notificacionesCreadas = [];
   }
 
-  async crearNotificacionMensaje(idReceptor, idMensaje, texto) {
-    this.notificacionesCreadas.push({ idReceptor, idMensaje, texto });
+  async enviarNotificacion(datos) {
+    this.notificacionesCreadas.push(datos);
   }
 }
 
@@ -160,11 +160,11 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
   beforeEach(() => {
     repo = new MensajeRepositoryEnMemoria();
     notifier = new RealtimeNotifierEnMemoria();
-    notificaciones = new NotificacionServiceEnMemoria();
+    notificaciones = new NotificadorEnMemoria();
     servicio = new ServicioMensajes({
       mensajeRepository: repo,
       realtimeNotifier: notifier,
-      notificacionService: notificaciones,
+      notificador: notificaciones,
     });
   });
 
@@ -187,6 +187,13 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
     assert.equal(notifier.emisionesMensaje.length, 1);
     assert.equal(notifier.emisionesMensaje[0].idReceptor, ID_NINERA);
     assert.equal(notificaciones.notificacionesCreadas.length, 1);
+    assert.deepEqual(notificaciones.notificacionesCreadas[0], {
+      idUsuario: ID_NINERA,
+      idReserva: null,
+      titulo: 'Nuevo mensaje recibido',
+      mensaje: 'Hola María, nos vemos el lunes a las 8 AM.',
+      tipo: 'MENSAJE',
+    });
   });
 
   test('rechaza el envío con ReservaNoPagadaError si la tarifa aún no ha sido pagada', async () => {

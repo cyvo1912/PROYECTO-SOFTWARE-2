@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import io from 'socket.io-client';
 import { colors } from '../theme/colors';
 import { MENSAJERIA_API_URL, SOCKET_URL } from '../config/api';
+import { SkeletonChatList } from '../components/SkeletonLoader';
 
 /**
  * PantallaChat (HU17 - Comunicación en Tiempo Real)
@@ -355,10 +356,24 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
           </View>
 
           {cargandoConversaciones ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 20 }} />
+            <SkeletonChatList count={4} />
           ) : conversacionesFiltradas.length === 0 ? (
-            <View style={styles.estadoVacio}>
-              <Text style={styles.textoEstadoVacio}>No hay conversaciones activas.</Text>
+            <View style={styles.estadoVacioConTexto}>
+              <View style={styles.iconoVacioWrap}>
+                <Ionicons
+                  name={busqueda.trim() ? 'search-outline' : 'chatbubbles-outline'}
+                  size={32}
+                  color={busqueda.trim() ? '#9CA3AF' : colors.primary}
+                />
+              </View>
+              <Text style={styles.tituloEstadoVacio}>
+                {busqueda.trim() ? 'Sin coincidencias' : 'Aún no tienes chats activos'}
+              </Text>
+              <Text style={styles.textoEstadoVacioExplicativo}>
+                {busqueda.trim()
+                  ? `No encontramos conversaciones que coincidan con "${busqueda}".`
+                  : 'Aún no tienes chats activos. Podrás comunicarte directamente con una niñera una vez que confirmes y pagues una reserva.'}
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -1028,6 +1043,38 @@ const styles = StyleSheet.create({
   textoEstadoVacio: {
     color: colors.textMuted,
     fontSize: 14,
+  },
+  estadoVacioConTexto: {
+    padding: 20,
+    paddingVertical: 28,
+    alignItems: 'center',
+    backgroundColor: '#FAF5FF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    marginVertical: 10,
+  },
+  iconoVacioWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  tituloEstadoVacio: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E1B4B',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  textoEstadoVacioExplicativo: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   avatarImagen: {
     width: 44,

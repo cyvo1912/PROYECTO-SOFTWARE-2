@@ -303,12 +303,28 @@ describe('ServicioReserva', () => {
 
     const resultado = await servicio.pagar(FAMILIA, creada.id, {
       metodoPago: 'TARJETA',
-      marcaTarjeta: 'visa',
       ultimos4: '4242',
+      titular: 'LUCIA VALDEZ',
     });
     assert.equal(resultado.reserva.estadoReserva, 'Aceptada');
     assert.equal(resultado.pago.estado, 'APROBADO');
     assert.equal(resultado.pago.metodo, 'TARJETA');
+    assert.equal(resultado.pago.entorno, 'SIMULACION');
+    assert.deepEqual(resultado.comprobante, resultado.pago);
+  });
+
+  test('valida los datos mínimos según el método de pago simulado', async () => {
+    const creada = await servicio.solicitar(FAMILIA, solicitudBase());
+    await assert.rejects(
+      () => servicio.pagar(FAMILIA, creada.id, { metodoPago: 'YAPE', datosPago: { celular: '999111222' } }),
+      (error) => error instanceof ValidationError && Boolean(error.fields.codigoAutorizacion),
+    );
+
+    const resultado = await servicio.pagar(FAMILIA, creada.id, {
+      metodoPago: 'YAPE',
+      datosPago: { celular: '999111222', codigoAutorizacion: '123456' },
+    });
+    assert.equal(resultado.pago.metodo, 'YAPE');
   });
 
   test('rechaza pagar una reserva ajena o ya expirada', async () => {

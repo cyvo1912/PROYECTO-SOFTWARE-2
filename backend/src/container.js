@@ -1,8 +1,6 @@
 const pool = require('./config/db');
 const PostgresUserRepository = require('./infrastructure/adapters/db/PostgresUserRepository');
-const PrismaUserRepository = require('./infrastructure/adapters/db/PrismaUserRepository');
 const PostgresHijoRepository = require('./infrastructure/adapters/db/PostgresHijoRepository');
-const PrismaHijoRepository = require('./infrastructure/adapters/db/PrismaHijoRepository');
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
 const PostgresMultimediaRepository = require('./infrastructure/adapters/db/PostgresMultimediaRepository');
@@ -47,33 +45,17 @@ const NotificacionController = require('./infrastructure/http/controllers/Notifi
 // HU17 - Mensajería en Tiempo Real (Gabriel)
 const PostgresMensajeRepository = require('./infrastructure/adapters/db/PostgresMensajeRepository');
 const SocketIoRealtimeNotifier = require('./infrastructure/adapters/realtime/SocketIoRealtimeNotifier');
-const PostgresNotificacionService = require('./infrastructure/adapters/db/PostgresNotificacionService');
 const ServicioMensajes = require('./application/services/ServicioMensajes');
 const MensajeriaController = require('./infrastructure/http/controllers/MensajeriaController');
 const ChatSocketController = require('./infrastructure/http/controllers/ChatSocketController');
 
 
 class Container {
-  constructor(options = {}) {
-    // Selección de estrategia de persistencia (SOLID DIP)
-    const usePrisma = options.usePrisma || process.env.USE_PRISMA === 'true';
-    let prismaClient = null;
-    if (usePrisma) {
-      try {
-        const { PrismaClient } = require('@prisma/client');
-        prismaClient = new PrismaClient();
-      } catch (_error) {
-        // El cliente Prisma es opcional; se usa PostgreSQL si no está disponible.
-      }
-    }
-
-    if (prismaClient) {
-      this.userRepository = new PrismaUserRepository(prismaClient);
-      this.hijoRepository = new PrismaHijoRepository(prismaClient);
-    } else {
-      this.userRepository = new PostgresUserRepository(pool);
-      this.hijoRepository = new PostgresHijoRepository(pool);
-    }
+  constructor() {
+    // La aplicación usa un único adaptador PostgreSQL soportado en producción.
+    // La inversión de dependencias se conserva en los puertos, no en un ORM incompleto.
+    this.userRepository = new PostgresUserRepository(pool);
+    this.hijoRepository = new PostgresHijoRepository(pool);
 
     // Adaptadores Secundarios (Seguridad / Tokens)
     this.passwordHasher = new BcryptPasswordHasher();
@@ -97,7 +79,6 @@ class Container {
     // HU17: Adaptadores Secundarios de Mensajería
     this.mensajeRepository = new PostgresMensajeRepository(pool);
     this.realtimeNotifier = new SocketIoRealtimeNotifier();
-    this.notificacionService = new PostgresNotificacionService(pool);
 
     // HU18 - Servicio de Notificaciones
     this.servicioNotificacion = new ServicioNotificacion({
@@ -155,21 +136,19 @@ class Container {
 
       // Notificaciones existentes de HU18
       servicioNotificacion: this.servicioNotificacion,
-
-      // Notificaciones de cambios de estado incorporadas por tus compañeros
-      notificacionService: this.notificacionService,
     });
 
     // HU17: Servicio de Aplicación de Mensajes
     this.servicioMensajes = new ServicioMensajes({
       mensajeRepository: this.mensajeRepository,
       realtimeNotifier: this.realtimeNotifier,
-      notificacionService: this.notificacionService,
+      notificador: this.servicioNotificacion,
       userRepository: this.userRepository,
     });
 
 
     this.servicioValoracion = new ServicioValoracion({
+      reservaRepository: this.reservaRepository,
       valoracionRepository: this.valoracionRepository,
     });
 

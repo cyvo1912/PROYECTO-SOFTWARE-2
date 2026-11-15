@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import { BUSQUEDA_API_URL, GOOGLE_MAPS_API_KEY } from '../config/api';
+import { SkeletonList } from '../components/SkeletonLoader';
 
 const RADIOS_KM = [5, 10, 15, 25, 50];
 const MAX_MARCADORES_MAPA = 10;
@@ -133,7 +134,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
   }, []);
 
   const buscarNineras = useCallback(
-    async (ubicacionForzada) => {
+    async (ubicacionForzada, filtrosForzados = {}) => {
       setErrorMessage('');
       setFieldErrors({});
 
@@ -143,14 +144,18 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
       setBuscando(true);
       setYaBusco(true);
       try {
+        const radioAplicado = filtrosForzados.radioKm ?? radioKm;
+        const tarifaAplicada = filtrosForzados.tarifaMaxima ?? tarifaMaxima;
+        const experienciaAplicada = filtrosForzados.experienciaMinima ?? experienciaMinima;
+
         if (!token) {
           // Modo invitado: filtrar la lista de demostración
           let demo = [...NINERAS_DEMO];
-          if (tarifaMaxima.trim() !== '') {
-            demo = demo.filter((n) => n.tarifaHora <= Number(tarifaMaxima));
+          if (tarifaAplicada.trim() !== '') {
+            demo = demo.filter((n) => n.tarifaHora <= Number(tarifaAplicada));
           }
-          if (experienciaMinima.trim() !== '') {
-            demo = demo.filter((n) => n.anosExperiencia >= Number(experienciaMinima));
+          if (experienciaAplicada.trim() !== '') {
+            demo = demo.filter((n) => n.anosExperiencia >= Number(experienciaAplicada));
           }
           setResultados(demo);
           return;
@@ -159,10 +164,10 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
         const params = new URLSearchParams({
           latitud: String(origen.latitud),
           longitud: String(origen.longitud),
-          radioKm: String(radioKm),
+          radioKm: String(radioAplicado),
         });
-        if (tarifaMaxima.trim() !== '') params.append('tarifaMaxima', tarifaMaxima.trim());
-        if (experienciaMinima.trim() !== '') params.append('experienciaMinima', experienciaMinima.trim());
+        if (tarifaAplicada.trim() !== '') params.append('tarifaMaxima', tarifaAplicada.trim());
+        if (experienciaAplicada.trim() !== '') params.append('experienciaMinima', experienciaAplicada.trim());
 
         const response = await fetch(`${BUSQUEDA_API_URL}/ninera?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -409,28 +414,73 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
             </View>
           ) : null}
 
-          {/* Resultados y conmutador Lista / Mapa */}
-          {yaBusco && !buscando ? (
+          {/* Estado de carga con Skeleton Loader */}
+          {buscando ? (
+            <View style={{ marginTop: 10 }}>
+              <Text style={styles.resultsCount}>Buscando niñeras verificadas en tu zona...</Text>
+              <SkeletonList count={3} />
+            </View>
+          ) : yaBusco ? (
             resultados.length === 0 ? (
               <View style={styles.emptyBox}>
-                <Ionicons name="search-outline" size={32} color={colors.primary} />
-                <Text style={styles.emptyTitle}>No encontramos niñeras en ese radio</Text>
+                <Ionicons name="search-outline" size={36} color={colors.primary} />
+                <Text style={styles.emptyTitle}>No encontramos niñeras con estos filtros</Text>
                 <Text style={styles.emptyText}>
-                  Intenta ampliar el radio de búsqueda o restablecer los filtros de tarifa y experiencia.
+                  No hay candidatas disponibles en {radioKm} km con las condiciones seleccionadas. Evita callejones sin salida con estas opciones de 1 toque:
                 </Text>
-                <TouchableOpacity
-                  style={styles.resetFilterBtn}
-                  onPress={() => {
-                    setRadioKm(25);
-                    setTarifaMaxima('');
-                    setExperienciaMinima('');
-                    buscarNineras(ubicacion);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="refresh-outline" size={15} color={colors.primary} />
-                  <Text style={styles.resetFilterBtnText}>Restablecer filtros</Text>
-                </TouchableOpacity>
+
+                <View style={styles.quickEmptyActions}>
+                  {radioKm < 25 ? (
+                    <TouchableOpacity
+                      style={styles.emptyActionBtnPrimary}
+                      onPress={() => {
+                        const nuevoRadio = radioKm < 15 ? 15 : 25;
+                        setRadioKm(nuevoRadio);
+                        buscarNineras(ubicacion, { radioKm: nuevoRadio });
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="expand-outline" size={16} color="#FFFFFF" />
+                      <Text style={styles.emptyActionBtnPrimaryText}>
+                        Ampliar a {radioKm < 15 ? 15 : 25} km
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={styles.emptyActionBtnSecondary}
+                    onPress={() => {
+                      setTarifaMaxima('');
+                      setExperienciaMinima('');
+                      buscarNineras(ubicacion, { tarifaMaxima: '', experienciaMinima: '' });
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="business-outline" size={16} color={colors.primary} />
+                    <Text style={styles.emptyActionBtnSecondaryText}>
+                      Ver todas en distritos cercanos
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.resetFilterBtn}
+                    onPress={() => {
+                      setRadioKm(15);
+                      setTarifaMaxima('');
+                      setExperienciaMinima('');
+                      setDistritoSeleccionado('cerca');
+                      buscarNineras(ubicacion, {
+                        radioKm: 15,
+                        tarifaMaxima: '',
+                        experienciaMinima: '',
+                      });
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="refresh-outline" size={15} color={colors.primary} />
+                    <Text style={styles.resetFilterBtnText}>Restablecer todos los filtros</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
               <View style={styles.resultsHeaderRow}>
@@ -452,29 +502,31 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
           ) : null}
 
           {/* Renderizado conmutable: Mapa o Lista de Niñeras */}
-          {vistaMapa && mapaUrl ? (
-            <View style={styles.mapCard}>
-              <Image source={{ uri: mapaUrl }} style={styles.mapImage} resizeMode="cover" />
-              <Text style={styles.mapCaption}>
-                <Ionicons name="pin" size={12} color={colors.primary} /> Tu zona ·{' '}
-                <Ionicons name="pin" size={12} color="#DC2626" /> Niñeras encontradas
-              </Text>
-            </View>
-          ) : (
-            resultados.map((ninera) => (
-              <NannyCard
-                key={ninera.id}
-                ninera={ninera}
-                onVerPerfil={() => {
-                  if (!token && onAuthRequired) {
-                    onAuthRequired(ninera);
-                  } else if (onVerPerfil) {
-                    onVerPerfil(ninera.id);
-                  }
-                }}
-              />
-            ))
-          )}
+          {!buscando && yaBusco && resultados.length > 0 ? (
+            vistaMapa && mapaUrl ? (
+              <View style={styles.mapCard}>
+                <Image source={{ uri: mapaUrl }} style={styles.mapImage} resizeMode="cover" />
+                <Text style={styles.mapCaption}>
+                  <Ionicons name="pin" size={12} color={colors.primary} /> Tu zona ·{' '}
+                  <Ionicons name="pin" size={12} color="#DC2626" /> Niñeras encontradas
+                </Text>
+              </View>
+            ) : (
+              resultados.map((ninera) => (
+                <NannyCard
+                  key={ninera.id}
+                  ninera={ninera}
+                  onVerPerfil={() => {
+                    if (!token && onAuthRequired) {
+                      onAuthRequired(ninera);
+                    } else if (onVerPerfil) {
+                      onVerPerfil(ninera.id);
+                    }
+                  }}
+                />
+              ))
+            )
+          ) : null}
         </View>
       </ScrollView>
 
@@ -893,12 +945,57 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 20,
+    lineHeight: 18,
+  },
+  quickEmptyActions: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  emptyActionBtnPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 280,
+  },
+  emptyActionBtnPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  emptyActionBtnSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 280,
+  },
+  emptyActionBtnSecondaryText: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '700',
   },
   resetFilterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    marginTop: 8,
+    marginTop: 4,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 10,

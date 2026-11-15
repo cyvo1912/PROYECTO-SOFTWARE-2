@@ -3,9 +3,11 @@ const {
   ValidationError,
   NotFoundError,
 } = require('../../domain/errors/DomainErrors');
+const NotificadorPort = require('../ports/NotificadorPort');
 
-class ServicioNotificacion {
+class ServicioNotificacion extends NotificadorPort {
   constructor({ notificacionRepository, expoNotificationAdapter }) {
+    super();
     if (!notificacionRepository || !expoNotificationAdapter) {
       throw new Error(
         'Las dependencias de notificaciones son requeridas'

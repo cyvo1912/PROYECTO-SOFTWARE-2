@@ -1,10 +1,10 @@
 const { test, describe, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
-const ServicioValoraciones = require('../src/application/services/ServicioValoraciones');
+const ServicioValoracion = require('../src/application/services/ServicioValoracion');
 const Reserva = require('../src/domain/entities/Reserva');
 const { ValidationError, ForbiddenError, ConflictError } = require('../src/domain/errors/DomainErrors');
 
-describe('ServicioValoraciones HU18', () => {
+describe('ServicioValoracion HU18', () => {
   let reservas;
   let valoraciones;
   let servicio;
@@ -12,7 +12,7 @@ describe('ServicioValoraciones HU18', () => {
   beforeEach(() => {
     reservas = new Map([[1, new Reserva({ id: 1, idPadre: 10, idNinera: 7, fechaReserva: '2026-11-01', horaInicio: '09:00', horaFin: '11:00', direccion: 'Av. Lima', estadoReserva: 'Completada' })]]);
     valoraciones = [];
-    servicio = new ServicioValoraciones({
+    servicio = new ServicioValoracion({
       reservaRepository: { async buscarPorId(id) { return reservas.get(Number(id)) || null; } },
       valoracionRepository: {
         async existeParaReserva(id) { return valoraciones.some((v) => v.idReserva === id); },
@@ -41,6 +41,16 @@ describe('ServicioValoraciones HU18', () => {
     await assert.rejects(
       () => servicio.crear({ id: 10, tipo_usuario: 'FAMILIA' }, { idReserva: 1, calificacion: 5 }),
       ConflictError,
+    );
+  });
+
+  test('rechaza un comentario que no es texto', async () => {
+    await assert.rejects(
+      () => servicio.crear(
+        { id: 10, tipo_usuario: 'FAMILIA' },
+        { idReserva: 1, calificacion: 5, comentario: { texto: 'inválido' } },
+      ),
+      (error) => error instanceof ValidationError && Boolean(error.fields.comentario),
     );
   });
 });

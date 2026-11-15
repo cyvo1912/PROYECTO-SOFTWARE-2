@@ -1,3 +1,5 @@
+const responderError = require('../responderError');
+
 /**
  * Adaptador Primario: AuthController (Controlador HTTP Express)
  * Gestiona peticiones de entrada y delega la lógica de negocio a los
@@ -27,7 +29,7 @@ class AuthController {
         usuario: resultado.usuario,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -44,7 +46,7 @@ class AuthController {
         usuario: resultado.usuario,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -60,7 +62,7 @@ class AuthController {
         usuario: resultado.usuario,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -85,18 +87,8 @@ class AuthController {
         message: resultado.message || 'Cierre de sesión exitoso.',
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
-  }
-
-  _responderError(res, error) {
-    const statusCode = error.statusCode || 500;
-    return res.status(statusCode).json({
-      success: false,
-      isPending: error.isPending || false,
-      message: error.message || 'Error interno del servidor.',
-      fields: error.fields || undefined,
-    });
   }
 }
 

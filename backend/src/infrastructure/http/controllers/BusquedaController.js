@@ -1,3 +1,5 @@
+const responderError = require('../responderError');
+
 /**
  * Adaptador Primario: BusquedaController (Controlador HTTP Express)
  * HU11: endpoint de búsqueda de niñeras por proximidad, tarifa y experiencia.
@@ -30,17 +32,8 @@ class BusquedaController {
         data: resultado,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
-  }
-
-  _responderError(res, error) {
-    const statusCode = error.statusCode || 500;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message || 'Error interno del servidor.',
-      fields: error.fields || undefined,
-    });
   }
 }
 

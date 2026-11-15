@@ -99,19 +99,15 @@ class ServicioUsuario {
    * Flujo UML Figura 6: actualizarPerfil(idUsuario, nuevosDatos) -> validarCampos -> UPDATE
    *
    * Reglas críticas del documento y HU5:
-   * 1. Solo una niñera autenticada puede editar su propio perfil (idAutenticado === idObjetivo).
+   * 1. Solo una niñera autenticada puede editar su propio perfil.
    * 2. DNI no debe poder modificarse (Restricción 2 / HU5 Escenario 2).
    * 3. Correo no debe poder modificarse (Restricción 2).
    * 4. Validación de campos obligatorios en backend.
    */
-  async actualizarPerfilNinera(idUsuarioAutenticado, idObjetivo, datos) {
-    // 1. Control de acceso / Prevención IDOR
+  async actualizarPerfilNinera(idUsuarioAutenticado, datos) {
+    // 1. La identidad procede exclusivamente de la sesión autenticada.
     if (!idUsuarioAutenticado) {
       throw new UnauthorizedError('Debes iniciar sesión para editar tu perfil.');
-    }
-
-    if (Number(idUsuarioAutenticado) !== Number(idObjetivo)) {
-      throw new ForbiddenError('No tienes permisos para modificar el perfil de otra niñera.');
     }
 
     // 2. Verificar existencia del usuario en BD
@@ -236,13 +232,9 @@ class ServicioUsuario {
    * por la familia para buscar niñeras cercanas. Acción independiente del
    * resto del perfil: se dispara desde un botón "Actualizar mi ubicación".
    */
-  async actualizarUbicacionNinera(idUsuarioAutenticado, idObjetivo, { latitud, longitud } = {}) {
+  async actualizarUbicacionNinera(idUsuarioAutenticado, { latitud, longitud } = {}) {
     if (!idUsuarioAutenticado) {
       throw new UnauthorizedError('Debes iniciar sesión para actualizar tu ubicación.');
-    }
-
-    if (Number(idUsuarioAutenticado) !== Number(idObjetivo)) {
-      throw new ForbiddenError('No tienes permisos para modificar la ubicación de otra niñera.');
     }
 
     const usuarioExistente = await this.userRepository.findById(idUsuarioAutenticado);
@@ -328,13 +320,9 @@ class ServicioUsuario {
    * Actualiza el perfil de la familia.
    * Regla de Seguridad: DNI y Correo protegidos en el servidor.
    */
-  async actualizarPerfilPadre(idUsuarioAutenticado, idObjetivo, datos) {
+  async actualizarPerfilPadre(idUsuarioAutenticado, datos) {
     if (!idUsuarioAutenticado) {
       throw new UnauthorizedError('Debes iniciar sesión para editar tu perfil.');
-    }
-
-    if (Number(idUsuarioAutenticado) !== Number(idObjetivo)) {
-      throw new ForbiddenError('No tienes permisos para modificar el perfil de otra familia.');
     }
 
     const usuarioExistente = await this.userRepository.findById(idUsuarioAutenticado);

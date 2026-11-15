@@ -76,13 +76,16 @@ class ServicioBolsaTrabajo {
   async obtenerOferta(usuario, idOfertaParam) {
     const idNinera = exigirSesion(usuario, 'ver la oferta', 'NINERA');
     const idOferta = validarId(idOfertaParam);
-    const perfil = await this._obtenerPerfil(idNinera);
 
-    const oferta = await this.ofertaTrabajoRepository.findById(idOferta);
+    const [perfil, oferta, idsPostuladas] = await Promise.all([
+      this._obtenerPerfil(idNinera),
+      this.ofertaTrabajoRepository.findById(idOferta),
+      this.ofertaTrabajoRepository.listarIdsOfertasPostuladas(idNinera),
+    ]);
+
     if (!oferta) {
       throw new NotFoundError('La oferta de trabajo no existe.');
     }
-    const idsPostuladas = await this.ofertaTrabajoRepository.listarIdsOfertasPostuladas(idNinera);
     return aVistaNinera(oferta, perfil, idsPostuladas.includes(oferta.id));
   }
 
@@ -100,9 +103,12 @@ class ServicioBolsaTrabajo {
       });
     }
 
-    await this._obtenerPerfil(idNinera);
+    const [perfil, oferta, idsPostuladas] = await Promise.all([
+      this._obtenerPerfil(idNinera),
+      this.ofertaTrabajoRepository.findById(idOferta),
+      this.ofertaTrabajoRepository.listarIdsOfertasPostuladas(idNinera),
+    ]);
 
-    const oferta = await this.ofertaTrabajoRepository.findById(idOferta);
     if (!oferta) {
       throw new NotFoundError('La oferta de trabajo no existe.');
     }
@@ -110,7 +116,6 @@ class ServicioBolsaTrabajo {
       throw new ConflictError('Esta oferta ya no está disponible para postular.');
     }
 
-    const idsPostuladas = await this.ofertaTrabajoRepository.listarIdsOfertasPostuladas(idNinera);
     if (idsPostuladas.includes(idOferta)) {
       throw new ConflictError('Ya te postulaste a esta oferta.');
     }

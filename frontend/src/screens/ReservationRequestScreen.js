@@ -158,6 +158,7 @@ export default function ReservationRequestScreen({
         },
       });
       setReservaCreada(reserva);
+      setMostrarPasarela(true);
     } catch (err) {
       setErrorMessage(
         err.status === 409 ? `Conflicto de horario: ${err.message}` : err.message,

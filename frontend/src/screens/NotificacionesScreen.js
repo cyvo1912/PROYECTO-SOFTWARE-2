@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../config/api';
+import { SkeletonList } from '../components/SkeletonLoader';
 
 export default function NotificacionesScreen({ token, onBack }) {
   const [notificaciones, setNotificaciones] = useState([]);
@@ -225,14 +226,8 @@ export default function NotificacionesScreen({ token, onBack }) {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator
-            size="large"
-            color="#7C3AED"
-          />
-          <Text style={styles.loadingText}>
-            Cargando notificaciones...
-          </Text>
+        <View style={{ padding: 16 }}>
+          <SkeletonList count={4} />
         </View>
       ) : (
         <FlatList

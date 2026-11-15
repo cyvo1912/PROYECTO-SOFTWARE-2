@@ -1,3 +1,5 @@
+const responderError = require('../responderError');
+
 /**
  * Adaptador Primario: HijoController (Controlador HTTP Express)
  * Gestiona los perfiles de los hijos de la familia autenticada.
@@ -18,7 +20,7 @@ class HijoController {
         data: hijos,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -32,7 +34,7 @@ class HijoController {
         data: hijo,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -46,17 +48,8 @@ class HijoController {
         data: hijo,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
-  }
-
-  _responderError(res, error) {
-    const statusCode = error.statusCode || 500;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message || 'Error interno del servidor.',
-      fields: error.fields || undefined,
-    });
   }
 }
 

@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
+import { SkeletonList } from '../components/SkeletonLoader';
 /**
  * Pantalla: Dashboard / Panel de Niñera (HU6 & HU5)
  * Basada en el Mockup Oficial del Documento (Figura 18 - Sprint 2, Pág. 44).
@@ -290,7 +291,7 @@ export default function NannyDashboardScreen({
             </View>
 
             {cargandoOfertas ? (
-              <Text style={styles.jobDesc}>Cargando ofertas...</Text>
+              <SkeletonList count={2} />
             ) : ofertas.length === 0 ? (
               <Text style={styles.jobDesc}>
                 Aún no hay ofertas publicadas. Revisa la bolsa de trabajo más tarde.

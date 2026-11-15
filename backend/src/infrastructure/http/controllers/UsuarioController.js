@@ -1,3 +1,5 @@
+const responderError = require('../responderError');
+
 /**
  * Adaptador Primario: UsuarioController (Controlador HTTP Express)
  * Gestiona endpoints relacionados con el perfil de usuario y niñera (HU5).
@@ -23,7 +25,7 @@ class UsuarioController {
         data: perfil,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -34,11 +36,9 @@ class UsuarioController {
   async actualizarPerfilNinera(req, res) {
     try {
       const idUsuarioAutenticado = req.user.id;
-      const idObjetivo = req.body.id ? req.body.id : idUsuarioAutenticado;
 
       const perfilActualizado = await this.servicioUsuario.actualizarPerfilNinera(
         idUsuarioAutenticado,
-        idObjetivo,
         req.body,
       );
 
@@ -48,7 +48,7 @@ class UsuarioController {
         user: perfilActualizado,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -64,7 +64,6 @@ class UsuarioController {
 
       const ubicacion = await this.servicioUsuario.actualizarUbicacionNinera(
         idUsuarioAutenticado,
-        idUsuarioAutenticado,
         { latitud, longitud },
       );
 
@@ -74,7 +73,7 @@ class UsuarioController {
         data: ubicacion,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -92,7 +91,7 @@ class UsuarioController {
         data: perfil,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
   }
 
@@ -103,11 +102,9 @@ class UsuarioController {
   async actualizarPerfilPadre(req, res) {
     try {
       const idUsuarioAutenticado = req.user.id;
-      const idObjetivo = req.body.id ? req.body.id : idUsuarioAutenticado;
 
       const perfilActualizado = await this.servicioUsuario.actualizarPerfilPadre(
         idUsuarioAutenticado,
-        idObjetivo,
         req.body,
       );
 
@@ -117,17 +114,8 @@ class UsuarioController {
         user: perfilActualizado,
       });
     } catch (error) {
-      return this._responderError(res, error);
+      return responderError(res, error);
     }
-  }
-
-  _responderError(res, error) {
-    const statusCode = error.statusCode || 500;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message || 'Error interno del servidor.',
-      fields: error.fields || undefined,
-    });
   }
 }
 

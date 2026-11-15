@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,14 @@ import {
   StatusBar,
   ScrollView,
   Image,
-  ActivityIndicator,
   useWindowDimensions,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
+import ModalPasarelaPago from '../components/ModalPasarelaPago';
+import { SkeletonItem } from '../components/SkeletonLoader';
 
 /**
  * Pantalla: Panel Principal de Familia (HU6 - Gestión de Hogar)
@@ -54,36 +55,92 @@ export default function FamilyDashboardScreen({
   const [hijos, setHijos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [reservaPendiente, setReservaPendiente] = useState(null);
+  const [tiempoRestanteMs, setTiempoRestanteMs] = useState(0);
+  const [reservaParaPagar, setReservaParaPagar] = useState(null);
+  const [pagoExitosoMensaje, setPagoExitosoMensaje] = useState(false);
+  const estaMontadaRef = useRef(true);
+
+  const cargarResumen = async () => {
+    if (!estaMontadaRef.current) return;
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const cargarRecurso = async (ruta, mensajeError) => {
+        const response = await fetch(`${API_BASE_URL}${ruta}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || mensajeError);
+        }
+        return data.data;
+      };
+
+      const [hijosData, reservasData] = await Promise.all([
+        cargarRecurso('/hijos', 'No se pudo cargar el resumen de tu hogar.'),
+        cargarRecurso('/reservas', 'No se pudieron cargar tus reservas.'),
+      ]);
+
+      if (!estaMontadaRef.current) return;
+
+      setHijos(Array.isArray(hijosData) ? hijosData : []);
+
+      if (Array.isArray(reservasData)) {
+        const ahora = Date.now();
+        const pend = reservasData.find((r) => {
+          const est = String(r.estadoReserva || '').toUpperCase();
+          if (est !== 'PENDIENTE') return false;
+          const expiraMs = r.expiraEn ? new Date(r.expiraEn).getTime() : (r.expira_en ? new Date(r.expira_en).getTime() : 0);
+          return expiraMs > ahora;
+        });
+        setReservaPendiente(pend || null);
+        if (pend) {
+          const expiraMs = pend.expiraEn ? new Date(pend.expiraEn).getTime() : new Date(pend.expira_en).getTime();
+          setTiempoRestanteMs(Math.max(0, expiraMs - ahora));
+        }
+      }
+    } catch (err) {
+      if (estaMontadaRef.current) {
+        setErrorMessage('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+      }
+    } finally {
+      if (estaMontadaRef.current) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    async function cargarResumen() {
-      setLoading(true);
-      setErrorMessage('');
-      try {
-        const response = await fetch(`${API_BASE_URL}/hijos`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        if (!isMounted) return;
-        if (response.ok && data.success) {
-          setHijos(Array.isArray(data.data) ? data.data : []);
-        } else {
-          setErrorMessage(data.message || 'No se pudo cargar el resumen de tu hogar.');
-        }
-      } catch (err) {
-        if (isMounted) setErrorMessage('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
+    estaMontadaRef.current = true;
     cargarResumen();
     return () => {
-      isMounted = false;
+      estaMontadaRef.current = false;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!pagoExitosoMensaje) return undefined;
+    const timeout = setTimeout(() => setPagoExitosoMensaje(false), 5000);
+    return () => clearTimeout(timeout);
+  }, [pagoExitosoMensaje]);
+
+  // Temporizador para cuenta regresiva de la reserva separada
+  useEffect(() => {
+    if (!reservaPendiente || tiempoRestanteMs <= 0) return;
+    const interval = setInterval(() => {
+      const expiraMs = reservaPendiente.expiraEn
+        ? new Date(reservaPendiente.expiraEn).getTime()
+        : new Date(reservaPendiente.expira_en).getTime();
+      const diff = expiraMs - Date.now();
+      if (diff <= 0) {
+        setTiempoRestanteMs(0);
+        setReservaPendiente(null);
+        clearInterval(interval);
+      } else {
+        setTiempoRestanteMs(diff);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [reservaPendiente]);
 
   const totalHijos = hijos.length;
   const conAlergias = hijos.filter((h) => tieneTexto(h.alergias)).length;
@@ -165,6 +222,40 @@ export default function FamilyDashboardScreen({
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={[styles.content, isMobile ? styles.contentMobile : styles.contentDesktop]}>
+          {/* Banner de Reserva Pendiente de Pago con Temporizador */}
+          {reservaPendiente && tiempoRestanteMs > 0 ? (
+            <View style={styles.pendingReservationBanner}>
+              <View style={styles.pendingBannerIconWrap}>
+                <Ionicons name="time" size={24} color="#D97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pendingBannerTitle}>Tienes 1 reserva separada</Text>
+                <Text style={styles.pendingBannerDesc}>
+                  Expira en {Math.floor(tiempoRestanteMs / 60000)}:
+                  {String(Math.floor((tiempoRestanteMs % 60000) / 1000)).padStart(2, '0')} min • Total: S/. {Number(reservaPendiente.montoTotal || 0).toFixed(2)}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pendingBannerBtn}
+                onPress={() => setReservaParaPagar(reservaPendiente)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="card-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.pendingBannerBtnText}>Pagar ahora</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {/* Notificación de Pago Exitoso */}
+          {pagoExitosoMensaje ? (
+            <View style={styles.successPaymentBanner}>
+              <Ionicons name="checkmark-circle" size={22} color="#059669" />
+              <Text style={styles.successPaymentText}>
+                ¡Pago simulado con éxito! Tu reserva quedó confirmada.
+              </Text>
+            </View>
+          ) : null}
+
           <View style={styles.headerBlock}>
             <Text style={styles.screenTitle}>Panel de Familia</Text>
             <Text style={styles.screenSubtitle}>Resumen de tu hogar y servicios</Text>
@@ -259,10 +350,7 @@ export default function FamilyDashboardScreen({
             </View>
 
             {loading ? (
-              <View style={styles.loadingBox}>
-                <ActivityIndicator color={colors.primary} />
-                <Text style={styles.loadingText}>Cargando resumen...</Text>
-              </View>
+              <ChildrenSkeleton />
             ) : totalHijos === 0 ? (
               <View style={styles.emptyBox}>
                 <Ionicons name="happy-outline" size={28} color={colors.primary} />
@@ -386,7 +474,36 @@ export default function FamilyDashboardScreen({
           ) : null}
         </View>
       </ScrollView>
+
+      <ModalPasarelaPago
+        visible={Boolean(reservaParaPagar)}
+        reserva={reservaParaPagar}
+        token={token}
+        onClose={() => setReservaParaPagar(null)}
+        onPagoExitoso={() => {
+          setReservaParaPagar(null);
+          setReservaPendiente(null);
+          setPagoExitosoMensaje(true);
+          cargarResumen();
+        }}
+      />
     </SafeAreaView>
+  );
+}
+
+function ChildrenSkeleton() {
+  return (
+    <View style={{ gap: 10, paddingVertical: 6 }}>
+      {[1, 2].map((i) => (
+        <View key={i} style={styles.childSkeletonRow}>
+          <SkeletonItem width={42} height={42} borderRadius={21} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <SkeletonItem width="50%" height={14} />
+            <SkeletonItem width="80%" height={12} />
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -508,6 +625,72 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#DC2626',
+  },
+  pendingReservationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  pendingBannerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  pendingBannerDesc: {
+    fontSize: 12,
+    color: '#B45309',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  pendingBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  pendingBannerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  successPaymentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    borderWidth: 1,
+    borderColor: '#10B981',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  successPaymentText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065F46',
   },
   scrollContainer: {
     alignItems: 'center',

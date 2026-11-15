@@ -108,15 +108,12 @@ export default function ModalPasarelaPago({
         datosPago: {
           ultimos4: numeroTarjeta.slice(-4) || '9999',
           titular: titular.trim(),
+          celular: celularYape,
+          codigoAutorizacion: codigoOtp,
         },
       });
 
-      setComprobante(respuesta.comprobante || {
-        idTransaccion: `TXN-${Date.now().toString(36).toUpperCase()}`,
-        monto: Number(monto),
-        fechaPago: new Date().toISOString(),
-        metodo,
-      });
+      setComprobante(respuesta.comprobante);
     } catch (err) {
       setErrorPago(err.message || 'La entidad bancaria denegó la transacción simulada.');
     } finally {

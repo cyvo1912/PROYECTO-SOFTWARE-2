@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
+import { SkeletonList } from '../components/SkeletonLoader';
 
 /**
  * Pantalla: Bolsa de Trabajo (HU14)
@@ -286,10 +287,7 @@ export default function JobBoardScreen({ token, onBack }) {
                   </View>
 
                   {loading ? (
-                    <View style={styles.loadingBox}>
-                      <ActivityIndicator color={colors.primary} size="large" />
-                      <Text style={styles.loadingText}>Cargando ofertas...</Text>
-                    </View>
+                    <SkeletonList count={3} />
                   ) : !errorMessage && ofertas.length === 0 ? (
                     <EmptyState
                       icon="briefcase-outline"
@@ -321,10 +319,7 @@ export default function JobBoardScreen({ token, onBack }) {
                   )}
                 </>
               ) : loadingPostulaciones ? (
-                <View style={styles.loadingBox}>
-                  <ActivityIndicator color={colors.primary} size="large" />
-                  <Text style={styles.loadingText}>Cargando postulaciones...</Text>
-                </View>
+                <SkeletonList count={3} />
               ) : !errorMessage && postulaciones.length === 0 ? (
                 <EmptyState
                   icon="paper-plane-outline"

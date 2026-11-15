@@ -17,13 +17,13 @@ class ServicioMensajes {
    * @param {Object} dependencias
    * @param {import('../ports/MensajeRepositoryPort')} dependencias.mensajeRepository
    * @param {import('../ports/RealtimeNotifierPort')} [dependencias.realtimeNotifier]
-   * @param {import('../ports/NotificacionServicePort')} [dependencias.notificacionService]
+   * @param {import('../ports/NotificadorPort')} [dependencias.notificador]
    * @param {import('../ports/UserRepositoryPort')} [dependencias.userRepository]
    */
   constructor({
     mensajeRepository,
     realtimeNotifier = null,
-    notificacionService = null,
+    notificador = null,
     userRepository = null,
   }) {
     if (!mensajeRepository) {
@@ -31,7 +31,7 @@ class ServicioMensajes {
     }
     this.mensajeRepository = mensajeRepository;
     this.realtimeNotifier = realtimeNotifier;
-    this.notificacionService = notificacionService;
+    this.notificador = notificador;
     this.userRepository = userRepository;
   }
 
@@ -84,14 +84,16 @@ class ServicioMensajes {
     });
 
     // 4. Crear Notificación (asíncrona en segundo plano para no demorar el envío del mensaje)
-    if (this.notificacionService && typeof this.notificacionService.crearNotificacionMensaje === 'function') {
+    if (this.notificador?.enviarNotificacion) {
       Promise.resolve()
         .then(() =>
-          this.notificacionService.crearNotificacionMensaje(
-            receptorId,
-            nuevoMensaje.id,
-            nuevoMensaje.contenido
-          )
+          this.notificador.enviarNotificacion({
+            idUsuario: receptorId,
+            idReserva: null,
+            titulo: 'Nuevo mensaje recibido',
+            mensaje: resumirMensaje(nuevoMensaje.contenido),
+            tipo: 'MENSAJE',
+          })
         )
         .catch((err) => {
           console.warn('Aviso: no se pudo registrar la notificación de mensaje:', err.message);
@@ -194,6 +196,13 @@ class ServicioMensajes {
     }
     return this.mensajeRepository.obtenerPerfilContacto(Number(idContacto));
   }
+}
+
+function resumirMensaje(texto, longitudMaxima = 50) {
+  const contenido = String(texto || '').trim();
+  return contenido.length > longitudMaxima
+    ? `${contenido.slice(0, longitudMaxima - 3)}...`
+    : contenido;
 }
 
 module.exports = ServicioMensajes;

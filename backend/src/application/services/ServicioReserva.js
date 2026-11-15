@@ -11,6 +11,7 @@ const { TarifaPorHora } = require('../../domain/strategies/EstrategiaCalculoTari
 const {
   EstrategiaDisponibilidadRangoFechas,
 } = require('../../domain/strategies/EstrategiaCalculoDisponibilidad');
+const ProcesadorPagoSimulado = require('../../domain/services/ProcesadorPagoSimulado');
 
 const REGEX_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -35,8 +36,8 @@ class ServicioReserva {
     servicioNotificacion = null,
     estrategiaTarifa = new TarifaPorHora(),
     estrategiaDisponibilidad = new EstrategiaDisponibilidadRangoFechas(),
-    notificacionService = null,
     reloj = () => new Date(),
+    procesadorPago = new ProcesadorPagoSimulado({ reloj }),
   }) {
     if (!reservaRepository) throw new Error('reservaRepository es requerido en ServicioReserva');
     if (!disponibilidadRepository) throw new Error('disponibilidadRepository es requerido en ServicioReserva');
@@ -47,7 +48,7 @@ class ServicioReserva {
     this.servicioNotificacion = servicioNotificacion;
     this.estrategiaTarifa = estrategiaTarifa;
     this.estrategiaDisponibilidad = estrategiaDisponibilidad;
-    this.notificacionService = notificacionService;
+    this.procesadorPago = procesadorPago;
     this.reloj = reloj;
   }
 
@@ -67,10 +68,17 @@ class ServicioReserva {
   async solicitar(usuario, datos = {}) {
     this._exigirFamilia(usuario);
     const solicitud = this._validarSolicitud(datos, { exigirDireccion: true });
-    const ninera = await this._obtenerNineraActiva(solicitud.idNinera);
+    // Ejecución paralela de consultas independientes para mínima latencia DB
+    const [ninera, hijo, reservasNinera, reservasHijo] = await Promise.all([
+      this._obtenerNineraActiva(solicitud.idNinera),
+      solicitud.idHijo ? this.hijoRepository.findById(solicitud.idHijo) : Promise.resolve(null),
+      this.reservaRepository.listarActivasDeNineraEnFecha(solicitud.idNinera, solicitud.fecha),
+      solicitud.idHijo
+        ? this.reservaRepository.listarActivasDeHijoEnFecha(solicitud.idHijo, solicitud.fecha)
+        : Promise.resolve([]),
+    ]);
 
     if (solicitud.idHijo) {
-      const hijo = await this.hijoRepository.findById(solicitud.idHijo);
       if (!hijo) throw new NotFoundError('El perfil del niño no existe.');
       if (!hijo.perteneceA(usuario.id)) {
         throw new ForbiddenError('Solo puedes reservar para tus propios hijos.');
@@ -89,10 +97,6 @@ class ServicioReserva {
     });
 
     // 1) Solapamiento con otras reservas de la niñera
-    const reservasNinera = await this.reservaRepository.listarActivasDeNineraEnFecha(
-      solicitud.idNinera,
-      solicitud.fecha,
-    );
     const ahora = this.reloj();
     const choqueNinera = reservasNinera.find((r) => r.estaActiva(ahora) && nueva.seSolapaCon(r));
     if (choqueNinera) {
@@ -103,10 +107,6 @@ class ServicioReserva {
 
     // 2) Solapamiento con otras reservas del mismo niño
     if (solicitud.idHijo) {
-      const reservasHijo = await this.reservaRepository.listarActivasDeHijoEnFecha(
-        solicitud.idHijo,
-        solicitud.fecha,
-      );
       const choqueHijo = reservasHijo.find((r) => r.estaActiva(ahora) && nueva.seSolapaCon(r));
       if (choqueHijo) {
         throw new ConflictoHorarioError(
@@ -304,7 +304,7 @@ class ServicioReserva {
    * dentro de sus 10 minutos de vigencia, marcándola como Aceptada y liberando
    * la expiración para activar la mensajería y el servicio.
    */
-  async pagar(usuario, idReservaParam, datosPago = {}) {
+  async pagar(usuario, idReservaParam, solicitudPago = {}) {
     this._exigirFamilia(usuario);
     const idReserva = Number(idReservaParam);
     if (!Number.isInteger(idReserva) || idReserva <= 0) {
@@ -325,6 +325,12 @@ class ServicioReserva {
       throw new ConflictError(`La reserva ya se encuentra en estado ${reserva.estadoReserva}.`);
     }
 
+    const comprobante = this.procesadorPago.procesar({
+      monto: reserva.montoTotal,
+      metodoPago: solicitudPago.metodoPago,
+      datosPago: solicitudPago.datosPago || solicitudPago,
+    });
+
     const actualizada = await this._actualizarEstadoSiVigente(
       idReserva,
       'Aceptada',
@@ -334,16 +340,10 @@ class ServicioReserva {
     // Notificar a la niñera que la reserva fue confirmada y pagada
     await this._notificarCambio(actualizada, reserva.idNinera);
 
-    const metodo = (datosPago.metodoPago || 'TARJETA').toUpperCase();
     return {
       reserva: actualizada,
-      pago: {
-        idTransaccion: `TXN-${Date.now().toString(36).toUpperCase()}`,
-        monto: Number(reserva.montoTotal || 0),
-        metodo,
-        estado: 'APROBADO',
-        fechaPago: new Date().toISOString(),
-      },
+      pago: comprobante,
+      comprobante,
     };
   }
 
@@ -352,12 +352,7 @@ class ServicioReserva {
    * cuando se registra una nueva solicitud de reserva.
    */
   async _notificarNuevaReserva(reserva) {
-    if (!this.servicioNotificacion) {
-      console.warn(
-        'HU18: servicioNotificacion no configurado en ServicioReserva.'
-      );
-      return;
-    }
+    if (!this.servicioNotificacion?.enviarNotificacion) return;
 
     const datosReserva =
       `${reserva.fechaReserva}, ` +
@@ -560,15 +555,6 @@ class ServicioReserva {
           mensaje: datos.mensaje,
           tipo: 'RESERVA',
         });
-      } else if (this.notificacionService?.crearNotificacionReserva) {
-        await this.notificacionService.crearNotificacionReserva(
-          idReceptor,
-          datos.mensaje
-        );
-      } else {
-        console.warn(
-          'HU18: no se configuró el servicio de notificaciones.'
-        );
       }
     } catch (error) {
       console.error(

@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { listarMisReservas, cambiarEstadoReserva, crearValoracion, obtenerValoracionPorReserva, } from '../services/reservaService';
 import { colors } from '../theme/colors';
 import ModalPasarelaPago from '../components/ModalPasarelaPago';
+import { SkeletonList } from '../components/SkeletonLoader';
 
 
 const estadoNormalizado = (estado) => String(estado || 'Pendiente').toUpperCase();
@@ -181,7 +182,21 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
         </TouchableOpacity>
     <Text style={styles.title}>{esNinera ? 'Mis servicios' : 'Mis reservas'}</Text>
     <Text style={styles.subtitle}>{esNinera ? 'Acepta, rechaza o completa servicios asignados.' : 'Revisa solicitudes y valora servicios terminados.'}</Text>
-    {loading ? <ActivityIndicator color={colors.primary} size="large" style={styles.loader} /> : reservas.length === 0 ? <View style={styles.empty}><Text>No hay reservas registradas.</Text></View> : reservas.map((reserva) => {
+    {loading ? (
+      <SkeletonList count={3} />
+    ) : reservas.length === 0 ? (
+      <View style={styles.empty}>
+        <Ionicons name="calendar-outline" size={40} color={colors.primary} style={{ marginBottom: 8 }} />
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#172033', marginBottom: 4 }}>
+          No tienes reservas {esNinera ? 'asignadas' : 'registradas'}
+        </Text>
+        <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center' }}>
+          {esNinera
+            ? 'Las solicitudes de servicio de las familias aparecerán aquí.'
+            : 'Cuando solicites y reserves la atención de una niñera, podrás hacerle seguimiento desde aquí.'}
+        </Text>
+      </View>
+    ) : reservas.map((reserva) => {
       const estado = estadoNormalizado(reserva.estadoReserva);
       return <View key={reserva.id} style={styles.card}>
         <View style={styles.row}><Text style={styles.date}>{reserva.fechaReserva} · {reserva.horaInicio}–{reserva.horaFin}</Text><Text style={styles.status}>{reserva.estadoReserva}</Text></View>
