@@ -39,8 +39,8 @@ class MensajeRepositoryPort {
   }
 
   /**
-   * Verifica si existe una reserva confirmada o pagada entre el padre y la niñera.
-   * Regla de negocio crítica: solo se puede conversar una vez pagada la tarifa / reserva confirmada.
+   * Verifica si existe una reserva pagada y aceptada entre la familia y la niñera.
+   * Regla de negocio crítica: solo se puede conversar después de la aceptación.
    */
   async verificarReservaPagada(idUsuarioA, idUsuarioB) {
     throw new Error('Método verificarReservaPagada no implementado');

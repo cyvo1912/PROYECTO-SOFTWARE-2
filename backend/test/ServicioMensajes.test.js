@@ -20,14 +20,14 @@ class MensajeRepositoryEnMemoria extends MensajeRepositoryPort {
     super();
     this.mensajes = [];
     this.siguienteId = 1;
-    // Set de claves `${padreId}_${nineraId}` con reserva pagada
-    this.reservasPagadas = new Set();
+    // Set de claves `${padreId}_${nineraId}` con reserva aceptada.
+    this.reservasAceptadas = new Set();
     this.admins = new Set();
   }
 
-  agregarReservaPagada(idPadre, idNinera) {
-    this.reservasPagadas.add(`${idPadre}_${idNinera}`);
-    this.reservasPagadas.add(`${idNinera}_${idPadre}`);
+  agregarReservaAceptada(idPadre, idNinera) {
+    this.reservasAceptadas.add(`${idPadre}_${idNinera}`);
+    this.reservasAceptadas.add(`${idNinera}_${idPadre}`);
   }
 
   agregarAdmin(idUsuario) {
@@ -108,7 +108,7 @@ class MensajeRepositoryEnMemoria extends MensajeRepositoryPort {
     const a = Number(idUsuarioA);
     const b = Number(idUsuarioB);
     if (this.admins.has(a) || this.admins.has(b)) return true;
-    return this.reservasPagadas.has(`${a}_${b}`);
+    return this.reservasAceptadas.has(`${a}_${b}`);
   }
 }
 
@@ -168,8 +168,8 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
     });
   });
 
-  test('permite enviar un mensaje cuando la reserva está confirmada y pagada', async () => {
-    repo.agregarReservaPagada(ID_PADRE, ID_NINERA);
+  test('permite enviar un mensaje cuando la reserva está aceptada', async () => {
+    repo.agregarReservaAceptada(ID_PADRE, ID_NINERA);
 
     const mensaje = await servicio.enviarMensaje({
       idEmisor: ID_PADRE,
@@ -196,8 +196,8 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
     });
   });
 
-  test('rechaza el envío con ReservaNoPagadaError si la tarifa aún no ha sido pagada', async () => {
-    // No agregamos reserva pagada entre ID_PADRE e ID_NINERA
+  test('rechaza el envío con ReservaNoPagadaError si la reserva no fue aceptada', async () => {
+    // No agregamos una reserva aceptada entre ID_PADRE e ID_NINERA.
     await assert.rejects(
       () =>
         servicio.enviarMensaje({
@@ -208,7 +208,7 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
       (err) => {
         assert.ok(err instanceof ReservaNoPagadaError);
         assert.equal(err.statusCode, 403);
-        assert.match(err.message, /se requiere una reserva confirmada y pagada/i);
+        assert.match(err.message, /se requiere una reserva pagada y aceptada/i);
         return true;
       }
     );
@@ -231,7 +231,7 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
   });
 
   test('rechaza el mensaje con ValidationError si el texto está vacío', async () => {
-    repo.agregarReservaPagada(ID_PADRE, ID_NINERA);
+    repo.agregarReservaAceptada(ID_PADRE, ID_NINERA);
 
     await assert.rejects(
       () =>
@@ -265,7 +265,7 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
   });
 
   test('obtenerConversacion recupera el historial y marca como leídos los mensajes', async () => {
-    repo.agregarReservaPagada(ID_PADRE, ID_NINERA);
+    repo.agregarReservaAceptada(ID_PADRE, ID_NINERA);
 
     // Niñera envía 2 mensajes al Padre
     await servicio.enviarMensaje({ idEmisor: ID_NINERA, idReceptor: ID_PADRE, texto: 'Hola!' });
@@ -285,7 +285,7 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
   });
 
   test('obtenerConversaciones calcula correctamente el conteo de no leídos', async () => {
-    repo.agregarReservaPagada(ID_PADRE, ID_NINERA);
+    repo.agregarReservaAceptada(ID_PADRE, ID_NINERA);
 
     await servicio.enviarMensaje({ idEmisor: ID_NINERA, idReceptor: ID_PADRE, texto: 'Mensaje 1' });
     await servicio.enviarMensaje({ idEmisor: ID_NINERA, idReceptor: ID_PADRE, texto: 'Mensaje 2' });
@@ -301,6 +301,24 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
     await assert.rejects(
       () => servicio.obtenerConversaciones(null),
       (err) => err instanceof UnauthorizedError
+    );
+  });
+
+  test('valida el contacto antes de marcar mensajes como leídos o consultar su perfil', async () => {
+    await assert.rejects(
+      () => servicio.marcarLeido(ID_PADRE, 'abc'),
+      (err) => err instanceof ValidationError && err.message === 'Identificador de contacto inválido.',
+    );
+    await assert.rejects(
+      () => servicio.obtenerPerfilContacto('abc'),
+      (err) => err instanceof ValidationError && err.message === 'Identificador de contacto inválido.',
+    );
+  });
+
+  test('valida los límites de paginación antes de consultar la base de datos', async () => {
+    await assert.rejects(
+      () => servicio.obtenerConversacion(ID_PADRE, ID_NINERA, { limite: 0, offset: -1 }),
+      (err) => err instanceof ValidationError && err.message === 'Los parámetros de paginación no son válidos.',
     );
   });
 });

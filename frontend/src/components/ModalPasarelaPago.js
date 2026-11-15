@@ -15,6 +15,49 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { pagarReserva } from '../services/reservaService';
 
+const TAMANO_QR = 17;
+const ORIGENES_MARCADOR = [[0, 0], [0, 10], [10, 0]];
+
+function obtenerModuloMarcador(fila, columna) {
+  for (const [origenFila, origenColumna] of ORIGENES_MARCADOR) {
+    const filaLocal = fila - origenFila;
+    const columnaLocal = columna - origenColumna;
+    if (filaLocal < 0 || filaLocal > 6 || columnaLocal < 0 || columnaLocal > 6) continue;
+    return (
+      filaLocal === 0 || filaLocal === 6 || columnaLocal === 0 || columnaLocal === 6 ||
+      (filaLocal >= 2 && filaLocal <= 4 && columnaLocal >= 2 && columnaLocal <= 4)
+    );
+  }
+  return null;
+}
+
+function esModuloOscuro(fila, columna, referencia) {
+  const moduloMarcador = obtenerModuloMarcador(fila, columna);
+  if (moduloMarcador !== null) return moduloMarcador;
+  const semilla = Array.from(referencia).reduce((total, caracter) => total + caracter.charCodeAt(0), 0);
+  return ((fila * 13 + columna * 7 + semilla) % 5) < 2;
+}
+
+function CodigoQrSimulado({ reservaId, monto }) {
+  const referencia = `MINANA-${reservaId}-${monto}`;
+  return (
+    <View style={styles.qrBox} accessibilityLabel={`Código QR simulado para la reserva ${reservaId}`}>
+      <View style={styles.qrGrid}>
+        {Array.from({ length: TAMANO_QR * TAMANO_QR }, (_, indice) => {
+          const fila = Math.floor(indice / TAMANO_QR);
+          const columna = indice % TAMANO_QR;
+          return (
+            <View
+              key={`${fila}-${columna}`}
+              style={[styles.qrCell, esModuloOscuro(fila, columna, referencia) && styles.qrCellDark]}
+            />
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export default function ModalPasarelaPago({
   visible,
   reserva,
@@ -136,7 +179,7 @@ export default function ModalPasarelaPago({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Ionicons name="lock-closed" size={18} color="#059669" />
-              <Text style={styles.headerTitle}>Pasarela de Pago Seguro</Text>
+              <Text style={styles.headerTitle}>Pago de prueba</Text>
             </View>
             <TouchableOpacity onPress={onClose} disabled={procesando} style={styles.closeBtn}>
               <Ionicons name="close" size={20} color="#6B7280" />
@@ -152,7 +195,7 @@ export default function ModalPasarelaPago({
                 </View>
                 <Text style={styles.successTitle}>¡Pago Aprobado!</Text>
                 <Text style={styles.successSubtitle}>
-                  Tu reserva ha sido confirmada exitosamente y la niñera ha sido notificada.
+                  La niñera recibirá la solicitud y deberá aceptarla antes de habilitar el chat.
                 </Text>
 
                 <View style={styles.receiptBox}>
@@ -175,7 +218,7 @@ export default function ModalPasarelaPago({
                   <View style={styles.receiptRow}>
                     <Text style={styles.receiptLabel}>Estado</Text>
                     <View style={styles.approvedBadge}>
-                      <Text style={styles.approvedBadgeText}>CONFIRMADA</Text>
+                      <Text style={styles.approvedBadgeText}>PENDIENTE DE ACEPTACIÓN</Text>
                     </View>
                   </View>
                 </View>
@@ -316,6 +359,17 @@ export default function ModalPasarelaPago({
                       </View>
                     </View>
 
+                    <View style={styles.qrPayment}>
+                      <CodigoQrSimulado reservaId={reserva.id} monto={monto} />
+                      <View style={styles.qrTextBlock}>
+                        <Text style={styles.qrTitle}>Escanea el código QR</Text>
+                        <Text style={styles.qrDescription}>
+                          En esta simulación, el QR representa el cobro de S/. {monto} para la reserva.
+                        </Text>
+                        <Text style={styles.qrReference}>Referencia: MN-{reserva.id}</Text>
+                      </View>
+                    </View>
+
                     <Text style={styles.inputLabel}>Número de Celular Afiliado</Text>
                     <View style={styles.inputContainer}>
                       <TextInput
@@ -364,7 +418,7 @@ export default function ModalPasarelaPago({
                 <View style={styles.securityNote}>
                   <Ionicons name="shield-checkmark" size={14} color="#6B7280" />
                   <Text style={styles.securityNoteText}>
-                    Transacción cifrada punto a punto • No almacenamos datos sensibles
+                    Simulación de pago. No ingreses datos reales.
                   </Text>
                 </View>
               </>
@@ -532,6 +586,58 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 16,
     marginTop: 2,
+  },
+  qrPayment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    borderRadius: 14,
+    backgroundColor: '#FCFAFF',
+    marginBottom: 4,
+  },
+  qrBox: {
+    padding: 7,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  qrGrid: {
+    width: 102,
+    height: 102,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  qrCell: {
+    width: 6,
+    height: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  qrCellDark: {
+    backgroundColor: '#24124D',
+  },
+  qrTextBlock: {
+    flex: 1,
+  },
+  qrTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#4C1D95',
+    marginBottom: 4,
+  },
+  qrDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#5B6475',
+  },
+  qrReference: {
+    marginTop: 7,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6D28D9',
   },
   payButton: {
     backgroundColor: colors.primary,

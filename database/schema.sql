@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS valoracion (
     id_ninera INT NOT NULL REFERENCES ninera(id_ninera),
     calificacion INT NOT NULL CHECK (calificacion >= 1 AND calificacion <= 5),
     comentario TEXT,
-    fecha_valoracion TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'America/Lima')
+    fecha_creacion TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'America/Lima')
 );
 
 -- Niñeras Favoritas marcadas por Padres

@@ -37,7 +37,7 @@ class ServicioMensajes {
 
   /**
    * Enviar un mensaje entre usuarios (Figura 56: enviarMensaje(idEmisorPadre, idReceptorNinera, texto)).
-   * Aplica la regla de negocio crítica: solo se puede conversar una vez pagada la tarifa / reserva confirmada.
+   * Aplica la regla de negocio crítica: solo se puede conversar tras el pago y la aceptación de la niñera.
    *
    * @param {number|string|Object} arg1 - idEmisor o payload { idEmisor, idReceptor, texto, omitirValidacionReserva }
    * @param {number|string} [arg2] - idReceptor
@@ -66,12 +66,12 @@ class ServicioMensajes {
     const emisorId = Number(idEmisor);
     const receptorId = Number(idReceptor);
 
-    // 2. Regla de Negocio: Verificar que la tarifa esté pagada (reserva confirmada/pagada)
+    // 2. Regla de negocio: verificar que la reserva ya fue pagada y aceptada.
     if (!omitirValidacionReserva) {
       const tienePermiso = await this.mensajeRepository.verificarReservaPagada(emisorId, receptorId);
       if (!tienePermiso) {
         throw new ReservaNoPagadaError(
-          'No se puede iniciar la conversación: se requiere una reserva confirmada y pagada con la niñera.'
+          'No se puede iniciar la conversación: se requiere una reserva pagada y aceptada por la niñera.'
         );
       }
     }
@@ -116,14 +116,17 @@ class ServicioMensajes {
    * Obtiene el historial de conversación entre dos usuarios y marca como leídos los recibidos.
    */
   async obtenerConversacion(idUsuarioActual, idOtroUsuario, { limite = 50, offset = 0 } = {}) {
-    if (!idUsuarioActual) {
+    if (!esIdPositivo(idUsuarioActual)) {
       throw new UnauthorizedError('Debes iniciar sesión para ver los mensajes.');
     }
     const usuarioActualId = Number(idUsuarioActual);
     const otroUsuarioId = Number(idOtroUsuario);
 
-    if (!otroUsuarioId || usuarioActualId === otroUsuarioId) {
+    if (!esIdPositivo(idOtroUsuario) || usuarioActualId === otroUsuarioId) {
       throw new ValidationError('Identificador de contacto inválido.');
+    }
+    if (!Number.isInteger(limite) || limite < 1 || limite > 100 || !Number.isInteger(offset) || offset < 0) {
+      throw new ValidationError('Los parámetros de paginación no son válidos.');
     }
 
     // Marcar como leídos los mensajes enviados por el otro usuario hacia mí
@@ -151,7 +154,7 @@ class ServicioMensajes {
    * Obtiene la lista de conversaciones activas con último mensaje y badge de no leídos.
    */
   async obtenerConversaciones(idUsuario) {
-    if (!idUsuario) {
+    if (!esIdPositivo(idUsuario)) {
       throw new UnauthorizedError('Debes iniciar sesión para consultar conversaciones.');
     }
     return this.mensajeRepository.obtenerConversaciones(Number(idUsuario));
@@ -161,11 +164,14 @@ class ServicioMensajes {
    * Marcar como leídos los mensajes de un contacto.
    */
   async marcarLeido(idUsuarioActual, idContacto) {
-    if (!idUsuarioActual) {
+    if (!esIdPositivo(idUsuarioActual)) {
       throw new UnauthorizedError('Debes iniciar sesión.');
     }
     const usuarioActualId = Number(idUsuarioActual);
     const contactoId = Number(idContacto);
+    if (!esIdPositivo(idContacto) || usuarioActualId === contactoId) {
+      throw new ValidationError('Identificador de contacto inválido.');
+    }
 
     const actualizados = await this.mensajeRepository.marcarMensajesComoLeidos(
       usuarioActualId,
@@ -191,11 +197,16 @@ class ServicioMensajes {
    * Obtener información de perfil de un contacto de mensajería (para botón Ver Perfil).
    */
   async obtenerPerfilContacto(idContacto) {
-    if (!idContacto) {
-      throw new ValidationError('ID de contacto requerido.');
+    if (!esIdPositivo(idContacto)) {
+      throw new ValidationError('Identificador de contacto inválido.');
     }
     return this.mensajeRepository.obtenerPerfilContacto(Number(idContacto));
   }
+}
+
+function esIdPositivo(valor) {
+  const id = Number(valor);
+  return Number.isInteger(id) && id > 0;
 }
 
 function resumirMensaje(texto, longitudMaxima = 50) {

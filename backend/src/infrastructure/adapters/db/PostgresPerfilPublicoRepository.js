@@ -90,10 +90,10 @@ class PostgresPerfilPublicoRepository extends PerfilPublicoRepositoryPort {
   async listarValoraciones(idNinera) {
     try {
       const result = await this.pool.query(
-        `SELECT calificacion, comentario, TO_CHAR(fecha_valoracion, 'YYYY-MM-DD') AS fecha_valoracion
+        `SELECT calificacion, comentario, TO_CHAR(fecha_creacion, 'YYYY-MM-DD') AS fecha_valoracion
            FROM valoracion
           WHERE id_ninera = $1
-          ORDER BY fecha_valoracion DESC, id_valoracion DESC;`,
+          ORDER BY fecha_creacion DESC, id_valoracion DESC;`,
         [idNinera],
       );
       return result.rows.map((row) => ({

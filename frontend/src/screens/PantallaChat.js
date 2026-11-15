@@ -236,7 +236,7 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
   const manejarErrorEnvio = (mensajeError) => {
     const errorMsg =
       mensajeError ||
-      'No se pudo enviar el mensaje. Verifica si cuentas con una reserva pagada con esta niñera.';
+      'No se pudo enviar el mensaje. Necesitas una reserva pagada y aceptada por la niñera.';
     setErrorAlerta(errorMsg);
     if (Platform.OS !== 'web') {
       Alert.alert('Aviso de Mensajería', errorMsg);

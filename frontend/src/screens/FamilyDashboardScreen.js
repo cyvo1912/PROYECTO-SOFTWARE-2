@@ -251,7 +251,7 @@ export default function FamilyDashboardScreen({
             <View style={styles.successPaymentBanner}>
               <Ionicons name="checkmark-circle" size={22} color="#059669" />
               <Text style={styles.successPaymentText}>
-                ¡Pago simulado con éxito! Tu reserva quedó confirmada.
+                Pago registrado. La niñera debe aceptar la reserva para habilitar el chat.
               </Text>
             </View>
           ) : null}

@@ -203,8 +203,8 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
         <Text style={styles.detail}>Reserva #{reserva.id} · S/. {Number(reserva.montoTotal || 0).toFixed(2)}</Text><Text style={styles.address}>{reserva.direccion}</Text>
         {procesando === reserva.id ? <ActivityIndicator color={colors.primary} /> : <View style={styles.actions}>
           {!esNinera && estado === 'PENDIENTE' && <Action label="Pagar ahora" color="#059669" onPress={() => setReservaParaPagar(reserva)} />}
-          {!esNinera && ['PENDIENTE', 'ACEPTADA'].includes(estado) && <Action label="Cancelar" color="#DC2626" onPress={() => actualizar(reserva, 'CANCELADA')} />}
-          {esNinera && estado === 'PENDIENTE' && <><Action label="Aceptar" onPress={() => actualizar(reserva, 'ACEPTADA')} /><Action label="Rechazar" color="#DC2626" onPress={() => actualizar(reserva, 'RECHAZADA')} /></>}
+          {!esNinera && ['PENDIENTE', 'PAGADA', 'ACEPTADA'].includes(estado) && <Action label="Cancelar" color="#DC2626" onPress={() => actualizar(reserva, 'CANCELADA')} />}
+          {esNinera && estado === 'PAGADA' && <><Action label="Aceptar" onPress={() => actualizar(reserva, 'ACEPTADA')} /><Action label="Rechazar" color="#DC2626" onPress={() => actualizar(reserva, 'RECHAZADA')} /></>}
           {esNinera && estado === 'ACEPTADA' && <Action label="Marcar completada" onPress={() => actualizar(reserva, 'COMPLETADA')} />}
           {!esNinera && estado === 'COMPLETADA' && reservasValoradas[reserva.id] === false && (<Action label="Dejar reseña" onPress={() => setValorando(reserva.id)} />)}
           {!esNinera && estado === 'COMPLETADA' && reservasValoradas[reserva.id] === true && (

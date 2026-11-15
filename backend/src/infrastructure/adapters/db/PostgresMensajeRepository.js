@@ -138,7 +138,7 @@ class PostgresMensajeRepository extends MensajeRepositoryPort {
   }
 
   /**
-   * Valida regla de negocio: ¿Existe reserva pagada/confirmada entre padre y niñera?
+   * Valida regla de negocio: ¿Existe una reserva aceptada entre familia y niñera?
    * Optimizado: Consulta combinada única para reducir latencia de red.
    */
   async verificarReservaPagada(idUsuarioA, idUsuarioB) {

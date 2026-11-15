@@ -42,7 +42,7 @@ export function cambiarEstadoReserva({ token, idReserva, estado }) {
   return llamar(`/reservas/${idReserva}/estado`, { token, method: 'PATCH', body: { estado } });
 }
 
-/** Simulación de pasarela de pago para confirmar reserva */
+/** Simulación de pago. Después del pago, la niñera debe aceptar la reserva. */
 export function pagarReserva({ token, idReserva, metodoPago = 'TARJETA', datosPago = {} }) {
   return llamar(`/reservas/${idReserva}/pagar`, {
     token,

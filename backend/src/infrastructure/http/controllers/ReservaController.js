@@ -25,7 +25,7 @@ class ReservaController {
       const data = await this.servicioReserva.solicitar(req.user, req.body);
       return res.status(201).json({
         success: true,
-        message: 'Horario separado por 10 minutos. Completa el pago para confirmarlo.',
+        message: 'Horario separado por 10 minutos. Completa el pago para enviarlo a aceptación de la niñera.',
         data,
       });
     } catch (error) {
@@ -59,7 +59,7 @@ class ReservaController {
       const data = await this.servicioReserva.pagar(req.user, req.params.id, req.body || {});
       return res.status(200).json({
         success: true,
-        message: 'Pago simulado procesado exitosamente. Tu reserva ha sido confirmada.',
+        message: 'Pago simulado procesado. La reserva queda pendiente de aceptación de la niñera.',
         data,
       });
     } catch (error) {
