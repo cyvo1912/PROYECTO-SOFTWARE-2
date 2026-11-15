@@ -27,12 +27,9 @@ class ServicioRegistro {
   }
 
   async _enviarBienvenida(idUsuario, nombre, tipoUsuario) {
-    if (!this.servicioNotificacion) {
-      console.warn(
-        'HU18: servicioNotificacion no está configurado en ServicioRegistro.'
-      );
-      return;
-    }
+    // Las notificaciones son complementarias al registro: una configuración
+    // sin este servicio sigue siendo válida, por ejemplo en pruebas unitarias.
+    if (!this.servicioNotificacion?.enviarNotificacion) return;
 
     try {
       const esNinera = tipoUsuario === 'NINERA';

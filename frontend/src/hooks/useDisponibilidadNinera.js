@@ -36,13 +36,13 @@ export function useDisponibilidadNinera({ token, initialIdNinera = null }) {
         const lista = await listarNinerasActivas({ token });
         if (!activo) return;
         setNineras(lista);
-        if (!idNineraSeleccionada && lista.length > 0) {
-          setIdNineraSeleccionada(lista[0].id);
-        } else if (!idNineraSeleccionada && lista.length === 0) {
-          setLoading(false);
-        }
+        setIdNineraSeleccionada((seleccionActual) => {
+          const sigueDisponible = lista.some((ninera) => Number(ninera.id) === Number(seleccionActual));
+          return sigueDisponible ? seleccionActual : (lista[0]?.id ?? null);
+        });
+        if (lista.length === 0) setLoading(false);
       } catch (error) {
-        if (activo && !idNineraSeleccionada) {
+        if (activo) {
           setErrorMessage(error.message || 'Error al cargar niñeras disponibles.');
           setLoading(false);
         }
