@@ -6,6 +6,16 @@ const responderError = require('../responderError');
  * ServicioBolsaTrabajo y formatea la respuesta JSON.
  */
 class BolsaTrabajoController {
+  async editar(req, res) {
+    try { return res.status(200).json({ success: true, data: await this.servicioBolsaTrabajo.editarOferta(req.user, req.params.id, req.body || {}), message: 'Oferta actualizada.' }); }
+    catch (error) { return responderError(res, error); }
+  }
+  async postulantes(req, res) {
+    try {
+      const data = await this.servicioBolsaTrabajo.listarPostulantes(req.user, req.params.id);
+      return res.status(200).json({ success: true, data });
+    } catch (error) { return responderError(res, error); }
+  }
   constructor(servicioBolsaTrabajo) {
     if (!servicioBolsaTrabajo) {
       throw new Error('servicioBolsaTrabajo es requerido en BolsaTrabajoController');

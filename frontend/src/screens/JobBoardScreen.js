@@ -38,7 +38,6 @@ export default function JobBoardScreen({ token, onBack }) {
   const [soloCompatibles, setSoloCompatibles] = useState(false);
 
   const [ofertas, setOfertas] = useState([]);
-  const [perfil, setPerfil] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
@@ -67,7 +66,6 @@ export default function JobBoardScreen({ token, onBack }) {
         const data = await response.json();
         if (response.ok && data.success) {
           setOfertas(data.data.ofertas || []);
-          setPerfil(data.data.perfil || null);
         } else {
           setErrorMessage(data.message || 'No se pudieron cargar las ofertas de trabajo.');
           setFieldErrors(data.fields || {});
@@ -178,17 +176,6 @@ export default function JobBoardScreen({ token, onBack }) {
                 </Text>
               </View>
 
-              {perfil ? (
-                <View style={styles.profileStrip}>
-                  <Ionicons name="person-circle-outline" size={18} color={colors.primaryDark} />
-                  <Text style={styles.profileStripText}>
-                    Tu perfil: {describirZonas(perfil)}
-                    {perfil.tarifaHora !== null && perfil.tarifaHora !== undefined
-                      ? `  •  S/. ${formatearMonto(perfil.tarifaHora)}/hora`
-                      : ''}
-                  </Text>
-                </View>
-              ) : null}
 
               <View style={styles.tabs}>
                 <TabButton
@@ -660,14 +647,6 @@ function formatearMonto(valor) {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return '-';
   return Number.isInteger(numero) ? String(numero) : numero.toFixed(2);
-}
-
-function describirZonas(perfil) {
-  const zonas = [...(perfil.distritos || [])];
-  if (perfil.zona && !zonas.some((z) => z.toLowerCase() === perfil.zona.toLowerCase())) {
-    zonas.unshift(perfil.zona);
-  }
-  return zonas.length ? zonas.join(', ') : 'sin zonas registradas';
 }
 
 const styles = StyleSheet.create({

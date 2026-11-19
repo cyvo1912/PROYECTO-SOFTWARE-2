@@ -44,7 +44,7 @@ class ProcesadorPagoSimulado {
     }
 
     if (Object.keys(fields).length > 0) {
-      throw new ValidationError('Revisa los datos del pago simulado.', fields);
+      throw new ValidationError('Revisa los datos del pago.', fields);
     }
 
     return {

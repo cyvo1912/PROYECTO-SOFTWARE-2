@@ -67,15 +67,23 @@ class EstrategiaDisponibilidadRangoFechas extends EstrategiaCalculoDisponibilida
       const slotsCalculados = [];
 
       for (const bloque of bloquesDelDia) {
-        const estaReservado = reservasDelDia.some((reserva) =>
-          bloque.seSolapaCon(reserva.horaInicio, reserva.horaFin),
-        );
-
-        if (!estaReservado) {
+        let libres = [{ inicio: bloque.horaInicio, fin: bloque.horaFin }];
+        for (const reserva of reservasDelDia) {
+          const inicio = String(reserva.horaInicio).slice(0, 5);
+          const fin = String(reserva.horaFin).slice(0, 5);
+          libres = libres.flatMap((rango) => {
+            if (inicio >= rango.fin || fin <= rango.inicio) return [rango];
+            const partes = [];
+            if (inicio > rango.inicio) partes.push({ inicio: rango.inicio, fin: inicio });
+            if (fin < rango.fin) partes.push({ inicio: fin, fin: rango.fin });
+            return partes;
+          });
+        }
+        for (const rango of libres) {
           slotsCalculados.push({
             idDisponibilidad: bloque.id,
-            horaInicio: bloque.horaInicio,
-            horaFin: bloque.horaFin,
+            horaInicio: rango.inicio,
+            horaFin: rango.fin,
             estado: 'Disponible',
             disponible: true,
           });

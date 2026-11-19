@@ -121,12 +121,48 @@ class PostgresOfertaTrabajoRepository extends OfertaTrabajoRepositoryPort {
     return result.rows.map(filaAOferta);
   }
 
+  async editarOferta(idOferta, idPadre, datos) {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const bloqueada = await client.query(`SELECT id_oferta FROM oferta_trabajo WHERE id_oferta=$1 AND id_padre=$2 AND estado='ABIERTA' FOR UPDATE`, [idOferta, idPadre]);
+      if (!bloqueada.rows.length) { await client.query('ROLLBACK'); return null; }
+      const result = await client.query(`UPDATE oferta_trabajo SET titulo=$3, descripcion=$4, distrito=$5,
+        fecha_inicio=$6::date, hora_inicio=$7::time, hora_fin=$8::time, tarifa_hora=$9,
+        numero_ninos=$10, edades_ninos=$11, requisitos=$12
+        WHERE id_oferta=$1 AND id_padre=$2 AND NOT EXISTS (
+          SELECT 1 FROM reserva r JOIN postulacion p ON p.id_postulacion=r.id_postulacion
+          WHERE p.id_oferta=$1 AND LOWER(r.estado_reserva) NOT IN ('cancelada','rechazada')
+          AND NOT (LOWER(r.estado_reserva)='pendiente' AND r.expira_en <= NOW())
+        ) RETURNING id_oferta`, [idOferta,idPadre,datos.titulo,datos.descripcion,datos.distrito,datos.fechaInicio,
+          datos.horaInicio,datos.horaFin,datos.tarifaHora,datos.numeroNinos,datos.edadesNinos,datos.requisitos]);
+      await client.query('COMMIT');
+      return result.rows.length ? this.findById(idOferta) : null;
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
+    finally { client.release(); }
+  }
+
   async listarIdsOfertasPostuladas(idNinera) {
     const result = await this.pool.query(
       `SELECT id_oferta FROM postulacion WHERE id_ninera = $1;`,
       [idNinera],
     );
     return result.rows.map((fila) => fila.id_oferta);
+  }
+
+  async listarPostulantes(idOferta, idPadre) {
+    const result = await this.pool.query(
+      `SELECT ps.id_postulacion, ps.id_ninera, ps.mensaje, ps.estado,
+              u.nombre_usuario, u.apellido_usuario
+       FROM postulacion ps
+       JOIN oferta_trabajo o ON o.id_oferta = ps.id_oferta
+       JOIN usuario u ON u.id_usuario = ps.id_ninera
+       WHERE o.id_oferta = $1 AND o.id_padre = $2
+       ORDER BY ps.fecha_postulacion DESC, ps.id_postulacion DESC`,
+      [idOferta, idPadre],
+    );
+    return result.rows.map((r) => ({ id: r.id_postulacion, idNinera: r.id_ninera,
+      nombre: `${r.nombre_usuario} ${r.apellido_usuario}`.trim(), mensaje: r.mensaje, estado: r.estado }));
   }
 
   async crearPostulacion(idOferta, idNinera, mensaje) {

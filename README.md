@@ -49,7 +49,7 @@ frontend/
   src/config/api.js         URL de la API
 database/
   schema.sql                Esquema base
-  migrations/               Migraciones 001 a 007
+  migrations/               Migraciones 001 a 010
 docs/
   uml/                      Diagramas UML editables (PlantUML)
 ```
@@ -81,6 +81,11 @@ docs/
 006_hu18_notificaciones_valoraciones.sql
 006_hu18_valoraciones.sql
 007_hu18_dispositivo_push.sql
+008_ofertas_reservas.sql
+009_reservas_grupo.sql
+010_tokens_revocados.sql
+011_ingresos_comision.sql
+010_tokens_revocados.sql
 ```
 
 Con `psql` sería así (también se pueden pegar en el editor SQL de Neon):
@@ -105,7 +110,7 @@ Edita `backend/.env` con tus propios valores:
 |---|---|
 | `PORT` | Puerto de la API (por defecto 5000) |
 | `DB` | Cadena de conexión de PostgreSQL |
-| `JWT_SECRET` | Clave para firmar los tokens (usa un texto largo y aleatorio) |
+| `JWT_SECRET` | Clave para firmar los tokens (usa un texto largo y aleatorio). **Obligatoria**: el servidor no arranca si falta o si usa el valor de ejemplo |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Credenciales de Cloudinary |
 
 El archivo `.env` no se sube al repositorio. No escribas claves reales en el código ni en `.env.example`.

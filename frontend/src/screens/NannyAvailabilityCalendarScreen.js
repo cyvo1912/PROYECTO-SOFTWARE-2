@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,8 @@ export default function NannyAvailabilityCalendarScreen({
   onBack,
   onSelectSlot,
 }) {
+  const selectorRef = useRef(null);
+  const [indiceNinera, setIndiceNinera] = useState(0);
   const {
     hoyISO,
     nineras,
@@ -83,14 +85,20 @@ export default function NannyAvailabilityCalendarScreen({
           {nineras.length > 0 && (
             <View style={styles.selectorBlock}>
               <Text style={styles.selectorLabel}>Selecciona una niñera:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorScroll}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity accessibilityLabel="Niñera anterior" onPress={() => {
+                const indice = Math.max(0, indiceNinera - 1); setIndiceNinera(indice);
+                if (nineras[indice]) seleccionarNinera(nineras[indice].id);
+                selectorRef.current?.scrollTo({ x: Math.max(0, indice * 160 - 160), animated: true });
+              }}><Ionicons name="chevron-back-circle-outline" size={28} color={colors.primary} /></TouchableOpacity>
+              <ScrollView ref={selectorRef} horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.selectorScroll} style={{ flex: 1 }}>
                 {nineras.map((n) => {
                   const activa = Number(n.id) === Number(idNineraSeleccionada);
                   return (
                     <TouchableOpacity
                       key={n.id}
                       style={[styles.nannyChip, activa && styles.nannyChipActive]}
-                      onPress={() => seleccionarNinera(n.id)}
+                      onPress={() => { setIndiceNinera(nineras.findIndex((item) => item.id === n.id)); seleccionarNinera(n.id); }}
                       activeOpacity={0.8}
                     >
                       <Ionicons
@@ -105,6 +113,12 @@ export default function NannyAvailabilityCalendarScreen({
                   );
                 })}
               </ScrollView>
+              <TouchableOpacity accessibilityLabel="Niñera siguiente" onPress={() => {
+                const indice = Math.min(nineras.length - 1, indiceNinera + 1); setIndiceNinera(indice);
+                if (nineras[indice]) seleccionarNinera(nineras[indice].id);
+                selectorRef.current?.scrollTo({ x: indice * 160, animated: true });
+              }}><Ionicons name="chevron-forward-circle-outline" size={28} color={colors.primary} /></TouchableOpacity>
+              </View>
             </View>
           )}
 

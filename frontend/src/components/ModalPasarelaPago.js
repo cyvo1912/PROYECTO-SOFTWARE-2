@@ -15,49 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { pagarReserva } from '../services/reservaService';
 
-const TAMANO_QR = 17;
-const ORIGENES_MARCADOR = [[0, 0], [0, 10], [10, 0]];
-
-function obtenerModuloMarcador(fila, columna) {
-  for (const [origenFila, origenColumna] of ORIGENES_MARCADOR) {
-    const filaLocal = fila - origenFila;
-    const columnaLocal = columna - origenColumna;
-    if (filaLocal < 0 || filaLocal > 6 || columnaLocal < 0 || columnaLocal > 6) continue;
-    return (
-      filaLocal === 0 || filaLocal === 6 || columnaLocal === 0 || columnaLocal === 6 ||
-      (filaLocal >= 2 && filaLocal <= 4 && columnaLocal >= 2 && columnaLocal <= 4)
-    );
-  }
-  return null;
-}
-
-function esModuloOscuro(fila, columna, referencia) {
-  const moduloMarcador = obtenerModuloMarcador(fila, columna);
-  if (moduloMarcador !== null) return moduloMarcador;
-  const semilla = Array.from(referencia).reduce((total, caracter) => total + caracter.charCodeAt(0), 0);
-  return ((fila * 13 + columna * 7 + semilla) % 5) < 2;
-}
-
-function CodigoQrSimulado({ reservaId, monto }) {
-  const referencia = `MINANA-${reservaId}-${monto}`;
-  return (
-    <View style={styles.qrBox} accessibilityLabel={`Código QR simulado para la reserva ${reservaId}`}>
-      <View style={styles.qrGrid}>
-        {Array.from({ length: TAMANO_QR * TAMANO_QR }, (_, indice) => {
-          const fila = Math.floor(indice / TAMANO_QR);
-          const columna = indice % TAMANO_QR;
-          return (
-            <View
-              key={`${fila}-${columna}`}
-              style={[styles.qrCell, esModuloOscuro(fila, columna, referencia) && styles.qrCellDark]}
-            />
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
 export default function ModalPasarelaPago({
   visible,
   reserva,
@@ -80,7 +37,11 @@ export default function ModalPasarelaPago({
 
   if (!reserva) return null;
 
-  const monto = Number(reserva.montoTotal || 0).toFixed(2);
+  const monto = Number(reserva.montoPago ?? reserva.montoTotal ?? 0).toFixed(2);
+  const centimos = Math.round(Number(monto) * 100);
+  const comisionCentimos = Math.round(centimos * 0.05);
+  const comision = (comisionCentimos / 100).toFixed(2);
+  const ingresoNinera = ((centimos - comisionCentimos) / 100).toFixed(2);
 
   // Formateador de tarjeta con espacios cada 4 dígitos
   const handleCardNumberChange = (text) => {
@@ -130,24 +91,25 @@ export default function ModalPasarelaPago({
         return;
       }
       if (codigoOtp.length < 4) {
-        setErrorPago('Ingresa el código de aprobación de tu app Yape o Plin.');
+        setErrorPago('Ingresa un código de autorización de 4 a 6 dígitos.');
         return;
       }
     }
 
     setProcesando(true);
-    setMensajeEstado('Conectando con pasarela segura...');
+    setMensajeEstado('Procesando pago...');
 
     try {
       // Simular latencia de verificación bancaria
       await new Promise((r) => setTimeout(r, 800));
-      setMensajeEstado('Validando fondos y token de autorización...');
+      setMensajeEstado('Confirmando operación...');
       await new Promise((r) => setTimeout(r, 700));
 
       const respuesta = await pagarReserva({
         token,
         idReserva: reserva.id,
         metodoPago: metodo,
+        montoEsperado: Number(monto),
         datosPago: {
           ultimos4: numeroTarjeta.slice(-4) || '9999',
           titular: titular.trim(),
@@ -158,7 +120,7 @@ export default function ModalPasarelaPago({
 
       setComprobante(respuesta.comprobante);
     } catch (err) {
-      setErrorPago(err.message || 'La entidad bancaria denegó la transacción simulada.');
+      setErrorPago(err.message || 'No se pudo completar el pago.');
     } finally {
       setProcesando(false);
     }
@@ -179,7 +141,7 @@ export default function ModalPasarelaPago({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Ionicons name="lock-closed" size={18} color="#059669" />
-              <Text style={styles.headerTitle}>Pago de prueba</Text>
+              <Text style={styles.headerTitle}>Pago</Text>
             </View>
             <TouchableOpacity onPress={onClose} disabled={procesando} style={styles.closeBtn}>
               <Ionicons name="close" size={20} color="#6B7280" />
@@ -195,7 +157,7 @@ export default function ModalPasarelaPago({
                 </View>
                 <Text style={styles.successTitle}>¡Pago Aprobado!</Text>
                 <Text style={styles.successSubtitle}>
-                  La niñera recibirá la solicitud y deberá aceptarla antes de habilitar el chat.
+                  No se realizó ningún cargo. Ya puedes comunicarte con la niñera desde Mensajes.
                 </Text>
 
                 <View style={styles.receiptBox}>
@@ -209,6 +171,8 @@ export default function ModalPasarelaPago({
                       S/. {monto}
                     </Text>
                   </View>
+                  <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Comisión Mi Nana (5%)</Text><Text style={styles.receiptValue}>S/. {comision}</Text></View>
+                  <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Para la niñera</Text><Text style={styles.receiptValue}>S/. {ingresoNinera}</Text></View>
                   <View style={styles.receiptRow}>
                     <Text style={styles.receiptLabel}>Método</Text>
                     <Text style={styles.receiptValue}>
@@ -224,7 +188,7 @@ export default function ModalPasarelaPago({
                 </View>
 
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleFinalizar} activeOpacity={0.85}>
-                  <Text style={styles.confirmBtnText}>Listo, ver mis reservas</Text>
+                  <Text style={styles.confirmBtnText}>Listo</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -234,6 +198,13 @@ export default function ModalPasarelaPago({
                 <View style={styles.summaryBox}>
                   <Text style={styles.summaryLabel}>Total a pagar</Text>
                   <Text style={styles.summaryAmount}>S/. {monto}</Text>
+                  <Text style={styles.summaryDetails}>Comisión de Mi Nana (5%): S/. {comision}</Text>
+                  <Text style={styles.summaryDetails}>Para la niñera: S/. {ingresoNinera}</Text>
+                  <Text style={styles.summaryDetails}>La comisión está incluida en el total.</Text>
+                  {reserva.tarifaHora != null && reserva.horas != null ? (
+                    <Text style={styles.summaryDetails}>Tarifa: S/ {Number(reserva.tarifaHora).toFixed(2)}/hora · {reserva.horas} h{(reserva.dias ?? reserva.diasPago) > 1 ? ` por día · ${reserva.dias ?? reserva.diasPago} días` : ''}</Text>
+                  ) : null}
+                  <Text style={styles.summaryDetails}>No se realizará ningún cargo. Usa datos de prueba.</Text>
                   <Text style={styles.summaryDetails}>
                     Servicio de cuidado • Reserva #{reserva.id}
                   </Text>
@@ -304,7 +275,7 @@ export default function ModalPasarelaPago({
                     <View style={styles.inputContainer}>
                       <TextInput
                         style={styles.input}
-                        placeholder="COMO FIGURA EN LA TARJETA"
+                        placeholder="Nombre del Titular"
                         placeholderTextColor="#9CA3AF"
                         autoCapitalize="characters"
                         value={titular}
@@ -331,7 +302,7 @@ export default function ModalPasarelaPago({
                       <View style={{ width: 14 }} />
 
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.inputLabel}>CVV / CVC</Text>
+                        <Text style={styles.inputLabel}>CVV</Text>
                         <View style={styles.inputContainer}>
                           <TextInput
                             style={styles.input}
@@ -354,23 +325,13 @@ export default function ModalPasarelaPago({
                       <View style={{ flex: 1 }}>
                         <Text style={styles.yapeBannerTitle}>Billetera Digital Rápida</Text>
                         <Text style={styles.yapeBannerDesc}>
-                          Simula tu pago con código de aprobación generado desde tu app bancaria.
+                          Ingresa los datos solicitados para continuar.
                         </Text>
                       </View>
                     </View>
 
-                    <View style={styles.qrPayment}>
-                      <CodigoQrSimulado reservaId={reserva.id} monto={monto} />
-                      <View style={styles.qrTextBlock}>
-                        <Text style={styles.qrTitle}>Escanea el código QR</Text>
-                        <Text style={styles.qrDescription}>
-                          En esta simulación, el QR representa el cobro de S/. {monto} para la reserva.
-                        </Text>
-                        <Text style={styles.qrReference}>Referencia: MN-{reserva.id}</Text>
-                      </View>
-                    </View>
 
-                    <Text style={styles.inputLabel}>Número de Celular Afiliado</Text>
+                    <Text style={styles.inputLabel}>Número de Celular</Text>
                     <View style={styles.inputContainer}>
                       <TextInput
                         style={styles.input}
@@ -383,11 +344,11 @@ export default function ModalPasarelaPago({
                       />
                     </View>
 
-                    <Text style={styles.inputLabel}>Código de Aprobación (OTP)</Text>
+                    <Text style={styles.inputLabel}>Código de autorización</Text>
                     <View style={styles.inputContainer}>
                       <TextInput
                         style={styles.input}
-                        placeholder="6 dígitos"
+                        placeholder="4 a 6 dígitos"
                         placeholderTextColor="#9CA3AF"
                         keyboardType="number-pad"
                         value={codigoOtp}
@@ -418,7 +379,7 @@ export default function ModalPasarelaPago({
                 <View style={styles.securityNote}>
                   <Ionicons name="shield-checkmark" size={14} color="#6B7280" />
                   <Text style={styles.securityNoteText}>
-                    Simulación de pago. No ingreses datos reales.
+                    No ingreses datos reales.
                   </Text>
                 </View>
               </>

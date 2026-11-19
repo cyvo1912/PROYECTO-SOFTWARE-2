@@ -6,6 +6,8 @@ const container = require('../container');
  * Enrutador de Reservas (solo familias autenticadas).
  */
 const { autenticar, soloFamilia } = container.authMiddleware;
+router.post('/rango', autenticar, soloFamilia, (req, res) => container.reservaController.solicitarRango(req, res));
+router.post('/grupo/:grupo/cancelar', autenticar, soloFamilia, (req, res) => container.reservaController.cancelarFechas(req, res));
 
 // POST /api/reservas/cotizar - Calcula el monto sin guardar
 router.post('/cotizar', autenticar, soloFamilia, (req, res) =>

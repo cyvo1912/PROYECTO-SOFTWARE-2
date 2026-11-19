@@ -148,6 +148,27 @@ class ServicioBolsaTrabajo {
     return this.ofertaTrabajoRepository.listarPorPadre(idPadre);
   }
 
+  async listarPostulantes(usuario, idOfertaParam) {
+    const idPadre = exigirSesion(usuario, 'ver postulantes', 'FAMILIA');
+    const idOferta = validarId(idOfertaParam);
+    const oferta = await this.ofertaTrabajoRepository.findById(idOferta);
+    if (!oferta || Number(oferta.idPadre) !== idPadre) {
+      throw new NotFoundError('La oferta de trabajo no existe.');
+    }
+    return this.ofertaTrabajoRepository.listarPostulantes(idOferta, idPadre);
+  }
+
+  async editarOferta(usuario, idOfertaParam, datos) {
+    const idPadre = exigirSesion(usuario, 'editar tu oferta', 'FAMILIA');
+    const idOferta = validarId(idOfertaParam);
+    const oferta = await this.ofertaTrabajoRepository.findById(idOferta);
+    if (!oferta || Number(oferta.idPadre) !== idPadre) throw new NotFoundError('La oferta de trabajo no existe.');
+    const validada = this._validarOferta(datos);
+    const actualizada = await this.ofertaTrabajoRepository.editarOferta(idOferta, idPadre, validada);
+    if (!actualizada) throw new ConflictError('Solo puedes editar ofertas abiertas sin una reserva vigente.');
+    return actualizada;
+  }
+
   async _obtenerPerfil(idNinera) {
     const perfil = await this.ofertaTrabajoRepository.obtenerPerfilNinera(idNinera);
     if (!perfil) {

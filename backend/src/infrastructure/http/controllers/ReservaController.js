@@ -4,6 +4,20 @@ const responderError = require('../responderError');
  * Adaptador Primario: ReservaController (GRASP Controlador)
  */
 class ReservaController {
+  async solicitarRango(req, res) {
+    try { return res.status(201).json({ success: true, data: await this.servicioReserva.solicitarRango(req.user, req.body || {}) }); }
+    catch (error) { return responderError(res, error); }
+  }
+  async cancelarFechas(req, res) {
+    try { return res.status(200).json({ success: true, data: await this.servicioReserva.cancelarFechas(req.user, req.params.grupo, req.body?.fechas) }); }
+    catch (error) { return responderError(res, error); }
+  }
+  async solicitarDesdePostulacion(req, res) {
+    try {
+      const data = await this.servicioReserva.solicitarDesdePostulacion(req.user, req.params.id, req.params.postulacionId, req.body || {});
+      return res.status(201).json({ success: true, data });
+    } catch (error) { return responderError(res, error); }
+  }
   constructor(servicioReserva) {
     if (!servicioReserva) throw new Error('servicioReserva es requerido en ReservaController');
     this.servicioReserva = servicioReserva;
@@ -59,7 +73,7 @@ class ReservaController {
       const data = await this.servicioReserva.pagar(req.user, req.params.id, req.body || {});
       return res.status(200).json({
         success: true,
-        message: 'Pago simulado procesado. La reserva queda pendiente de aceptación de la niñera.',
+        message: 'Pago registrado. Ya puedes comunicarte por el chat.',
         data,
       });
     } catch (error) {

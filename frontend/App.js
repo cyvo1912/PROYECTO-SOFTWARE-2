@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import io from 'socket.io-client';
 import { Platform, View, StyleSheet } from 'react-native';
 import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -22,7 +23,7 @@ import NotFoundScreen from './src/screens/NotFoundScreen';
 import JobBoardScreen from './src/screens/JobBoardScreen';
 import PublishJobOfferScreen from './src/screens/PublishJobOfferScreen';
 import ReservationHistoryScreen from './src/screens/ReservationHistoryScreen';
-import { API_BASE_URL, AUTH_API_URL } from './src/config/api';
+import { API_BASE_URL, AUTH_API_URL, SOCKET_URL } from './src/config/api';
 import NotificacionesScreen from './src/screens/NotificacionesScreen';
 import ValoracionScreen from './src/screens/ValoracionScreen';
 import BottomNavBar from './src/components/BottomNavBar';
@@ -57,11 +58,25 @@ export default function App() {
   const currentUserRef = useRef(sesionInicial.user);
   const [authToken, setAuthToken] = useState(() => sesionInicial.token);
   const [logoutLoading, setLogoutLoading] = useState(false);
+
+  // La presencia acompaña a la sesión, también fuera de la pantalla de chat.
+  useEffect(() => {
+    if (!authToken) return undefined;
+    const socket = io(SOCKET_URL, { auth: { token: authToken }, transports: ['websocket', 'polling'] });
+    return () => socket.disconnect();
+  }, [authToken]);
   const [selectedChild, setSelectedChild] = useState(() => sesionInicial.child);
+  const [origenFormularioHijo, setOrigenFormularioHijo] = useState(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return 'familyDashboard';
+    try { return window.sessionStorage.getItem('minana_origen_hijo') === 'familyChildren' ? 'familyChildren' : 'familyDashboard'; } catch { return 'familyDashboard'; }
+  });
+  const [origenDisponibilidad, setOrigenDisponibilidad] = useState('familyDashboard');
+  const [origenReserva, setOrigenReserva] = useState('nannyAvailability');
   // HU12: niñera cuyo perfil público se está viendo y pantalla a la que se vuelve
   const [perfilVisto, setPerfilVisto] = useState({ idNinera: null, volverA: 'landing' });
   // HU Reservas: bloque elegido en el calendario de disponibilidad
   const [slotReserva, setSlotReserva] = useState(null);
+  const [nineraCalendario, setNineraCalendario] = useState(null);
 
   // HU18 - Reserva seleccionada para valorar
   const [reservaParaValorar, setReservaParaValorar] = useState(null);
@@ -155,12 +170,24 @@ export default function App() {
   const navigateToFamilyDashboard = () => navegar('familyDashboard');
   const navigateToEditFamilyProfile = () => navegar('editFamilyProfile');
   const navigateToFamilyChildren = () => navegar('familyChildren');
-  const navigateToChildForm = (child = null) => navegar('childForm', child);
+  const navigateToChildForm = (child = null) => {
+    const origen = currentScreen === 'familyChildren' ? 'familyChildren' : 'familyDashboard';
+    setOrigenFormularioHijo(origen);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try { window.sessionStorage.setItem('minana_origen_hijo', origen); } catch (_) {}
+    }
+    navegar('childForm', child);
+  };
+  const volverDeFormularioHijo = () => navegar(origenFormularioHijo);
   const navigateToSearchNannies = () => navegar('searchNannies');
 
   // Navegación al chat
   const navigateToChat = () => navegar('chat');
-  const navigateToNannyAvailability = () => navegar('nannyAvailability');
+  const navigateToNannyAvailability = () => {
+    setOrigenDisponibilidad(currentScreen === 'familyChildren' ? 'familyChildren' : 'familyDashboard');
+    setNineraCalendario(null);
+    navegar('nannyAvailability');
+  };
 
   // HU14 - Bolsa de trabajo
   const navigateToJobBoard = () => navegar('jobBoard');
@@ -173,6 +200,8 @@ export default function App() {
     navegar('reservationHistory');
 
   const navigateToRequestReservation = (slot) => {
+    setOrigenReserva(currentScreen === 'searchNannies' ? 'searchNannies' : 'nannyAvailability');
+    if (currentScreen === 'nannyAvailability') setNineraCalendario(slot.idNinera);
     setSlotReserva(slot);
     navegar('requestReservation');
   };
@@ -406,6 +435,7 @@ export default function App() {
           token={authToken}
           user={currentUser}
           onBack={navigateToFamilyDashboard}
+          onVerPerfil={(id) => navigateToNannyPublicProfile(id, 'publishJobOffer')}
         />
       );
     }
@@ -432,6 +462,10 @@ export default function App() {
           token={authToken}
           idNinera={perfilVisto.idNinera}
           onBack={() => navegar(perfilVisto.volverA)}
+          onVerDisponibilidad={(currentUser.rol || currentUser.tipo_usuario) === 'FAMILIA' ? () => {
+            setOrigenDisponibilidad('nannyPublicProfile');
+            setNineraCalendario(perfilVisto.idNinera); navegar('nannyAvailability');
+          } : undefined}
         />
       );
     }
@@ -470,6 +504,7 @@ export default function App() {
             else navigateToNannyPublicProfile(idNinera, 'searchNannies');
           }}
           onAuthRequired={navigateToLogin}
+          onReservar={navigateToRequestReservation}
         />
       );
     }
@@ -479,7 +514,8 @@ export default function App() {
       return (
         <NannyAvailabilityCalendarScreen
           token={authToken}
-          onBack={navigateToFamilyDashboard}
+          idNinera={nineraCalendario}
+          onBack={() => navegar(origenDisponibilidad === 'nannyPublicProfile' && !perfilVisto.idNinera ? 'familyDashboard' : origenDisponibilidad)}
           onSelectSlot={navigateToRequestReservation}
         />
       );
@@ -501,7 +537,7 @@ export default function App() {
         <ReservationRequestScreen
           token={authToken}
           slot={slotReserva}
-          onBack={navigateToNannyAvailability}
+          onBack={() => navegar(origenReserva)}
           onReservaCreada={navigateToFamilyDashboard}
         />
       );
@@ -542,8 +578,8 @@ export default function App() {
           key={selectedChild ? selectedChild.id : 'nuevo'}
           token={authToken}
           child={selectedChild}
-          onBack={navigateToFamilyChildren}
-          onSaved={navigateToFamilyChildren}
+          onBack={volverDeFormularioHijo}
+          onSaved={volverDeFormularioHijo}
         />
       );
     }

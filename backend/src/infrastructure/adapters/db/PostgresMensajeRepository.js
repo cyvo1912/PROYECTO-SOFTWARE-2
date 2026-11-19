@@ -62,6 +62,14 @@ class PostgresMensajeRepository extends MensajeRepositoryPort {
         WHERE id_usuario_emisor = $1 OR id_usuario_receptor = $1
         GROUP BY contacto_id
       ),
+      contactos AS (
+        SELECT contacto_id FROM ultimos
+        UNION
+        SELECT CASE WHEN id_padre = $1 THEN id_ninera ELSE id_padre END
+        FROM reserva
+        WHERE (id_padre = $1 OR id_ninera = $1)
+          AND LOWER(estado_reserva) IN ('pagada', 'aceptada', 'completada')
+      ),
       no_leidos AS (
         SELECT id_usuario_emisor AS contacto_id, COUNT(*) AS sin_leer
         FROM mensaje
@@ -85,15 +93,18 @@ class PostgresMensajeRepository extends MensajeRepositoryPort {
         p.numero_ninos,
         m.id_mensaje,
         m.contenido AS ultimo_mensaje,
+        m.id_usuario_emisor AS ultimo_emisor,
+        m.leido AS ultimo_leido,
         m.fecha_creacion AS ultima_fecha,
         COALESCE(nl.sin_leer, 0)::int AS no_leidos
-      FROM ultimos ul
-      JOIN mensaje m ON m.id_mensaje = ul.max_id
-      JOIN usuario u ON u.id_usuario = ul.contacto_id
+      FROM contactos c
+      JOIN usuario u ON u.id_usuario = c.contacto_id
+      LEFT JOIN ultimos ul ON ul.contacto_id = c.contacto_id
+      LEFT JOIN mensaje m ON m.id_mensaje = ul.max_id
       LEFT JOIN ninera n ON n.id_ninera = u.id_usuario
       LEFT JOIN padre p ON p.id_padre = u.id_usuario
       LEFT JOIN no_leidos nl ON nl.contacto_id = ul.contacto_id
-      ORDER BY m.fecha_creacion DESC;
+      ORDER BY m.fecha_creacion DESC NULLS LAST, u.nombre_usuario;
     `;
 
     const result = await this.pool.query(query, [userId]);
@@ -113,6 +124,8 @@ class PostgresMensajeRepository extends MensajeRepositoryPort {
       direccion: r.direccion,
       numeroNinos: r.numero_ninos,
       ultimoMensaje: r.ultimo_mensaje,
+      ultimoEmisorId: r.ultimo_emisor,
+      ultimoLeido: r.ultimo_leido,
       ultimaFecha: r.ultima_fecha,
       noLeidos: r.no_leidos,
       enLinea: false, // Enriquecido por el notifier en memoria si está conectado
@@ -153,7 +166,7 @@ class PostgresMensajeRepository extends MensajeRepositoryPort {
          (id_padre = $1 AND id_ninera = $2)
          OR (id_padre = $2 AND id_ninera = $1)
        )
-       AND LOWER(estado_reserva) IN ('aceptada', 'completada')
+       AND LOWER(estado_reserva) IN ('pagada', 'aceptada', 'completada')
        LIMIT 1;`,
       [userA, userB]
     );

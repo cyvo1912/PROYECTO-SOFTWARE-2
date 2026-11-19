@@ -103,7 +103,7 @@ class MensajeriaController {
    */
   async obtenerPerfilContacto(req, res) {
     try {
-      const perfil = await this.servicioMensajes.obtenerPerfilContacto(req.params.idContacto);
+      const perfil = await this.servicioMensajes.obtenerPerfilContacto(req.user.id, req.params.idContacto);
       if (!perfil) {
         return res.status(404).json({
           success: false,

@@ -270,6 +270,7 @@ export default function AdminDashboardScreen({
           ),
         };
       });
+      cargarNineras();
 
       Alert.alert(
         'Correcto',
@@ -631,7 +632,7 @@ export default function AdminDashboardScreen({
             )}
           </View>
 
-          <TouchableOpacity
+          {nineraSeleccionada.estado === 'PENDIENTE_VERIFICACION' && <TouchableOpacity
             style={[
               styles.activateButton,
               accionando === 'activar' &&
@@ -657,7 +658,7 @@ export default function AdminDashboardScreen({
                 </Text>
               </>
             )}
-          </TouchableOpacity>
+          </TouchableOpacity>}
         </ScrollView>
       </SafeAreaView>
     );
@@ -705,7 +706,7 @@ export default function AdminDashboardScreen({
                 seccionActiva === 'nineras' && styles.sectionTabTextActive,
               ]}
             >
-              Niñeras pendientes
+              Expedientes y certificados
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -729,13 +730,13 @@ export default function AdminDashboardScreen({
         </View>
 
         <Text style={styles.title}>
-          {seccionActiva === 'usuarios' ? 'Listado general de usuarios' : 'Niñeras pendientes'}
+          {seccionActiva === 'usuarios' ? 'Listado general de usuarios' : 'Expedientes y certificados pendientes'}
         </Text>
 
         <Text style={styles.subtitle}>
           {seccionActiva === 'usuarios'
             ? 'Consulta los datos y administra el estado de las cuentas.'
-            : 'Revisa los antecedentes y autoriza las cuentas antes de activarlas.'}
+            : 'Revisa las cuentas nuevas y los certificados pendientes, incluso de niñeras activas.'}
         </Text>
 
         {errorMessage ? (
@@ -852,7 +853,7 @@ export default function AdminDashboardScreen({
             />
 
             <Text style={styles.emptyTitle}>
-              No hay cuentas pendientes
+              No hay revisiones pendientes
             </Text>
 
             <Text style={styles.emptyText}>

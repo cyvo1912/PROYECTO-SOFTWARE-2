@@ -8,9 +8,11 @@ describe('PostgresReservaRepository', () => {
   test('protege en una sola consulta el horario de la niñera y el del mismo hijo', async () => {
     let ejecutada;
     const repositorio = new PostgresReservaRepository({
-      async query(sql, valores) {
-        ejecutada = { sql, valores };
-        return { rows: [] };
+      async connect() {
+        return { async query(sql, valores) {
+          if (sql.includes('INSERT INTO reserva')) ejecutada = { sql, valores };
+          return { rows: [] };
+        }, release() {} };
       },
     });
 
@@ -35,11 +37,11 @@ describe('PostgresReservaRepository', () => {
       },
     });
 
-    await repositorio.actualizarEstado(27, 'Pagada', ['Pendiente']);
+    await repositorio.actualizarEstado(27, 'Aceptada', ['Pagada']);
 
     assert.match(ejecutada.sql, /estado_reserva = \$2::varchar/);
     assert.match(ejecutada.sql, /LOWER\(\$2::varchar\)/);
-    assert.deepEqual(ejecutada.valores, [27, 'Pagada', ['pendiente']]);
+    assert.deepEqual(ejecutada.valores, [27, 'Aceptada', ['pagada']]);
   });
 });
 

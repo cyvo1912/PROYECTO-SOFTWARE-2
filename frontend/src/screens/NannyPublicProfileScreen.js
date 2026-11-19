@@ -21,7 +21,7 @@ import { API_BASE_URL } from '../config/api';
  * Muestra foto, biografía, experiencia, habilidades, idiomas, distritos, tarifa,
  * certificados aprobados, reputación y reseñas publicadas (HU18).
  */
-export default function NannyPublicProfileScreen({ token, idNinera, onBack }) {
+export default function NannyPublicProfileScreen({ token, idNinera, onBack, onVerDisponibilidad }) {
   const [cargando, setCargando] = useState(true);
   const [perfil, setPerfil] = useState(null);
   const [mensajeError, setMensajeError] = useState('');
@@ -99,7 +99,7 @@ export default function NannyPublicProfileScreen({ token, idNinera, onBack }) {
               <Text style={styles.verifiedText}>Niñera verificada</Text>
             </View>
           ) : (
-            <Text style={styles.previewText}>Vista previa: aún no estás verificada</Text>
+            <Text style={styles.previewText}>Perfil aún no verificado</Text>
           )}
 
           <View style={styles.statsRow}>
@@ -120,6 +120,11 @@ export default function NannyPublicProfileScreen({ token, idNinera, onBack }) {
               <Text style={styles.statLabel}>por hora</Text>
             </View>
           </View>
+          {onVerDisponibilidad && perfil.verificada ? (
+            <TouchableOpacity onPress={onVerDisponibilidad} style={{ marginTop: 16, backgroundColor: colors.primary, borderRadius: 12, padding: 12 }}>
+              <Text style={{ color: '#fff', fontWeight: '700', textAlign: 'center' }}>Consultar disponibilidad</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* Biografía */}

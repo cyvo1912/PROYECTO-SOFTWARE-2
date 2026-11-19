@@ -9,6 +9,7 @@ const {
   ValidationError,
   ReservaNoPagadaError,
   UnauthorizedError,
+  ForbiddenError,
 } = require('../../domain/errors/DomainErrors');
 
 
@@ -71,7 +72,7 @@ class ServicioMensajes {
       const tienePermiso = await this.mensajeRepository.verificarReservaPagada(emisorId, receptorId);
       if (!tienePermiso) {
         throw new ReservaNoPagadaError(
-          'No se puede iniciar la conversación: se requiere una reserva pagada y aceptada por la niñera.'
+          'No se puede iniciar la conversación: se requiere una reserva pagada.'
         );
       }
     }
@@ -195,10 +196,22 @@ class ServicioMensajes {
 
   /**
    * Obtener información de perfil de un contacto de mensajería (para botón Ver Perfil).
+   * Solo se entrega si existe una reserva pagada entre ambos usuarios (misma regla que el chat),
+   * para no exponer correo, celular ni dirección a cualquier usuario con sesión.
    */
-  async obtenerPerfilContacto(idContacto) {
-    if (!esIdPositivo(idContacto)) {
+  async obtenerPerfilContacto(idUsuarioActual, idContacto) {
+    if (!esIdPositivo(idUsuarioActual)) {
+      throw new UnauthorizedError('Debes iniciar sesión para ver el perfil del contacto.');
+    }
+    if (!esIdPositivo(idContacto) || Number(idContacto) === Number(idUsuarioActual)) {
       throw new ValidationError('Identificador de contacto inválido.');
+    }
+    const tieneReserva = await this.mensajeRepository.verificarReservaPagada(
+      Number(idUsuarioActual),
+      Number(idContacto)
+    );
+    if (!tieneReserva) {
+      throw new ForbiddenError('Solo puedes ver el perfil de contactos con una reserva pagada.');
     }
     return this.mensajeRepository.obtenerPerfilContacto(Number(idContacto));
   }

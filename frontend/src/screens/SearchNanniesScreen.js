@@ -18,6 +18,7 @@ import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import { BUSQUEDA_API_URL, GOOGLE_MAPS_API_KEY } from '../config/api';
 import { SkeletonList } from '../components/SkeletonLoader';
+import { Calendar } from 'react-native-calendars';
 
 const RADIOS_KM = [5, 10, 15, 25, 50];
 const MAX_MARCADORES_MAPA = 10;
@@ -81,7 +82,7 @@ const NINERAS_DEMO = [
  * - Vista conmutable Lista / Mapa para navegación ágil en móvil.
  * - Modo invitado para explorar antes de registrarse.
  */
-export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuthRequired }) {
+export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuthRequired, onReservar }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
 
@@ -99,6 +100,13 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
   const [resultados, setResultados] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const [tipoFecha, setTipoFecha] = useState('dia');
+  const [modo, setModo] = useState('todos');
+  const [horaInicio, setHoraInicio] = useState('');
+  const [horaFin, setHoraFin] = useState('');
+  const [calendario, setCalendario] = useState(null);
   const buscaPorZona = distritoSeleccionado !== 'todas' || Boolean(ubicacion);
 
   const obtenerUbicacionActual = useCallback(async () => {
@@ -132,7 +140,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
       setErrorMessage('');
       setFieldErrors({});
 
-      const origen = ubicacionForzada || ubicacion;
+      const origen = ubicacionForzada === undefined ? ubicacion : ubicacionForzada;
 
       setBuscando(true);
       setYaBusco(true);
@@ -142,6 +150,11 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
         const experienciaAplicada = filtrosForzados.experienciaMinima ?? experienciaMinima;
 
         if (!token) {
+          if (desde || hasta || horaInicio || horaFin) {
+            setErrorMessage('Inicia sesión para buscar por disponibilidad.');
+            setResultados([]);
+            return;
+          }
           // Modo invitado: filtrar la lista de demostración
           let demo = [...NINERAS_DEMO];
           if (tarifaAplicada.trim() !== '') {
@@ -162,6 +175,13 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
         }
         if (tarifaAplicada.trim() !== '') params.append('tarifaMaxima', tarifaAplicada.trim());
         if (experienciaAplicada.trim() !== '') params.append('experienciaMinima', experienciaAplicada.trim());
+        const fechas = filtrosForzados.limpiarDisponibilidad ? { desde: '', hasta: '', horaInicio: '', horaFin: '' } : { desde, hasta, horaInicio, horaFin };
+        if (fechas.desde) params.set('desde', fechas.desde);
+        if (fechas.hasta && tipoFecha === 'rango') params.set('hasta', fechas.hasta);
+        if (tipoFecha === 'rango' && fechas.desde && !fechas.hasta) { setErrorMessage('Selecciona la fecha final.'); setResultados([]); return; }
+        if (fechas.horaInicio) params.set('horaInicio', fechas.horaInicio);
+        if (fechas.horaFin) params.set('horaFin', fechas.horaFin);
+        if (fechas.desde) params.set('modo', tipoFecha === 'rango' ? modo : 'todos');
 
         const response = await fetch(`${BUSQUEDA_API_URL}/ninera?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -182,7 +202,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
         setBuscando(false);
       }
     },
-    [ubicacion, radioKm, tarifaMaxima, experienciaMinima, obtenerUbicacionActual, token]
+    [ubicacion, radioKm, tarifaMaxima, experienciaMinima, token, desde, hasta, tipoFecha, modo, horaInicio, horaFin]
   );
 
   // Mostrar candidatas verificadas desde el inicio, incluso sin GPS.
@@ -193,7 +213,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
       return;
     }
     buscarNineras(null);
-  }, [token, buscarNineras]);
+  }, [token]);
 
   const mapaUrl = construirUrlMapa(ubicacion, resultados);
 
@@ -238,6 +258,49 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
               <Ionicons name="options-outline" size={18} color={colors.primary} />
               <Text style={styles.sectionTitle}>Filtros de búsqueda</Text>
             </View>
+
+            <Text style={styles.label}>Disponibilidad</Text>
+            <View style={styles.quickChipsRow}>
+              {[['dia', 'Un día'], ['rango', 'Rango de días']].map(([valor, etiqueta]) => (
+                <TouchableOpacity key={valor} style={[styles.quickChip, tipoFecha === valor && styles.quickChipActive]}
+                  onPress={() => { setTipoFecha(valor); setHasta(''); setCalendario(null); }}>
+                  <Text style={[styles.quickChipText, tipoFecha === valor && styles.quickChipTextActive]}>{etiqueta}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={isMobile ? styles.filterInputsMobile : styles.row}>
+              <View style={[styles.col, { flex: 1 }]}>
+                <Text style={styles.label}>{tipoFecha === 'dia' ? 'Fecha' : 'Desde'}</Text>
+                <TouchableOpacity style={[styles.inputWrapper, { paddingVertical: 12 }]} onPress={() => setCalendario(calendario === 'desde' ? null : 'desde')}>
+                  <Text>{desde ? desde.split('-').reverse().join('/') : 'Seleccionar fecha'}</Text>
+                </TouchableOpacity>
+              </View>
+              {tipoFecha === 'rango' && <View style={[styles.col, { flex: 1 }]}>
+                <Text style={styles.label}>Hasta</Text>
+                <TouchableOpacity style={[styles.inputWrapper, { paddingVertical: 12 }]} onPress={() => setCalendario(calendario === 'hasta' ? null : 'hasta')}>
+                  <Text>{hasta ? hasta.split('-').reverse().join('/') : 'Seleccionar fecha'}</Text>
+                </TouchableOpacity>
+              </View>}
+            </View>
+            {calendario && <Calendar onDayPress={(day) => {
+              if (calendario === 'desde') { setDesde(day.dateString); if (hasta && day.dateString > hasta) setHasta(''); }
+              else setHasta(day.dateString);
+              setCalendario(null);
+            }} markedDates={(calendario === 'desde' ? desde : hasta) ? { [calendario === 'desde' ? desde : hasta]: { selected: true, selectedColor: colors.primary } } : {}} />}
+            {tipoFecha === 'rango' && <View style={styles.quickChipsRow}>
+              {[['todos', 'Todos los días'], ['alguno', 'Al menos un día']].map(([valor, etiqueta]) => (
+                <TouchableOpacity key={valor} style={[styles.quickChip, modo === valor && styles.quickChipActive]} onPress={() => setModo(valor)}>
+                  <Text style={[styles.quickChipText, modo === valor && styles.quickChipTextActive]}>{etiqueta}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>}
+            <View style={isMobile ? styles.filterInputsMobile : styles.row}>
+              <View style={[styles.col, { flex: 1 }]}><Field label="Desde las (opcional)" placeholder="08:00" value={horaInicio} onChangeText={setHoraInicio} maxLength={5} /></View>
+              <View style={[styles.col, { flex: 1 }]}><Field label="Hasta las (opcional)" placeholder="12:00" value={horaFin} onChangeText={setHoraFin} maxLength={5} /></View>
+            </View>
+            {(desde || hasta || horaInicio || horaFin) ? <TouchableOpacity onPress={() => { setDesde(''); setHasta(''); setHoraInicio(''); setHoraFin(''); setCalendario(null); buscarNineras(ubicacion, { limpiarDisponibilidad: true }); }}>
+              <Text style={{ color: colors.primary, fontWeight: '700', marginBottom: 12 }}>Limpiar disponibilidad</Text>
+            </TouchableOpacity> : null}
 
             <View style={styles.quickChipsRow}>
               <TouchableOpacity
@@ -483,10 +546,12 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
                       setExperienciaMinima('');
                       setDistritoSeleccionado('todas');
                       setUbicacion(null);
+                      setDesde(''); setHasta(''); setHoraInicio(''); setHoraFin('');
                       buscarNineras(null, {
                         radioKm: 15,
                         tarifaMaxima: '',
                         experienciaMinima: '',
+                        limpiarDisponibilidad: true,
                       });
                     }}
                     activeOpacity={0.8}
@@ -530,6 +595,14 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
                 <NannyCard
                   key={ninera.id}
                   ninera={ninera}
+                  onReservarRango={() => { const r = ninera.rangoReservable; onReservar?.({ fecha: r.desde, fechaHasta: r.hasta, horaInicio: r.horaInicio, horaFin: r.horaFin, idNinera: ninera.id, nombreNinera: ninera.nombre, tarifaHora: ninera.tarifaHora }); }}
+                  onReservar={(fecha, slot) => {
+                    const [h, m] = slot.horaInicio.split(':').map(Number);
+                    const maximo = h * 60 + m + 720;
+                    const [finH, finM] = slot.horaFin.split(':').map(Number);
+                    const fin = finH * 60 + finM > maximo ? `${String(Math.floor(maximo / 60)).padStart(2, '0')}:${String(maximo % 60).padStart(2, '0')}` : slot.horaFin;
+                    onReservar?.({ fecha, horaInicio: slot.horaInicio, horaFin: fin, idDisponibilidad: slot.idDisponibilidad, idNinera: ninera.id, nombreNinera: ninera.nombre, tarifaHora: ninera.tarifaHora });
+                  }}
                   onVerPerfil={() => {
                     if (!token && onAuthRequired) {
                       onAuthRequired(ninera);
@@ -563,7 +636,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
   );
 }
 
-function NannyCard({ ninera, onVerPerfil }) {
+function NannyCard({ ninera, onVerPerfil, onReservar, onReservarRango }) {
   return (
     <View style={styles.nannyCard}>
       <View style={styles.nannyCardTop}>
@@ -614,6 +687,18 @@ function NannyCard({ ninera, onVerPerfil }) {
       </View>
 
       {ninera.experiencia ? <Text style={styles.nannyDesc}>{ninera.experiencia}</Text> : null}
+      {ninera.rangoReservable && <TouchableOpacity style={styles.verPerfilBtn} onPress={onReservarRango}><Ionicons name="calendar-outline" size={16} color={colors.primary} /><Text style={styles.verPerfilBtnText}>Reservar todas las fechas · {ninera.rangoReservable.horaInicio}–{ninera.rangoReservable.horaFin}</Text></TouchableOpacity>}
+
+      {ninera.disponibilidadCoincidente && Object.entries(ninera.disponibilidadCoincidente).map(([fecha, slots]) => (
+        <View key={fecha} style={{ marginTop: 10 }}>
+          <Text style={{ color: '#374151', fontWeight: '700' }}>{fecha.split('-').reverse().join('/')}</Text>
+          {slots.map((slot) => <View key={`${slot.idDisponibilidad}-${slot.horaInicio}-${slot.horaFin}`} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 6 }}>
+            <Text style={{ color: '#4B5563' }}>{slot.horaInicio} – {slot.horaFin}</Text>
+            <TouchableOpacity onPress={() => onReservar(fecha, slot)}><Text style={{ color: colors.primary, fontWeight: '700', paddingVertical: 5 }}>Reservar</Text></TouchableOpacity>
+          </View>)}
+        </View>
+      ))}
+      {ninera.diasCoincidentes > 1 && <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 8 }}>Selecciona un horario para reservar ese día.</Text>}
 
       {/* HU12: abre el perfil público ampliado de la niñera */}
       {onVerPerfil ? (

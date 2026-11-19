@@ -16,7 +16,7 @@ export default function BottomNavBar({ currentScreen, user, onNavigate }) {
   const isMobile = width < 768;
 
   // Solo se muestra en dispositivos móviles para usuarios autenticados
-  if (!isMobile || !user) {
+  if (Platform.OS === 'web' || !isMobile || !user) {
     return null;
   }
 
@@ -49,12 +49,20 @@ export default function BottomNavBar({ currentScreen, user, onNavigate }) {
       activo: currentScreen === 'chat',
     },
     {
+      id: 'reservas',
+      label: 'Reservas',
+      icon: 'calendar-outline',
+      iconActive: 'calendar',
+      target: 'reservationHistory',
+      activo: currentScreen === 'reservationHistory',
+    },
+    {
       id: 'perfil',
       label: 'Perfil',
       icon: 'person-outline',
       iconActive: 'person',
       target: 'familyDashboard',
-      activo: ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'reservationHistory', 'notificaciones'].includes(currentScreen),
+      activo: ['familyDashboard', 'editFamilyProfile', 'familyChildren', 'childForm', 'notificaciones'].includes(currentScreen),
     },
   ];
 
@@ -128,10 +136,6 @@ export default function BottomNavBar({ currentScreen, user, onNavigate }) {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F1EEF9',

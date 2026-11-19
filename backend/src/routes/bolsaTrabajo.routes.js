@@ -27,6 +27,14 @@ router.get('/', autenticar, soloNinera, (req, res) =>
 router.post('/', autenticar, soloFamilia, (req, res) =>
   container.bolsaTrabajoController.publicar(req, res),
 );
+router.put('/:id', autenticar, soloFamilia, (req, res) => container.bolsaTrabajoController.editar(req, res));
+
+router.get('/:id/postulaciones', autenticar, soloFamilia, (req, res) =>
+  container.bolsaTrabajoController.postulantes(req, res),
+);
+router.post('/:id/postulaciones/:postulacionId/reserva', autenticar, soloFamilia, (req, res) =>
+  container.reservaController.solicitarDesdePostulacion(req, res),
+);
 
 router.get('/:id', autenticar, soloNinera, (req, res) =>
   container.bolsaTrabajoController.obtener(req, res),

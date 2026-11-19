@@ -37,7 +37,10 @@ class ServicioPerfilPublico {
       throw new NotFoundError(PERFIL_NO_DISPONIBLE);
     }
 
-    if (!esVisiblePara(ninera, usuario)) {                          // Decisión 3
+    const postulanteDeFamilia = !esVisiblePara(ninera, usuario) && usuario?.tipo_usuario === 'FAMILIA' && ninera.estadoCuenta === 'ACTIVA'
+      && this.perfilRepository.esPostulanteDeFamilia
+      && await this.perfilRepository.esPostulanteDeFamilia(id, Number(usuario.id));
+    if (!esVisiblePara(ninera, usuario) && !postulanteDeFamilia) {   // Decisión 3
       throw new NotFoundError(PERFIL_NO_DISPONIBLE);
     }
 

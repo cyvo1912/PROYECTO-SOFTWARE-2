@@ -127,7 +127,13 @@ class ServicioAuth {
     }
 
     // Invalida el token en el servicio de tokens (lista de revocación)
-    this.tokenService.invalidateToken(token);
+    // y la persiste para que sobreviva a reinicios. Si la BD falla, el token igual
+    // queda revocado en memoria y el cierre de sesión no se bloquea.
+    try {
+      await this.tokenService.invalidateToken(token);
+    } catch (error) {
+      console.warn('Aviso: no se pudo persistir la revocación del token:', error.message);
+    }
 
     return {
       success: true,

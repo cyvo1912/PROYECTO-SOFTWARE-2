@@ -152,7 +152,7 @@ export default function EditPublicProfileScreen({ token, onBack, onVerPerfil }) 
 
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
-          <Text style={styles.title}>Mi perfil público</Text>
+          <Text style={styles.title}>Presentación pública</Text>
           <Text style={styles.subtitle}>
             Esto es lo que verán las familias cuando busquen una niñera. No se muestran tu DNI, correo ni celular.
           </Text>

@@ -3,6 +3,7 @@ const PostgresUserRepository = require('./infrastructure/adapters/db/PostgresUse
 const PostgresHijoRepository = require('./infrastructure/adapters/db/PostgresHijoRepository');
 const BcryptPasswordHasher = require('./infrastructure/adapters/security/BcryptPasswordHasher');
 const JwtTokenService = require('./infrastructure/adapters/security/JwtTokenService');
+const PostgresTokenRevocadoRepository = require('./infrastructure/adapters/db/PostgresTokenRevocadoRepository');
 const PostgresMultimediaRepository = require('./infrastructure/adapters/db/PostgresMultimediaRepository');
 const CloudinaryAlmacenamiento = require('./infrastructure/adapters/storage/CloudinaryAlmacenamiento');
 const ServicioAuth = require('./application/services/ServicioAuth');
@@ -59,7 +60,11 @@ class Container {
 
     // Adaptadores Secundarios (Seguridad / Tokens)
     this.passwordHasher = new BcryptPasswordHasher();
-    this.tokenService = new JwtTokenService();
+    this.tokenService = new JwtTokenService(
+      undefined,
+      '7d',
+      new PostgresTokenRevocadoRepository(pool),
+    );
     this.multimediaRepository = new PostgresMultimediaRepository(pool);
     this.administradorRepository = new PostgresAdministradorRepository(pool);
     this.disponibilidadRepository = new PostgresDisponibilidadRepository(pool);
@@ -119,6 +124,8 @@ class Container {
     });
     this.servicioBusqueda = new ServicioBusqueda({
       userRepository: this.userRepository,
+      disponibilidadRepository: this.disponibilidadRepository,
+      estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,
     });
     this.servicioDisponibilidad = new ServicioDisponibilidad({
       disponibilidadRepository: this.disponibilidadRepository,
@@ -130,6 +137,7 @@ class Container {
 
     this.servicioReserva = new ServicioReserva({
       reservaRepository: this.reservaRepository,
+      ofertaTrabajoRepository: this.ofertaTrabajoRepository,
       disponibilidadRepository: this.disponibilidadRepository,
       hijoRepository: this.hijoRepository,
       estrategiaDisponibilidad: this.estrategiaCalculoDisponibilidad,

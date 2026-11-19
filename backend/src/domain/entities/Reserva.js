@@ -19,7 +19,10 @@ class Reserva {
     horas = null,
     montoTotal = null,
     fechaCreacion = null,
+    fechaPago = null,
+    comisionPlataforma = null,
     expiraEn = null,
+    grupoReserva = null,
   }) {
     this.id = id;
     this.idPadre = idPadre;
@@ -35,7 +38,10 @@ class Reserva {
     this.horas = horas;
     this.montoTotal = montoTotal;
     this.fechaCreacion = fechaCreacion;
+    this.fechaPago = fechaPago;
+    this.comisionPlataforma = comisionPlataforma;
     this.expiraEn = expiraEn ? new Date(expiraEn) : null; // fin de los 10 min para pagar
+    this.grupoReserva = grupoReserva;
   }
 
   estaPendiente() {

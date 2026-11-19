@@ -6,6 +6,23 @@ const Disponibilidad = require('../../../domain/entities/Disponibilidad');
  * Implementa DisponibilidadRepositoryPort aislando todas las consultas SQL.
  */
 class PostgresDisponibilidadRepository extends DisponibilidadRepositoryPort {
+  async listarParaBusqueda(ids, desde, hasta) {
+    if (!ids.length) return { bloques: [], reservas: [] };
+    const [bloques, reservas] = await Promise.all([
+      this.pool.query(`SELECT id_disponibilidad,id_ninera,TO_CHAR(fecha,'YYYY-MM-DD') AS fecha,dia_semana,
+        TO_CHAR(hora_inicio,'HH24:MI') AS hora_inicio,TO_CHAR(hora_fin,'HH24:MI') AS hora_fin,estado
+        FROM disponibilidad WHERE id_ninera=ANY($1::int[]) AND
+        ((fecha BETWEEN $2::date AND $3::date) OR (fecha IS NULL AND dia_semana IS NOT NULL))`, [ids, desde, hasta]),
+      this.pool.query(`SELECT id_ninera,TO_CHAR(fecha_reserva,'YYYY-MM-DD') AS fecha_reserva,
+        TO_CHAR(hora_inicio,'HH24:MI') AS hora_inicio,TO_CHAR(hora_fin,'HH24:MI') AS hora_fin
+        FROM reserva WHERE id_ninera=ANY($1::int[]) AND fecha_reserva BETWEEN $2::date AND $3::date
+        AND LOWER(COALESCE(estado_reserva,'pendiente')) NOT IN ('cancelada','rechazada')
+        AND NOT (LOWER(COALESCE(estado_reserva,'pendiente'))='pendiente' AND expira_en IS NOT NULL AND expira_en<=NOW())`, [ids, desde, hasta]),
+    ]);
+    return { bloques: bloques.rows.map(filaADisponibilidad), reservas: reservas.rows.map((r) => ({
+      idNinera: r.id_ninera, fechaReserva: r.fecha_reserva, horaInicio: r.hora_inicio, horaFin: r.hora_fin,
+    })) };
+  }
   constructor(pool) {
     super();
     if (!pool) throw new Error('pool de PostgreSQL es requerido en PostgresDisponibilidadRepository');

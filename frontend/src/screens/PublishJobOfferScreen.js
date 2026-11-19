@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
+import ModalPasarelaPago from '../components/ModalPasarelaPago';
+import { Calendar } from 'react-native-calendars';
 
 const FORMULARIO_VACIO = {
   titulo: '',
@@ -29,12 +31,17 @@ const FORMULARIO_VACIO = {
   requisitos: '',
 };
 
+function totalOferta(oferta) {
+  const minutos = (hora) => { const [h, m] = hora.split(':').map(Number); return h * 60 + m; };
+  return (Number(oferta.tarifaHora) * (minutos(oferta.horaFin) - minutos(oferta.horaInicio)) / 60).toFixed(2);
+}
+
 /**
  * Pantalla: Publicar oferta de trabajo (HU14 - Bolsa de Trabajo)
  * La familia publica las ofertas que las niñeras exploran en la bolsa de trabajo
  * (POST /api/ofertas) y revisa las que ya publicó (GET /api/ofertas/mis-ofertas).
  */
-export default function PublishJobOfferScreen({ token, user, onBack }) {
+export default function PublishJobOfferScreen({ token, user, onBack, onVerPerfil }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
@@ -46,9 +53,61 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [mostrandoCalendario, setMostrandoCalendario] = useState(false);
+  const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
+
+  const nuevaOferta = () => {
+    setEditandoId(null); setForm({ ...FORMULARIO_VACIO, distrito: user?.detalles?.distrito || '' });
+    setErrorMessage(''); setFieldErrors({}); setMostrandoFormulario(true);
+  };
+  const editarOferta = (oferta) => {
+    setEditandoId(oferta.id);
+    setForm(Object.fromEntries(Object.keys(FORMULARIO_VACIO).map((key) => [key, String(oferta[key] ?? '')])));
+    setErrorMessage(''); setFieldErrors({}); setMostrandoFormulario(true);
+  };
 
   const [misOfertas, setMisOfertas] = useState([]);
   const [loadingOfertas, setLoadingOfertas] = useState(true);
+  const [ofertaAbierta, setOfertaAbierta] = useState(null);
+  const [postulantes, setPostulantes] = useState([]);
+  const [cargandoPostulantes, setCargandoPostulantes] = useState(false);
+  const [seleccion, setSeleccion] = useState(null);
+  const [direccion, setDireccion] = useState(user?.detalles?.direccion || '');
+  const [reservando, setReservando] = useState(false);
+  const [reservaPago, setReservaPago] = useState(null);
+
+  const reservarPostulacion = async () => {
+    if (!seleccion || reservando) return;
+    setErrorMessage('');
+    setReservando(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/ofertas/${seleccion.oferta.id}/postulaciones/${seleccion.postulante.id}/reserva`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ direccion }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'No se pudo crear la reserva.');
+      setReservaPago(data.data);
+    } catch (error) { setErrorMessage(error.message || 'Error de conexión.'); }
+    finally { setReservando(false); }
+  };
+
+  const verPostulantes = async (id) => {
+    if (ofertaAbierta === id) { setOfertaAbierta(null); return; }
+    setOfertaAbierta(id);
+    setPostulantes([]);
+    setCargandoPostulantes(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/ofertas/${id}/postulaciones`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'No se pudieron cargar las postulaciones.');
+      setPostulantes(data.data || []);
+    } catch (error) { setErrorMessage(error.message || 'Error de conexión.'); }
+    finally { setCargandoPostulantes(false); }
+  };
 
   const cargarMisOfertas = useCallback(async () => {
     setLoadingOfertas(true);
@@ -84,7 +143,7 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
     if (!form.titulo.trim()) errores.titulo = 'El título es obligatorio.';
     if (!form.descripcion.trim()) errores.descripcion = 'La descripción es obligatoria.';
     if (!form.distrito.trim()) errores.distrito = 'El distrito es obligatorio.';
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.fechaInicio.trim())) errores.fechaInicio = 'Usa el formato AAAA-MM-DD.';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.fechaInicio.trim())) errores.fechaInicio = 'Selecciona una fecha.';
     if (!/^\d{2}:\d{2}$/.test(form.horaInicio.trim())) errores.horaInicio = 'Usa el formato HH:MM.';
     if (!/^\d{2}:\d{2}$/.test(form.horaFin.trim())) errores.horaFin = 'Usa el formato HH:MM.';
     if (!form.tarifaHora.trim() || Number(form.tarifaHora) <= 0) errores.tarifaHora = 'Ingresa una tarifa válida.';
@@ -96,8 +155,8 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
 
     setSaving(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/ofertas`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/ofertas${editandoId ? `/${editandoId}` : ''}`, {
+        method: editandoId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -112,6 +171,8 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
       if (response.ok && data.success) {
         setSuccessMessage(data.message || 'Oferta publicada correctamente.');
         setForm({ ...FORMULARIO_VACIO, distrito: form.distrito });
+        setMostrandoFormulario(false);
+        setEditandoId(null);
         cargarMisOfertas();
       } else {
         setErrorMessage(data.message || 'No se pudo publicar la oferta.');
@@ -151,10 +212,10 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
-          <Text style={styles.screenTitle}>Publicar oferta de trabajo</Text>
+        {mostrandoFormulario && <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
+          <Text style={styles.screenTitle}>{editandoId ? 'Editar oferta' : 'Publicar oferta de trabajo'}</Text>
           <Text style={styles.screenSubtitle}>
-            Tu oferta aparecerá en la bolsa de trabajo para que las niñeras se postulen.
+            {editandoId ? 'Los cambios serán visibles para las postulantes. No se puede editar si hay una reserva vigente.' : 'Tu oferta aparecerá en la bolsa de trabajo para que las niñeras se postulen.'}
           </Text>
 
           {successMessage ? (
@@ -197,15 +258,13 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
           />
 
           <View style={[styles.row, isMobile && styles.rowMobile]}>
-            <Field
-              style={styles.rowItem}
-              label="Fecha de inicio"
-              placeholder="AAAA-MM-DD"
-              value={form.fechaInicio}
-              onChangeText={actualizar('fechaInicio')}
-              error={fieldErrors.fechaInicio}
-              maxLength={10}
-            />
+            <View style={[styles.formGroup, styles.rowItem]}>
+              <Text style={styles.label}>Fecha de inicio</Text>
+              <TouchableOpacity style={[styles.inputWrapper, { paddingVertical: 12 }]} onPress={() => setMostrandoCalendario(!mostrandoCalendario)}>
+                <Text style={{ color: form.fechaInicio ? '#111827' : '#9CA3AF' }}>{form.fechaInicio ? form.fechaInicio.split('-').reverse().join('/') : 'Seleccionar fecha'}</Text>
+              </TouchableOpacity>
+              {fieldErrors.fechaInicio ? <Text style={styles.fieldErrorText}>{fieldErrors.fechaInicio}</Text> : null}
+            </View>
             <Field
               style={styles.rowItem}
               label="Hora inicio"
@@ -226,6 +285,7 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
             />
           </View>
 
+          {mostrandoCalendario && <Calendar onDayPress={(dia) => { actualizar('fechaInicio')(dia.dateString); setMostrandoCalendario(false); }} markedDates={form.fechaInicio ? { [form.fechaInicio]: { selected: true, selectedColor: colors.primary } } : {}} />}
           <View style={[styles.row, isMobile && styles.rowMobile]}>
             <Field
               style={styles.rowItem}
@@ -277,14 +337,19 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
             ) : (
               <>
                 <Ionicons name="megaphone-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Publicar oferta</Text>
+                <Text style={styles.submitButtonText}>{editandoId ? 'Guardar cambios' : 'Publicar oferta'}</Text>
               </>
             )}
           </TouchableOpacity>
-        </View>
+          <TouchableOpacity onPress={() => setMostrandoFormulario(false)} style={{ padding: 14, alignItems: 'center' }}><Text style={{ color: colors.primary, fontWeight: '700' }}>Cancelar</Text></TouchableOpacity>
+        </View>}
 
-        <View style={[styles.listCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
-          <Text style={styles.listTitle}>Mis ofertas publicadas</Text>
+        {!mostrandoFormulario && <View style={[styles.listCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
+          <Text style={styles.listTitle}>Mis ofertas</Text>
+          <Text style={styles.offerDesc}>Publica tus necesidades, revisa postulantes y gestiona tus ofertas.</Text>
+          {successMessage ? <Text style={{ color: '#047857', marginVertical: 8 }}>{successMessage}</Text> : null}
+          {errorMessage ? <Text style={{ color: '#DC2626', marginVertical: 8 }}>{errorMessage}</Text> : null}
+          <TouchableOpacity style={[styles.submitButton, { marginVertical: 12 }]} onPress={nuevaOferta}><Text style={styles.submitButtonText}>Publicar oferta</Text></TouchableOpacity>
           {loadingOfertas ? (
             <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
           ) : misOfertas.length === 0 ? (
@@ -298,19 +363,56 @@ export default function PublishJobOfferScreen({ token, user, onBack }) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.offerTitle} numberOfLines={1}>{oferta.titulo}</Text>
                   <Text style={styles.offerDesc}>
-                    {oferta.distrito}  •  {oferta.fechaInicio}  •  {oferta.horaInicio} - {oferta.horaFin}  •  S/. {oferta.tarifaHora}/h
+                    {oferta.distrito}  •  {oferta.fechaInicio.split('-').reverse().join('/')}  •  {oferta.horaInicio} - {oferta.horaFin}  •  S/. {oferta.tarifaHora}/h
                   </Text>
                 </View>
-                <View style={styles.applicantsBadge}>
+                <TouchableOpacity style={styles.applicantsBadge} onPress={() => verPostulantes(oferta.id)}>
                   <Text style={styles.applicantsBadgeText}>
                     {oferta.totalPostulaciones} {oferta.totalPostulaciones === 1 ? 'postulante' : 'postulantes'}
                   </Text>
-                </View>
+                </TouchableOpacity>
+                {oferta.estado === 'ABIERTA' && <TouchableOpacity onPress={() => editarOferta(oferta)} style={{ padding: 8 }}><Text style={{ color: colors.primary, fontWeight: '700' }}>Editar</Text></TouchableOpacity>}
+                {ofertaAbierta === oferta.id && (
+                  <View style={{ width: '100%', marginTop: 12 }}>
+                    {cargandoPostulantes ? <ActivityIndicator color={colors.primary} /> : postulantes.length === 0 ? (
+                      <Text>Aún no hay postulaciones.</Text>
+                    ) : postulantes.map((p) => (
+                      <View key={p.id} style={{ paddingVertical: 10 }}>
+                        <Text style={styles.offerTitle}>{p.nombre} · {p.estado}</Text>
+                        {p.mensaje ? <Text style={styles.offerDesc}>{p.mensaje}</Text> : null}
+                        <TouchableOpacity onPress={() => onVerPerfil(p.idNinera)}>
+                          <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 6 }}>Ver perfil</Text>
+                        </TouchableOpacity>
+                        {oferta.estado === 'ABIERTA' && p.estado === 'PENDIENTE' && (
+                          <TouchableOpacity onPress={() => setSeleccion({ oferta, postulante: p })}>
+                            <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 8 }}>Seleccionar y pagar</Text>
+                          </TouchableOpacity>
+                        )}
+                        {seleccion?.postulante.id === p.id && seleccion?.oferta.id === oferta.id && (
+                          <View style={{ marginTop: 10, gap: 8 }}>
+                            <Text style={styles.offerDesc}>Servicio: {oferta.fechaInicio.split('-').reverse().join('/')}, {oferta.horaInicio} a {oferta.horaFin}. Tarifa de la oferta: S/ {Number(oferta.tarifaHora).toFixed(2)} por hora.</Text>
+                            <Text style={styles.offerTitle}>Total: S/ {totalOferta(oferta)}</Text>
+                            <TextInput value={direccion} onChangeText={setDireccion} placeholder="Dirección del servicio" style={styles.input} />
+                            <TouchableOpacity style={styles.submitButton} disabled={reservando} onPress={reservarPostulacion}>
+                              <Text style={styles.submitButtonText}>{reservando ? 'Reservando...' : 'Continuar al pago'}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             ))
           )}
-        </View>
+        </View>}
       </ScrollView>
+      <ModalPasarelaPago key={reservaPago?.id || 'sin-reserva'} visible={Boolean(reservaPago)} reserva={reservaPago} token={token}
+        onClose={() => { setReservaPago(null); cargarMisOfertas(); }} onPagoExitoso={() => {
+          setReservaPago(null); setSeleccion(null); setOfertaAbierta(null);
+          setSuccessMessage('Pago registrado. Ya puedes comunicarte con la niñera.');
+          cargarMisOfertas();
+        }} />
     </SafeAreaView>
   );
 }
@@ -526,6 +628,7 @@ const styles = StyleSheet.create({
   },
   offerRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 10,

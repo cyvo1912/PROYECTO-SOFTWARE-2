@@ -10,6 +10,7 @@ const {
   ValidationError,
   ReservaNoPagadaError,
   UnauthorizedError,
+  ForbiddenError,
 } = require('../src/domain/errors/DomainErrors');
 
 /**
@@ -196,7 +197,7 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
     });
   });
 
-  test('rechaza el envío con ReservaNoPagadaError si la reserva no fue aceptada', async () => {
+  test('rechaza el envío con ReservaNoPagadaError si la reserva no fue pagada', async () => {
     // No agregamos una reserva aceptada entre ID_PADRE e ID_NINERA.
     await assert.rejects(
       () =>
@@ -208,7 +209,7 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
       (err) => {
         assert.ok(err instanceof ReservaNoPagadaError);
         assert.equal(err.statusCode, 403);
-        assert.match(err.message, /se requiere una reserva pagada y aceptada/i);
+        assert.match(err.message, /se requiere una reserva pagada/i);
         return true;
       }
     );
@@ -310,9 +311,28 @@ describe('ServicioMensajes (HU17 - Comunicación en Tiempo Real)', () => {
       (err) => err instanceof ValidationError && err.message === 'Identificador de contacto inválido.',
     );
     await assert.rejects(
-      () => servicio.obtenerPerfilContacto('abc'),
+      () => servicio.obtenerPerfilContacto(ID_PADRE, 'abc'),
       (err) => err instanceof ValidationError && err.message === 'Identificador de contacto inválido.',
     );
+  });
+
+  test('no entrega el perfil de un contacto sin reserva pagada', async () => {
+    repo.obtenerPerfilContacto = async (id) => ({ idContacto: id, correo: 'privado@test.com' });
+    await assert.rejects(
+      () => servicio.obtenerPerfilContacto(ID_PADRE, ID_NINERA),
+      (err) => err instanceof ForbiddenError,
+    );
+    await assert.rejects(
+      () => servicio.obtenerPerfilContacto(null, ID_NINERA),
+      (err) => err instanceof UnauthorizedError,
+    );
+  });
+
+  test('entrega el perfil de un contacto con reserva pagada', async () => {
+    repo.agregarReservaAceptada(ID_PADRE, ID_NINERA);
+    repo.obtenerPerfilContacto = async (id) => ({ idContacto: id });
+    const perfil = await servicio.obtenerPerfilContacto(ID_PADRE, ID_NINERA);
+    assert.equal(perfil.idContacto, ID_NINERA);
   });
 
   test('valida los límites de paginación antes de consultar la base de datos', async () => {

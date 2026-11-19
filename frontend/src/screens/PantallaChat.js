@@ -42,9 +42,12 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
   const [modalPerfilVisible, setModalPerfilVisible] = useState(false);
   const [perfilDetalle, setPerfilDetalle] = useState(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(false);
+  const [avisoPerfil, setAvisoPerfil] = useState('');
 
   const socketRef = useRef(null);
   const flatListRef = useRef(null);
+  const contactoActivoRef = useRef(contactoActivo);
+  contactoActivoRef.current = contactoActivo;
 
   // Inicializar conexión Socket.IO
   useEffect(() => {
@@ -56,6 +59,11 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
     });
 
     socketRef.current = socket;
+    socket.on('connect', () => cargarConversaciones());
+    socket.on('disconnect', () => {
+      setConversaciones((prev) => prev.map((c) => ({ ...c, enLinea: false })));
+      setContactoActivo((prev) => prev ? { ...prev, enLinea: false } : prev);
+    });
 
     // Escuchar mensajes entrantes en tiempo real
     socket.on('chat:nuevo_mensaje', (msg) => {
@@ -111,8 +119,12 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
       if (res.ok && json.success) {
         setConversaciones(json.data);
         // Si no hay contacto activo y hay conversaciones, seleccionar la primera
-        if (!contactoActivo && json.data.length > 0) {
+        const actual = contactoActivoRef.current;
+        if (!actual && json.data.length > 0) {
           seleccionarContacto(json.data[0]);
+        } else if (actual) {
+          const actualizado = json.data.find((c) => Number(c.idContacto) === Number(actual.idContacto));
+          if (actualizado) setContactoActivo((prev) => prev && Number(prev.idContacto) === Number(actualizado.idContacto) ? { ...prev, enLinea: actualizado.enLinea } : prev);
         }
       }
     } catch (err) {
@@ -236,7 +248,7 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
   const manejarErrorEnvio = (mensajeError) => {
     const errorMsg =
       mensajeError ||
-      'No se pudo enviar el mensaje. Necesitas una reserva pagada y aceptada por la niñera.';
+      'No se pudo enviar el mensaje. Necesitas una reserva pagada.';
     setErrorAlerta(errorMsg);
     if (Platform.OS !== 'web') {
       Alert.alert('Aviso de Mensajería', errorMsg);
@@ -299,6 +311,7 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
   const abrirPerfil = async () => {
     if (!contactoActivo) return;
     setPerfilDetalle(contactoActivo);
+    setAvisoPerfil('');
     setModalPerfilVisible(true);
 
     try {
@@ -309,9 +322,15 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
       const json = await res.json();
       if (res.ok && json.success && json.data) {
         setPerfilDetalle((prev) => ({ ...(prev || {}), ...json.data }));
+      } else if (res.status === 403) {
+        // El backend solo comparte correo, celular y dirección si hay una reserva pagada.
+        setAvisoPerfil(json.message || 'Los datos de contacto se muestran cuando hay una reserva pagada.');
+      } else {
+        setAvisoPerfil(json.message || 'No se pudo cargar el perfil completo.');
       }
     } catch (err) {
       // Usar datos locales si la red falla
+      setAvisoPerfil('Sin conexión: se muestran los datos disponibles.');
     } finally {
       setCargandoPerfil(false);
     }
@@ -409,7 +428,7 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                       </View>
                       <View style={styles.filaContactoInferior}>
                         <Text style={styles.ultimoMensajeTexto} numberOfLines={1}>
-                          {item.ultimoMensaje || 'Sin mensajes'}
+                          {item.ultimoMensaje ? `${Number(item.ultimoEmisorId) === Number(user?.id) ? 'Tú: ' : ''}${item.ultimoMensaje}` : 'Sin mensajes'}
                         </Text>
                         {item.noLeidos > 0 && (
                           <View style={styles.badgeNoLeidos}>
@@ -445,7 +464,7 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                 <View>
                   <Text style={styles.nombreChatActivo}>{contactoActivo.nombre}</Text>
                   <Text style={styles.estadoEnLineaTexto}>
-                    {contactoActivo.enLinea ? '● En línea' : 'Desconectado'}
+                    {contactoActivo.enLinea ? '● En línea' : ''}
                   </Text>
                 </View>
               </View>
@@ -658,6 +677,9 @@ export default function PantallaChat({ token, user, contactoInicial = null, onBa
                   {/* Datos de contacto */}
                   <View style={styles.seccionDetallesPerfil}>
                     <Text style={styles.subtituloSeccion}>Información de Contacto</Text>
+                    {!!avisoPerfil && (
+                      <Text style={styles.textoAvisoPerfil}>{avisoPerfil}</Text>
+                    )}
                     {perfilDetalle?.correo && (
                       <View style={styles.filaDetalle}>
                         <Text style={styles.etiquetaDetalle}>Correo:</Text>
@@ -1203,6 +1225,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginVertical: 4,
+  },
+  textoAvisoPerfil: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginBottom: 8,
   },
   etiquetaDetalle: {
     fontSize: 13,

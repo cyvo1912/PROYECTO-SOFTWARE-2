@@ -12,6 +12,7 @@ const {
   EstrategiaDisponibilidadRangoFechas,
 } = require('../../domain/strategies/EstrategiaCalculoDisponibilidad');
 const ProcesadorPagoSimulado = require('../../domain/services/ProcesadorPagoSimulado');
+const { randomUUID } = require('crypto');
 
 const REGEX_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -31,6 +32,7 @@ const MINUTOS_PARA_PAGAR = 10; // El horario queda separado 10 min; si no se pag
 class ServicioReserva {
   constructor({
     reservaRepository,
+    ofertaTrabajoRepository = null,
     disponibilidadRepository,
     hijoRepository,
     servicioNotificacion = null,
@@ -43,6 +45,7 @@ class ServicioReserva {
     if (!disponibilidadRepository) throw new Error('disponibilidadRepository es requerido en ServicioReserva');
     if (!hijoRepository) throw new Error('hijoRepository es requerido en ServicioReserva');
     this.reservaRepository = reservaRepository;
+    this.ofertaTrabajoRepository = ofertaTrabajoRepository;
     this.disponibilidadRepository = disponibilidadRepository;
     this.hijoRepository = hijoRepository;
     this.servicioNotificacion = servicioNotificacion;
@@ -59,7 +62,74 @@ class ServicioReserva {
     this._exigirFamilia(usuario);
     const solicitud = this._validarSolicitud(datos, { exigirDireccion: false });
     const ninera = await this._obtenerNineraActiva(solicitud.idNinera);
-    return this._calcularTarifa(ninera.tarifaHora, solicitud.horaInicio, solicitud.horaFin);
+    const tarifa = this._calcularTarifa(ninera.tarifaHora, solicitud.horaInicio, solicitud.horaFin);
+    const fechas = fechasDelRango(solicitud.fecha, datos.fechaHasta || solicitud.fecha);
+    if (fechas.length === 1) return tarifa;
+    return { ...tarifa, dias: fechas.length, montoTotal: Math.round(tarifa.montoTotal * fechas.length * 100) / 100 };
+  }
+
+  async solicitarRango(usuario, datos = {}) {
+    this._exigirFamilia(usuario);
+    const solicitud = this._validarSolicitud(datos, { exigirDireccion: true });
+    const fechas = fechasDelRango(solicitud.fecha, datos.fechaHasta);
+    if (fechas.length < 2) throw new ValidationError('Selecciona al menos dos fechas.');
+    const [ninera, hijo] = await Promise.all([this._obtenerNineraActiva(solicitud.idNinera), solicitud.idHijo ? this.hijoRepository.findById(solicitud.idHijo) : null]);
+    if (solicitud.idHijo && (!hijo || !hijo.perteneceA(usuario.id))) throw new ForbiddenError('Selecciona un hijo de tu familia.');
+    const tarifa = this._calcularTarifa(ninera.tarifaHora, solicitud.horaInicio, solicitud.horaFin);
+    const expiraEn = new Date(this.reloj().getTime() + MINUTOS_PARA_PAGAR * 60000);
+    const reservas = fechas.map((fecha) => new Reserva({ idPadre: Number(usuario.id), idNinera: solicitud.idNinera,
+      idHijo: solicitud.idHijo, fechaReserva: fecha, horaInicio: solicitud.horaInicio, horaFin: solicitud.horaFin,
+      direccion: solicitud.direccion, comentario: solicitud.comentario, ...tarifa, expiraEn }));
+    const bloques = await this.disponibilidadRepository.listarDisponibilidadPorRango(solicitud.idNinera, fechas[0], fechas[fechas.length - 1]);
+    const agenda = this.estrategiaDisponibilidad.resolverHorariosPorRango({ bloquesDisponibilidad: bloques, reservasActivas: [], fechaDesde: fechas[0], fechaHasta: fechas[fechas.length - 1] });
+    const sinDisponibilidad = fechas.find((fecha) => !(agenda[fecha] || []).some((s) => s.horaInicio <= solicitud.horaInicio && solicitud.horaFin <= s.horaFin));
+    if (sinDisponibilidad) throw new ValidationError(`No hay disponibilidad para el ${sinDisponibilidad.split('-').reverse().join('/')}.`);
+    const guardadas = await this.reservaRepository.crearRango(reservas, randomUUID());
+    if (!guardadas) throw new ConflictoHorarioError('Al menos una fecha ya no está disponible. Actualiza la búsqueda.');
+    const primera = guardadas[0];
+    primera.fechaHasta = fechas[fechas.length - 1];
+    primera.dias = fechas.length;
+    primera.montoPago = Math.round(tarifa.montoTotal * fechas.length * 100) / 100;
+    primera.segundosParaPagar = Math.max(0, Math.round((expiraEn.getTime() - this.reloj().getTime()) / 1000));
+    await this._notificarNuevaReserva(primera);
+    return primera;
+  }
+
+  async cancelarFechas(usuario, grupo, fechas) {
+    this._exigirFamilia(usuario);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(grupo)) || !Array.isArray(fechas) || !fechas.length || fechas.length > 31 || fechas.some((f) => !esFechaValidaISO(f)) || new Set(fechas).size !== fechas.length) throw new ValidationError('Selecciona fechas válidas.');
+    const canceladas = await this.reservaRepository.cancelarFechas(grupo, Number(usuario.id), fechas);
+    if (!canceladas) throw new ConflictError('No se pudieron cancelar las fechas seleccionadas. Revisa su estado y plazo de cancelación.');
+    for (const reserva of canceladas) await this._notificarCambio(reserva, reserva.idNinera);
+    return canceladas;
+  }
+
+  async solicitarDesdePostulacion(usuario, idOfertaParam, idPostulacionParam, datos = {}) {
+    this._exigirFamilia(usuario);
+    const idOferta = Number(idOfertaParam);
+    const idPostulacion = Number(idPostulacionParam);
+    if (!Number.isInteger(idOferta) || idOferta <= 0 || !Number.isInteger(idPostulacion) || idPostulacion <= 0) {
+      throw new ValidationError('La oferta o postulación no es válida.');
+    }
+    const oferta = await this.ofertaTrabajoRepository.findById(idOferta);
+    if (!oferta || Number(oferta.idPadre) !== Number(usuario.id)) throw new NotFoundError('La oferta no existe.');
+    const postulantes = await this.ofertaTrabajoRepository.listarPostulantes(idOferta, Number(usuario.id));
+    const postulacion = postulantes.find((p) => Number(p.id) === idPostulacion);
+    if (!postulacion) throw new NotFoundError('La postulación no existe.');
+    if (oferta.estado !== 'ABIERTA' || postulacion.estado !== 'PENDIENTE') throw new ConflictError('La oferta o postulación ya no está disponible.');
+    const solicitud = this._validarSolicitud({ idNinera: postulacion.idNinera, fecha: oferta.fechaInicio,
+      horaInicio: oferta.horaInicio, horaFin: oferta.horaFin, direccion: datos.direccion }, { exigirDireccion: true });
+    await this._obtenerNineraActiva(solicitud.idNinera);
+    const nueva = new Reserva({ idPadre: Number(usuario.id), idNinera: solicitud.idNinera,
+      fechaReserva: solicitud.fecha, horaInicio: solicitud.horaInicio, horaFin: solicitud.horaFin,
+      direccion: solicitud.direccion, comentario: `Oferta: ${oferta.titulo}` });
+    Object.assign(nueva, this._calcularTarifa(oferta.tarifaHora, nueva.horaInicio, nueva.horaFin));
+    nueva.expiraEn = new Date(this.reloj().getTime() + MINUTOS_PARA_PAGAR * 60000);
+    const guardada = await this.reservaRepository.crearDesdePostulacion(nueva, idOferta, idPostulacion);
+    if (!guardada) throw new ConflictError('La oferta ya tiene una reserva pendiente de pago o el horario no está disponible.');
+    guardada.segundosParaPagar = Math.max(0, Math.round((guardada.expiraEn.getTime() - this.reloj().getTime()) / 1000));
+    await this._notificarNuevaReserva(guardada);
+    return guardada;
   }
 
   /**
@@ -154,7 +224,17 @@ class ServicioReserva {
       : await this.reservaRepository.listarPorPadre(Number(usuario.id));
     // Las pendientes que vencieron sin pago se muestran como "Expirada"
     // sin alterar la entidad recuperada desde el repositorio.
+    const pendientesGrupo = new Map();
+    for (const r of reservas) if (r.grupoReserva && r.estaPendiente() && !r.estaExpirada(ahora)) {
+      const previo = pendientesGrupo.get(r.grupoReserva) || { monto: 0, dias: 0 };
+      pendientesGrupo.set(r.grupoReserva, { monto: previo.monto + Number(r.montoTotal), dias: previo.dias + 1 });
+    }
     return reservas.map((r) => {
+      if (r.grupoReserva && pendientesGrupo.has(r.grupoReserva)) {
+        const grupo = pendientesGrupo.get(r.grupoReserva);
+        r.montoPago = Math.round(grupo.monto * 100) / 100;
+        r.diasPago = grupo.dias;
+      }
       if (!r.estaExpirada(ahora)) return r;
       return Object.assign(Object.create(Object.getPrototypeOf(r)), r, {
         estadoReserva: 'Expirada',
@@ -325,8 +405,11 @@ class ServicioReserva {
       throw new ConflictError(`La reserva ya se encuentra en estado ${reserva.estadoReserva}.`);
     }
 
+    const grupoPendiente = reserva.grupoReserva ? (await this.reservaRepository.listarGrupo(reserva.grupoReserva, usuario.id)).filter((r) => r.estaPendiente() && !r.estaExpirada(this.reloj())) : [reserva];
+    const montoPago = Math.round(grupoPendiente.reduce((total, r) => total + Number(r.montoTotal), 0) * 100) / 100;
+    if (solicitudPago.montoEsperado !== undefined && Number(solicitudPago.montoEsperado) !== montoPago) throw new ConflictError('El total cambió. Actualiza la reserva antes de pagar.');
     const comprobante = this.procesadorPago.procesar({
-      monto: reserva.montoTotal,
+      monto: montoPago,
       metodoPago: solicitudPago.metodoPago,
       datosPago: solicitudPago.datosPago || solicitudPago,
     });
@@ -334,7 +417,7 @@ class ServicioReserva {
     const actualizada = await this._actualizarEstadoSiVigente(
       idReserva,
       'Pagada',
-      ['Pendiente', 'PENDIENTE']
+      ['Pendiente', 'PENDIENTE'], montoPago
     );
 
     // La niñera recibe la solicitud ya pagada para aceptarla o rechazarla.
@@ -397,8 +480,8 @@ class ServicioReserva {
 
   // ---------- Reglas internas ----------
 
-  async _actualizarEstadoSiVigente(idReserva, estadoNuevo, estadosEsperados) {
-    const actualizada = await this.reservaRepository.actualizarEstado(idReserva, estadoNuevo, estadosEsperados);
+  async _actualizarEstadoSiVigente(idReserva, estadoNuevo, estadosEsperados, montoEsperado) {
+    const actualizada = await this.reservaRepository.actualizarEstado(idReserva, estadoNuevo, estadosEsperados, montoEsperado);
     if (!actualizada) {
       throw new ConflictError('La reserva fue actualizada por otra acción. Recarga el historial e inténtalo nuevamente.');
     }
@@ -579,6 +662,14 @@ class ServicioReserva {
 function aMinutos(hora) {
   const [h, m] = hora.split(':').map(Number);
   return h * 60 + m;
+}
+
+function fechasDelRango(desde, hasta) {
+  if (!esFechaValidaISO(desde) || !esFechaValidaISO(hasta)) throw new ValidationError('Selecciona las fechas de la reserva.');
+  const inicio = Date.parse(`${desde}T00:00:00Z`), fin = Date.parse(`${hasta}T00:00:00Z`);
+  const cantidad = Math.round((fin - inicio) / 86400000) + 1;
+  if (cantidad < 1 || cantidad > 31) throw new ValidationError('Selecciona un rango de hasta 31 días.');
+  return Array.from({ length: cantidad }, (_, i) => new Date(inicio + i * 86400000).toISOString().slice(0, 10));
 }
 
 function esFechaValidaISO(fechaStr) {

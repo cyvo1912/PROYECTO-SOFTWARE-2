@@ -8,6 +8,11 @@ const PerfilPublicoRepositoryPort = require('../../../application/ports/PerfilPu
  * Importante: las consultas NO traen DNI, correo ni celular (datos privados).
  */
 class PostgresPerfilPublicoRepository extends PerfilPublicoRepositoryPort {
+  async esPostulanteDeFamilia(idNinera, idFamilia) {
+    const resultado = await this.pool.query(`SELECT 1 FROM postulacion p JOIN oferta_trabajo o ON o.id_oferta=p.id_oferta
+      WHERE p.id_ninera=$1 AND o.id_padre=$2 LIMIT 1`, [idNinera, idFamilia]);
+    return resultado.rows.length > 0;
+  }
   constructor(pool) {
     super();
     this.pool = pool;

@@ -102,8 +102,9 @@ describe('ServicioDisponibilidad', () => {
     });
 
     assert.deepEqual(resultado.fechasDisponibles, ['2026-11-09', '2026-11-10']);
-    assert.equal(resultado.disponibilidadPorFecha['2026-11-09'].length, 1);
+    assert.equal(resultado.disponibilidadPorFecha['2026-11-09'].length, 3);
     assert.equal(resultado.disponibilidadPorFecha['2026-11-09'][0].horaInicio, '08:00');
+    assert.deepEqual(resultado.disponibilidadPorFecha['2026-11-09'].slice(1).map(({ horaInicio, horaFin }) => [horaInicio, horaFin]), [['14:00', '15:00'], ['17:00', '18:00']]);
     assert.equal(resultado.disponibilidadPorFecha['2026-11-10'][0].horaInicio, '09:00');
   });
 

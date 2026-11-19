@@ -37,7 +37,10 @@ async listarNinerasPendientes() {
     INNER JOIN ninera n
       ON n.id_ninera = u.id_usuario
     WHERE u.tipo_usuario = 'NINERA'
-      AND u.estado_cuenta = 'PENDIENTE_VERIFICACION'
+      AND (u.estado_cuenta = 'PENDIENTE_VERIFICACION' OR EXISTS (
+        SELECT 1 FROM certificado c
+        WHERE c.id_ninera = u.id_usuario AND c.estado_revision = 'PENDIENTE'
+      ))
     ORDER BY u.id_usuario ASC;
   `);
 

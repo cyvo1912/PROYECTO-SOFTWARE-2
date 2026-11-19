@@ -338,9 +338,9 @@ export default function EditNannyProfileScreen({
       >
         <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
           {/* Encabezado del Formulario (Figura 17) */}
-          <Text style={styles.screenTitle}>Editar Perfil Profesional</Text>
+          <Text style={styles.screenTitle}>Datos de cuenta</Text>
           <Text style={styles.screenSubtitle}>
-            Actualiza tu foto e información para destacar entre las familias que buscan niñeras
+            Actualiza tus datos personales, foto, tarifa y zona.
           </Text>
 
           {loadingInitial ? (
@@ -534,7 +534,7 @@ export default function EditNannyProfileScreen({
               {/* HU11: años de experiencia en número, para que las familias puedan
                   filtrar la búsqueda por proximidad por experiencia mínima */}
               <Field
-                label="Años de Experiencia (número)"
+                label="Años de Experiencia"
                 value={anosExperiencia}
                 onChangeText={(t) => {
                   setAnosExperiencia(t.replace(/[^0-9]/g, ''));
@@ -544,9 +544,6 @@ export default function EditNannyProfileScreen({
                 keyboardType="number-pad"
                 error={fieldErrors.anosExperiencia}
               />
-              <Text style={styles.helperText}>
-                Opcional. Se usa para que las familias puedan filtrar por experiencia mínima al buscar niñeras cerca de su zona.
-              </Text>
 
               <View style={styles.divider} />
 

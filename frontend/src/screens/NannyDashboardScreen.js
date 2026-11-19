@@ -48,6 +48,42 @@ export default function NannyDashboardScreen({
   // HU14: resumen real de la bolsa de trabajo
   const [ofertas, setOfertas] = useState([]);
   const [cargandoOfertas, setCargandoOfertas] = useState(Boolean(token));
+  const [perfilPublico, setPerfilPublico] = useState(null);
+  const [ingresosMes, setIngresosMes] = useState(null);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    let activo = true;
+    const mesLima = (fecha) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit' }).format(new Date(fecha));
+    const cargarIngresos = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/reservas`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await response.json();
+        if (!response.ok || !data.success || !Array.isArray(data.data)) throw new Error('No se pudieron cargar los ingresos');
+        const mesActual = mesLima(new Date());
+        const centimos = data.data.reduce((total, r) => {
+          if (!['pagada', 'aceptada', 'completada'].includes(String(r.estadoReserva || '').toLowerCase())) return total;
+          // Las reservas anteriores a esta función no registraron fecha de pago.
+          const fecha = r.fechaPago || r.fechaCreacion;
+          if (!fecha || Number.isNaN(new Date(fecha).getTime()) || mesLima(fecha) !== mesActual) return total;
+          const bruto = Math.round(Number(r.montoTotal || 0) * 100);
+          const comision = r.comisionPlataforma == null ? Math.round(bruto * 0.05) : Math.round(Number(r.comisionPlataforma) * 100);
+          return total + bruto - comision;
+        }, 0);
+        if (activo) setIngresosMes(centimos / 100);
+      } catch (error) { if (activo) setIngresosMes(null); }
+    };
+    cargarIngresos();
+    const intervalo = setInterval(cargarIngresos, 10000);
+    return () => { activo = false; clearInterval(intervalo); };
+  }, [token]);
+
+  useEffect(() => {
+    let activo = true;
+    if (token && user?.id) fetch(`${API_BASE_URL}/perfil-publico/${user.id}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => response.json()).then((data) => { if (activo && data.success) setPerfilPublico(data.data); }).catch(() => {});
+    return () => { activo = false; };
+  }, [token, user?.id]);
 
   useEffect(() => {
     if (!token) return undefined;
@@ -185,13 +221,13 @@ export default function NannyDashboardScreen({
               <View style={styles.profileInfo}>
                 <View style={styles.nameRow}>
                   <Text style={styles.profileName}>{nombreUsuario}</Text>
-                  <View style={styles.verifiedBadge}>
+                  {perfilPublico?.verificada && <View style={styles.verifiedBadge}>
                     <Ionicons name="shield-checkmark" size={12} color="#059669" />
                     <Text style={styles.verifiedText}>Verificada</Text>
-                  </View>
+                  </View>}
                 </View>
                 <Text style={styles.profileDetailsText}>
-                  Zona: {zona}  •  Calificación: 5.0 / 5
+                  Zona: {zona}  •  Calificación: {perfilPublico?.reputacion?.total ? `${perfilPublico.reputacion.promedio} / 5` : 'Sin valoraciones'}
                 </Text>
                 <Text style={styles.profileRateText}>
                   Tarifa: <Text style={styles.profileRateValue}>S/. {tarifa}/hora</Text>
@@ -221,7 +257,7 @@ export default function NannyDashboardScreen({
                   activeOpacity={0.8}
                 >
                   <Ionicons name="globe-outline" size={16} color={colors.primary} />
-                  <Text style={styles.mediaBtnText}>Perfil público</Text>
+                  <Text style={styles.mediaBtnText}>Presentación pública</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.editProfileBtn}
@@ -229,7 +265,7 @@ export default function NannyDashboardScreen({
                   activeOpacity={0.8}
                 >
                   <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-                  <Text style={styles.editProfileBtnText}>Editar Perfil</Text>
+                  <Text style={styles.editProfileBtnText}>Datos de cuenta</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -276,8 +312,8 @@ export default function NannyDashboardScreen({
               <View style={[styles.metricIconWrap, { backgroundColor: '#DCFCE7' }]}>
                 <Ionicons name="cash-outline" size={22} color="#16A34A" />
               </View>
-              <Text style={styles.metricValue}>S/. 1,240</Text>
-              <Text style={styles.metricLabel}>Ingresos Mes</Text>
+              <Text style={styles.metricValue}>{ingresosMes === null ? '—' : `S/. ${ingresosMes.toFixed(2)}`}</Text>
+              <Text style={styles.metricLabel}>Ingresos mensuales</Text>
             </View>
           </View>
 

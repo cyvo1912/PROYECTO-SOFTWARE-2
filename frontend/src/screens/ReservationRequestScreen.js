@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { cotizarReserva, solicitarReserva, listarHijos } from '../services/reservaService';
 import ModalPasarelaPago from '../components/ModalPasarelaPago';
+import { Calendar } from 'react-native-calendars';
 import { API_BASE_URL } from '../config/api';
 
 const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -41,6 +42,8 @@ export default function ReservationRequestScreen({
   const [idHijo, setIdHijo] = useState(null);
   const [horaInicio, setHoraInicio] = useState(slot.horaInicio);
   const [horaFin, setHoraFin] = useState(slot.horaFin);
+  const [fechaHasta, setFechaHasta] = useState(slot.fechaHasta || slot.fecha);
+  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
   const [direccion, setDireccion] = useState('');
   const [comentario, setComentario] = useState('');
   const [cotizacion, setCotizacion] = useState(null);
@@ -130,7 +133,7 @@ export default function ReservationRequestScreen({
     setErrorMessage('');
     cotizarReserva({
       token,
-      solicitud: { idNinera: slot.idNinera, fecha: slot.fecha, horaInicio, horaFin },
+      solicitud: { idNinera: slot.idNinera, fecha: slot.fecha, fechaHasta, horaInicio, horaFin },
     })
       .then((data) => vigente && setCotizacion(data))
       .catch((err) => vigente && setErrorMessage(err.message))
@@ -138,7 +141,7 @@ export default function ReservationRequestScreen({
     return () => {
       vigente = false;
     };
-  }, [token, slot.idNinera, slot.fecha, horaInicio, horaFin]);
+  }, [token, slot.idNinera, slot.fecha, fechaHasta, horaInicio, horaFin]);
 
   const confirmar = async () => {
     setEnviando(true);
@@ -151,6 +154,7 @@ export default function ReservationRequestScreen({
           idNinera: slot.idNinera,
           idHijo,
           fecha: slot.fecha,
+          fechaHasta,
           horaInicio,
           horaFin,
           direccion,
@@ -186,7 +190,7 @@ export default function ReservationRequestScreen({
           <Text style={styles.body}>
             {slot.nombreNinera} • {reservaCreada.fechaReserva} • {reservaCreada.horaInicio}–{reservaCreada.horaFin}
           </Text>
-          <Text style={styles.total}>Total: S/. {reservaCreada.montoTotal.toFixed(2)}</Text>
+          <Text style={styles.total}>Total: S/. {Number(reservaCreada.montoPago ?? reservaCreada.montoTotal).toFixed(2)}</Text>
 
           {vencida ? (
             <Text style={styles.muted}>
@@ -271,11 +275,17 @@ export default function ReservationRequestScreen({
           <Text style={styles.label}>Niñera</Text>
           <Text style={styles.value}>{slot.nombreNinera} • S/. {slot.tarifaHora}/hora</Text>
           <Text style={styles.label}>Fecha</Text>
-          <Text style={styles.value}>{slot.fecha}</Text>
+          <Text style={styles.value}>{slot.fecha.split('-').reverse().join('/')}{fechaHasta !== slot.fecha ? ` – ${fechaHasta.split('-').reverse().join('/')}` : ''}</Text>
           <Text style={styles.muted}>
             Horario disponible: {slot.horaInicio} – {slot.horaFin}
           </Text>
         </View>
+
+        <Text style={styles.label}>Último día</Text>
+        <TouchableOpacity style={styles.input} onPress={() => setCalendarioAbierto(!calendarioAbierto)}>
+          <Text>{fechaHasta.split('-').reverse().join('/')}</Text>
+        </TouchableOpacity>
+        {calendarioAbierto && <Calendar minDate={slot.fecha} onDayPress={(dia) => { setFechaHasta(dia.dateString); setCalendarioAbierto(false); }} markedDates={{ [fechaHasta]: { selected: true, selectedColor: colors.primary } }} />}
 
         <Text style={styles.sectionTitle}>Horario</Text>
         <View style={styles.row}>

@@ -17,7 +17,7 @@ class BusquedaController {
    */
   async buscarNineras(req, res) {
     try {
-      const { latitud, longitud, radioKm, tarifaMaxima, experienciaMinima } = req.query;
+      const { latitud, longitud, radioKm, tarifaMaxima, experienciaMinima, desde, hasta, modo, horaInicio, horaFin } = req.query;
 
       const resultado = await this.servicioBusqueda.buscarNineras(req.user, {
         latitud,
@@ -25,6 +25,7 @@ class BusquedaController {
         radioKm,
         tarifaMaxima,
         experienciaMinima,
+        desde, hasta, modo, horaInicio, horaFin,
       });
 
       return res.status(200).json({

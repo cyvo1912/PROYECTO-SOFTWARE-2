@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { listarMisReservas, cambiarEstadoReserva, crearValoracion, obtenerValoracionPorReserva, } from '../services/reservaService';
+import { listarMisReservas, cambiarEstadoReserva, cancelarFechasReserva, crearValoracion, obtenerValoracionPorReserva, } from '../services/reservaService';
 import { colors } from '../theme/colors';
 import ModalPasarelaPago from '../components/ModalPasarelaPago';
 import { SkeletonList } from '../components/SkeletonLoader';
@@ -30,6 +30,8 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
   const [comentario, setComentario] = useState('');
   const [reservasValoradas, setReservasValoradas] = useState({});
   const [reservaParaPagar, setReservaParaPagar] = useState(null);
+  const [seleccionadas, setSeleccionadas] = useState({});
+  const [errorAccion, setErrorAccion] = useState('');
   const esNinera = (user?.rol || user?.tipo_usuario) === 'NINERA';
 
   const cargar = useCallback(async () => {
@@ -104,8 +106,21 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
   useEffect(() => { cargar(); }, [cargar]);
   const actualizar = async (reserva, estado) => {
     setProcesando(reserva.id);
+    setErrorAccion('');
     try { await cambiarEstadoReserva({ token, idReserva: reserva.id, estado }); await cargar(); }
-    catch (error) { Alert.alert('No se pudo actualizar', error.message); }
+    catch (error) { setErrorAccion(error.message); }
+    finally { setProcesando(null); }
+  };
+
+  const cancelarSeleccion = async (reserva) => {
+    const fechas = seleccionadas[reserva.grupoReserva] || [];
+    if (!fechas.length) return;
+    setProcesando(reserva.id); setErrorAccion('');
+    try {
+      await cancelarFechasReserva({ token, grupo: reserva.grupoReserva, fechas });
+      setSeleccionadas((prev) => ({ ...prev, [reserva.grupoReserva]: [] }));
+      await cargar();
+    } catch (error) { setErrorAccion(error.message); }
     finally { setProcesando(null); }
   };
 
@@ -181,7 +196,8 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
           <Text style={styles.backText}>Volver</Text>
         </TouchableOpacity>
     <Text style={styles.title}>{esNinera ? 'Mis servicios' : 'Mis reservas'}</Text>
-    <Text style={styles.subtitle}>{esNinera ? 'Acepta, rechaza o completa servicios asignados.' : 'Revisa solicitudes y valora servicios terminados.'}</Text>
+    <Text style={styles.subtitle}>{esNinera ? 'Acepta, rechaza o completa servicios asignados.' : 'Consulta tus servicios, completa pagos pendientes, cancela si corresponde y valora los servicios terminados.'}</Text>
+    {errorAccion ? <Text style={{ color: '#DC2626', marginBottom: 12 }}>{errorAccion}</Text> : null}
     {loading ? (
       <SkeletonList count={3} />
     ) : reservas.length === 0 ? (
@@ -198,12 +214,22 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
       </View>
     ) : reservas.map((reserva) => {
       const estado = estadoNormalizado(reserva.estadoReserva);
+      const elegibles = !esNinera && reserva.grupoReserva && ['PENDIENTE', 'PAGADA', 'ACEPTADA'].includes(estado);
+      const fechasGrupo = seleccionadas[reserva.grupoReserva] || [];
       return <View key={reserva.id} style={styles.card}>
         <View style={styles.row}><Text style={styles.date}>{reserva.fechaReserva} · {reserva.horaInicio}–{reserva.horaFin}</Text><Text style={styles.status}>{reserva.estadoReserva}</Text></View>
         <Text style={styles.detail}>Reserva #{reserva.id} · S/. {Number(reserva.montoTotal || 0).toFixed(2)}</Text><Text style={styles.address}>{reserva.direccion}</Text>
+        {reserva.grupoReserva ? <Text style={styles.address}>Grupo: {reserva.grupoReserva.slice(0, 8)}</Text> : null}
         {procesando === reserva.id ? <ActivityIndicator color={colors.primary} /> : <View style={styles.actions}>
           {!esNinera && estado === 'PENDIENTE' && <Action label="Pagar ahora" color="#059669" onPress={() => setReservaParaPagar(reserva)} />}
           {!esNinera && ['PENDIENTE', 'PAGADA', 'ACEPTADA'].includes(estado) && <Action label="Cancelar" color="#DC2626" onPress={() => actualizar(reserva, 'CANCELADA')} />}
+          {elegibles && <Action label={fechasGrupo.includes(reserva.fechaReserva) ? 'Quitar selección' : 'Seleccionar fecha'} onPress={() => setSeleccionadas((prev) => ({ ...prev, [reserva.grupoReserva]: fechasGrupo.includes(reserva.fechaReserva) ? fechasGrupo.filter((f) => f !== reserva.fechaReserva) : [...fechasGrupo, reserva.fechaReserva] }))} />}
+          {elegibles && fechasGrupo.length === 1 && !fechasGrupo.includes(reserva.fechaReserva) && <Action label="Seleccionar rango" onPress={() => {
+            const [desde, hasta] = [fechasGrupo[0], reserva.fechaReserva].sort();
+            const fechas = reservas.filter((r) => r.grupoReserva === reserva.grupoReserva && r.fechaReserva >= desde && r.fechaReserva <= hasta && ['PENDIENTE', 'PAGADA', 'ACEPTADA'].includes(estadoNormalizado(r.estadoReserva))).map((r) => r.fechaReserva);
+            setSeleccionadas((prev) => ({ ...prev, [reserva.grupoReserva]: fechas }));
+          }} />}
+          {elegibles && fechasGrupo.length > 0 && <Action label={`Cancelar seleccionadas (${fechasGrupo.length})`} color="#DC2626" onPress={() => cancelarSeleccion(reserva)} />}
           {esNinera && estado === 'PAGADA' && <><Action label="Aceptar" onPress={() => actualizar(reserva, 'ACEPTADA')} /><Action label="Rechazar" color="#DC2626" onPress={() => actualizar(reserva, 'RECHAZADA')} /></>}
           {esNinera && estado === 'ACEPTADA' && <Action label="Marcar completada" onPress={() => actualizar(reserva, 'COMPLETADA')} />}
           {!esNinera && estado === 'COMPLETADA' && reservasValoradas[reserva.id] === false && (<Action label="Dejar reseña" onPress={() => setValorando(reserva.id)} />)}

@@ -1,19 +1,54 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const TokenServicePort = require('../../../application/ports/TokenServicePort');
+
+// Valores de ejemplo que nunca deben usarse como secreto real.
+const SECRETOS_INSEGUROS = new Set(['tu_clave_secreta_jwt', 'minana_jwt_secret_key_2026']);
+
+/**
+ * Obtiene JWT_SECRET del entorno. Si falta o es un valor de ejemplo, el servidor no arranca:
+ * firmar con un secreto conocido permitiría falsificar tokens de cualquier usuario.
+ * En pruebas (NODE_ENV=test) se usa un secreto aleatorio por proceso.
+ */
+function resolverSecreto(env = process.env) {
+  const secreto = String(env.JWT_SECRET || '').trim();
+  if (secreto && !SECRETOS_INSEGUROS.has(secreto)) return secreto;
+  if (env.NODE_ENV === 'test') return crypto.randomBytes(32).toString('hex');
+  throw new Error(
+    'JWT_SECRET no está definido o usa un valor de ejemplo. Configúralo en backend/.env antes de iniciar el servidor.'
+  );
+}
+
+function huellaToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
 
 /**
  * Adaptador Secundario: Generador y verificador de JWT (RFC 7519 Standard Claims)
  * Implementa TokenServicePort (SOLID: Interface Segregation / Dependency Inversion)
+ *
+ * Revocación (logout): se mantiene en memoria para que verifyToken siga siendo síncrono y,
+ * si se inyecta un repositorio, también se persiste en BD y se recarga al iniciar el servidor,
+ * de modo que un token cerrado no vuelva a ser válido tras un reinicio.
  */
 class JwtTokenService extends TokenServicePort {
-  constructor(
-    secret = process.env.JWT_SECRET || 'minana_jwt_secret_key_2026',
-    expiresIn = '7d'
-  ) {
+  constructor(secret, expiresIn = '7d', revocacionRepository = null) {
     super();
-    this.secret = secret;
+    this.secret = secret || resolverSecreto();
     this.expiresIn = expiresIn;
-    this.blacklistedTokens = new Set();
+    this.revocacionRepository = revocacionRepository;
+    this.blacklistedTokens = new Set(); // huellas SHA-256 de tokens revocados
+  }
+
+  /**
+   * Carga desde BD las revocaciones aún vigentes y elimina las ya expiradas.
+   */
+  async cargarRevocados() {
+    if (!this.revocacionRepository) return 0;
+    await this.revocacionRepository.eliminarExpirados();
+    const huellas = await this.revocacionRepository.listarVigentes();
+    huellas.forEach((h) => this.blacklistedTokens.add(h));
+    return huellas.length;
   }
 
   /**
@@ -56,17 +91,36 @@ class JwtTokenService extends TokenServicePort {
     return decoded;
   }
 
-  invalidateToken(token) {
-    if (token) {
-      this.blacklistedTokens.add(token);
+  /**
+   * Revoca un token. Devuelve una promesa que se resuelve cuando la revocación quedó persistida.
+   */
+  async invalidateToken(token) {
+    if (!token) return true;
+
+    // /auth/logout no exige sesión: solo se registran tokens firmados por este servidor y
+    // aún vigentes. Un texto cualquiera o un token expirado ya es rechazado por verifyToken,
+    // así que guardarlo solo permitiría llenar la memoria o la BD con basura.
+    let decoded;
+    try {
+      decoded = jwt.verify(token, this.secret);
+    } catch {
+      return false;
+    }
+
+    const huella = huellaToken(token);
+    this.blacklistedTokens.add(huella);
+
+    if (this.revocacionRepository) {
+      await this.revocacionRepository.guardar(huella, new Date(decoded.exp * 1000));
     }
     return true;
   }
 
   isTokenInvalidated(token) {
     if (!token) return true;
-    return this.blacklistedTokens.has(token);
+    return this.blacklistedTokens.has(huellaToken(token));
   }
 }
 
+JwtTokenService.resolverSecreto = resolverSecreto;
 module.exports = JwtTokenService;

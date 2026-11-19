@@ -72,7 +72,8 @@ export default function FamilyDashboardScreen({
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok || !data.success) {
-          throw new Error(data.message || mensajeError);
+          const message = response.status === 401 ? 'Tu sesión venció. Inicia sesión nuevamente.' : mensajeError;
+          throw new Error(message);
         }
         return data.data;
       };
@@ -102,7 +103,8 @@ export default function FamilyDashboardScreen({
       }
     } catch (err) {
       if (estaMontadaRef.current) {
-        setErrorMessage('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+        setErrorMessage(err.message === 'Failed to fetch' || err.message === 'Network request failed'
+          ? 'No se pudo conectar con el servidor.' : (err.message || 'No se pudo cargar el resumen.'));
       }
     } finally {
       if (estaMontadaRef.current) setLoading(false);
@@ -232,7 +234,7 @@ export default function FamilyDashboardScreen({
                 <Text style={styles.pendingBannerTitle}>Tienes 1 reserva separada</Text>
                 <Text style={styles.pendingBannerDesc}>
                   Expira en {Math.floor(tiempoRestanteMs / 60000)}:
-                  {String(Math.floor((tiempoRestanteMs % 60000) / 1000)).padStart(2, '0')} min • Total: S/. {Number(reservaPendiente.montoTotal || 0).toFixed(2)}
+                  {String(Math.floor((tiempoRestanteMs % 60000) / 1000)).padStart(2, '0')} min • Total: S/. {Number(reservaPendiente.montoPago ?? reservaPendiente.montoTotal ?? 0).toFixed(2)}
                 </Text>
               </View>
               <TouchableOpacity
@@ -251,7 +253,7 @@ export default function FamilyDashboardScreen({
             <View style={styles.successPaymentBanner}>
               <Ionicons name="checkmark-circle" size={22} color="#059669" />
               <Text style={styles.successPaymentText}>
-                Pago registrado. La niñera debe aceptar la reserva para habilitar el chat.
+                Pago registrado. Ya puedes comunicarte con la niñera.
               </Text>
             </View>
           ) : null}
@@ -307,6 +309,7 @@ export default function FamilyDashboardScreen({
             <View style={styles.errorBanner}>
               <Ionicons name="alert-circle" size={20} color="#DC2626" />
               <Text style={styles.errorBannerText}>{errorMessage}</Text>
+              <TouchableOpacity onPress={cargarResumen} accessibilityRole="button"><Text style={{ color: '#B91C1C', fontWeight: '700' }}>Reintentar</Text></TouchableOpacity>
             </View>
           ) : null}
 
@@ -316,21 +319,21 @@ export default function FamilyDashboardScreen({
               icon="people-outline"
               iconColor={colors.primary}
               bg="#F3E8FF"
-              value={loading ? null : totalHijos}
+              value={loading || errorMessage ? null : totalHijos}
               label="Hijos registrados"
             />
             <MetricCard
               icon="warning-outline"
               iconColor="#D97706"
               bg="#FEF3C7"
-              value={loading ? null : conAlergias}
+              value={loading || errorMessage ? null : conAlergias}
               label="Con alergias"
             />
             <MetricCard
               icon="medkit-outline"
               iconColor="#DB2777"
               bg="#FCE7F3"
-              value={loading ? null : conCuidados}
+              value={loading || errorMessage ? null : conCuidados}
               label="Con cuidados médicos"
             />
           </View>
@@ -351,6 +354,8 @@ export default function FamilyDashboardScreen({
 
             {loading ? (
               <ChildrenSkeleton />
+            ) : errorMessage ? (
+              <Text style={styles.emptyText}>No se pudieron cargar los datos.</Text>
             ) : totalHijos === 0 ? (
               <View style={styles.emptyBox}>
                 <Ionicons name="happy-outline" size={28} color={colors.primary} />
@@ -415,7 +420,7 @@ export default function FamilyDashboardScreen({
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionTitleGroup}>
                   <Ionicons name="megaphone-outline" size={20} color={colors.primary} />
-                  <Text style={styles.sectionTitle}>Publicar oferta de trabajo</Text>
+                <Text style={styles.sectionTitle}>Mis ofertas</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
               </View>
@@ -425,32 +430,11 @@ export default function FamilyDashboardScreen({
             </TouchableOpacity>
           ) : null}
 
-          {/* Tarjeta 3: Consultar Disponibilidad de Niñeras (HU13) */}
-          <View style={styles.sectionBlock}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={styles.sectionTitleGroup}>
-                <Ionicons name="calendar" size={20} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Disponibilidad de Niñeras</Text>
-              </View>
-            </View>
-            <Text style={styles.activeCardDesc}>
-              Consulta en un calendario interactivo los días y bloques de horarios disponibles en los que una niñera puede prestar servicio.
-            </Text>
-            <TouchableOpacity
-              style={styles.calendarActionBtn}
-              onPress={onNavigateToNannyAvailability}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="calendar-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.primaryBtnText}>Consultar calendario de disponibilidad</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* HU16/HU18: historial, cambios de estado y reseñas */}
           <TouchableOpacity style={styles.sectionBlock} onPress={onNavigateToReservations} activeOpacity={0.8}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionTitleGroup}>
-                <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Mis reservas</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />

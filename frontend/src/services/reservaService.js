@@ -30,7 +30,11 @@ export function cotizarReserva({ token, solicitud }) {
 
 /** Registra la solicitud de reserva (queda "Pendiente"). */
 export function solicitarReserva({ token, solicitud }) {
-  return llamar('/reservas', { token, method: 'POST', body: solicitud });
+  return llamar(solicitud.fechaHasta && solicitud.fechaHasta !== solicitud.fecha ? '/reservas/rango' : '/reservas', { token, method: 'POST', body: solicitud });
+}
+
+export function cancelarFechasReserva({ token, grupo, fechas }) {
+  return llamar(`/reservas/grupo/${grupo}/cancelar`, { token, method: 'POST', body: { fechas } });
 }
 
 /** Reservas de la familia autenticada. */
@@ -43,11 +47,11 @@ export function cambiarEstadoReserva({ token, idReserva, estado }) {
 }
 
 /** Simulación de pago. Después del pago, la niñera debe aceptar la reserva. */
-export function pagarReserva({ token, idReserva, metodoPago = 'TARJETA', datosPago = {} }) {
+export function pagarReserva({ token, idReserva, metodoPago = 'TARJETA', datosPago = {}, montoEsperado }) {
   return llamar(`/reservas/${idReserva}/pagar`, {
     token,
     method: 'POST',
-    body: { metodoPago, datosPago },
+    body: { metodoPago, datosPago, montoEsperado },
   });
 }
 
