@@ -1,0 +1,63 @@
+@startuml 13_caja_blanca_grafo_ServicioAuth
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+title Grafo de Flujo – Caja Blanca: ServicioAuth.iniciarSesion (HU4)\nComplejidad Ciclomática V(G) = 10
+
+skinparam activity {
+  BackgroundColor #DBEAFE
+  BorderColor #2563EB
+  DiamondBackgroundColor #FEF3C7
+  DiamondBorderColor #D97706
+}
+
+start
+:1. Recibir correo, contrasena, rolSolicitado;
+if (2. ¿correo y contrasena presentes?) then (no)
+  :3. throw InvalidCredentialsError;
+  stop
+else (sí)
+  :4. usuario = findByEmail(correo);
+  if (5. ¿usuario existe?) then (no)
+    :6. throw InvalidCredentialsError;
+    stop
+  else (sí)
+    :7. esValida = compare(contrasena, hash);
+    if (8. ¿contraseña válida?) then (no)
+      :9. throw InvalidCredentialsError;
+      stop
+    else (sí)
+      if (10. ¿rolSolicitado != rolUsuario?) then (sí)
+        :11. throw RoleMismatchError;
+        stop
+      else (no)
+        if (12. ¿cuenta pendiente?) then (sí)
+          if (13. ¿es NINERA?) then (no)
+            :14. throw AccountPendingError;
+            stop
+          else (sí)
+            :15. token = generateToken(limitado)\nreturn { token, accesoLimitado: true };
+            stop
+          endif
+        else (no)
+          if (16. ¿cuenta inactiva o suspendida?) then (sí)
+            :17. throw AccountInactiveError;
+            stop
+          else (no)
+            if (18. ¿tipoUsuario?) then (NINERA)
+              :19. findNineraDetails;
+            elseif (FAMILIA) then (sí)
+              :20. findPadreDetails;
+            else (ADMIN)
+              :21. detalles = null;
+            endif
+            :22. token = generateToken()\nreturn { token, usuario, detalles };
+            stop
+          endif
+        endif
+      endif
+    endif
+  endif
+endif
+
+@enduml

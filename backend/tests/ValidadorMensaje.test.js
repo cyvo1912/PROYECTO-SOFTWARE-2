@@ -46,7 +46,25 @@ describe('ValidadorMensaje (HU17)', () => {
       idReceptor: 2,
       contenido: 'Hola',
     });
-    expect(errores.idEmisor).toBeDefined();
+    expect(errores.idEmisor).toBe('El identificador del emisor debe ser un entero positivo válido.');
+  });
+
+  it('rechaza emisor menor o igual a cero', () => {
+    const errores = validarEnvioMensaje({
+      idEmisor: 0,
+      idReceptor: 2,
+      contenido: 'Hola',
+    });
+    expect(errores.idEmisor).toBe('El identificador del emisor debe ser un entero positivo válido.');
+  });
+
+  it('rechaza receptor menor o igual a cero o no numérico', () => {
+    const errores = validarEnvioMensaje({
+      idEmisor: 1,
+      idReceptor: 0,
+      contenido: 'Hola',
+    });
+    expect(errores.idReceptor).toBe('El identificador del receptor debe ser un entero positivo válido.');
   });
 
   it('rechaza cuando el emisor y receptor son el mismo usuario', () => {
@@ -58,3 +76,4 @@ describe('ValidadorMensaje (HU17)', () => {
     expect(errores.idReceptor).toBe('No es posible enviarse un mensaje a sí mismo.');
   });
 });
+

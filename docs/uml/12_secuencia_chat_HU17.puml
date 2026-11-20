@@ -1,0 +1,72 @@
+@startuml 12_secuencia_chat_HU17
+' MiNana - HU17: enviar mensaje por chat en tiempo real. Archivo fuente editable (PlantUML).
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequence {
+  ArrowColor #1F2937
+  LifeLineBorderColor #6B7280
+  ParticipantBorderColor #2563EB
+  ParticipantBackgroundColor #DBEAFE
+  ParticipantFontStyle bold
+}
+hide footbox
+title Diagrama de secuencia – HU17: enviar mensaje de chat en tiempo real
+
+actor "Usuario\n(Familia / Niñera)" as U
+participant "PantallaChat\n(Frontend)" as S
+participant "ChatSocketController\n/ MensajeriaController" as C
+participant "ServicioMensajes\n(Aplicación)" as SM
+participant "ValidadorMensaje\n(Dominio)" as V
+participant "MensajeRepository\nPort" as R
+participant "RealtimeNotifier\nPort (Socket.IO)" as RN
+participant "NotificacionService\nPort" as N
+
+U -> S : 1: redacta texto y pulsa "Enviar"
+S -> C : 2: emit("chat:enviar_mensaje", { idReceptor, texto })\n[Token JWT autenticado]
+activate C
+
+C -> SM : 3: enviarMensaje({ idEmisor, idReceptor, texto })
+activate SM
+
+SM -> V : 4: validarEnvioMensaje({ idEmisor, idReceptor, contenido })
+activate V
+V --> SM : 5: errores {}
+deactivate V
+
+alt datos inválidos (vacío, id inválido, auto-envío)
+  SM --> C : 5.1: throw ValidationError
+  C --> S : 5.2: ack({ success: false, error: mensajeError })
+  S --> U : 5.3: muestra alerta en pantalla
+end
+
+SM -> R : 6: verificarReservaPagada(idEmisor, idReceptor)
+activate R
+R --> SM : 7: tienePermiso (true / false)
+deactivate R
+
+alt reserva no pagada ni confirmada
+  SM --> C : 7.1: throw ReservaNoPagadaError
+  C --> S : 7.2: ack({ success: false, error: "Se requiere reserva pagada" })
+  S --> U : 7.3: bloquea chat y muestra advertencia
+end
+
+SM -> R : 8: crearMensaje({ idEmisor, idReceptor, contenido })
+activate R
+R --> SM : 9: mensajeCreado (Entidad Mensaje)
+deactivate R
+
+SM -> N : 10: crearNotificacionMensaje(...) [asíncrono]
+
+SM --> C : 11: retorna Mensaje
+deactivate SM
+
+C -> RN : 12: enviarMensajePrivado(idReceptor, "chat:nuevo_mensaje", mensaje)
+activate RN
+RN --> S : 12.1: transmite en tiempo real al receptor en sala user_{idReceptor}
+deactivate RN
+
+C --> S : 13: ack({ success: true, data: mensajeCreado })
+deactivate C
+
+S --> U : 14: actualiza conversación y muestra mensaje con check de enviado
+@enduml
