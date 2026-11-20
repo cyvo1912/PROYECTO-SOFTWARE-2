@@ -83,6 +83,14 @@ class PostgresUserRepository extends UserRepositoryPort {
         [idUsuario, datosPadre.nombreFamilia, datosPadre.direccion, datosPadre.numeroNinos, datosPadre.edadesNinos],
       );
 
+      for (const hijo of datosPadre.hijos || []) {
+        await client.query(
+          `INSERT INTO hijo (id_padre, nombre_hijo, edad, alergias, condiciones_medicas, notas)
+           VALUES ($1, $2, $3, NULL, NULL, NULL);`,
+          [idUsuario, hijo.nombre, hijo.edad],
+        );
+      }
+
       await client.query('COMMIT');
 
       return new Padre(

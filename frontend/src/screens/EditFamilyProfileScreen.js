@@ -249,9 +249,6 @@ export default function EditFamilyProfileScreen({
       >
         <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
           <Text style={styles.screenTitle}>Editar Perfil de Familia</Text>
-          <Text style={styles.screenSubtitle}>
-            Actualiza los datos de tu hogar y la información de contacto de tu perfil
-          </Text>
 
           {loadingInitial ? (
             <View style={styles.loadingBox}>

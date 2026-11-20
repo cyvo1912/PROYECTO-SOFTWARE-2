@@ -96,7 +96,7 @@ export default function NannyPublicProfileScreen({ token, idNinera, onBack, onVe
           {perfil.verificada ? (
             <View style={styles.verifiedBadge}>
               <Ionicons name="shield-checkmark" size={14} color="#059669" />
-              <Text style={styles.verifiedText}>Niñera verificada</Text>
+              <Text style={styles.verifiedText}>Verificada</Text>
             </View>
           ) : (
             <Text style={styles.previewText}>Perfil aún no verificado</Text>

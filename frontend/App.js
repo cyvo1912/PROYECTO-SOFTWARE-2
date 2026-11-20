@@ -18,6 +18,7 @@ import EditPublicProfileScreen from './src/screens/EditPublicProfileScreen';
 import NannyPublicProfileScreen from './src/screens/NannyPublicProfileScreen';
 import SearchNanniesScreen from './src/screens/SearchNanniesScreen';
 import NannyAvailabilityCalendarScreen from './src/screens/NannyAvailabilityCalendarScreen';
+import ManageAvailabilityScreen from './src/screens/ManageAvailabilityScreen';
 import ReservationRequestScreen from './src/screens/ReservationRequestScreen';
 import NotFoundScreen from './src/screens/NotFoundScreen';
 import JobBoardScreen from './src/screens/JobBoardScreen';
@@ -165,6 +166,7 @@ export default function App() {
   const navigateToNannyDashboard = () => navegar('nannyDashboard');
   const navigateToEditNannyProfile = () => navegar('editNannyProfile');
   const navigateToMultimedia = () => navegar('multimedia');
+  const navigateToManageAvailability = () => navegar('manageAvailability');
 
   // Navegación de familias
   const navigateToFamilyDashboard = () => navegar('familyDashboard');
@@ -356,6 +358,7 @@ export default function App() {
           onNavigateToEditProfile={navigateToEditNannyProfile}
           onNavigateToMultimedia={navigateToMultimedia}
           onNavigateToPublicProfile={navigateToEditPublicProfile}
+          onNavigateToManageAvailability={navigateToManageAvailability}
           onLogout={handleLogout}
           logoutLoading={logoutLoading}
           onNotificaciones={abrirNotificaciones}
@@ -426,6 +429,10 @@ export default function App() {
           onBack={navigateToNannyDashboard}
         />
       );
+    }
+
+    if (currentScreen === 'manageAvailability' && currentUser) {
+      return <ManageAvailabilityScreen token={authToken} onBack={navigateToNannyDashboard} />;
     }
 
     // HU14: la familia publica ofertas en la bolsa de trabajo

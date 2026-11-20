@@ -425,11 +425,6 @@ export default function AdminDashboardScreen({
             Revisar niñera
           </Text>
 
-          <Text style={styles.subtitle}>
-            Verifica sus datos y antecedentes antes de
-            autorizar su activación.
-          </Text>
-
           <View style={styles.card}>
             <Text style={styles.cardTitle}>
               Datos personales
@@ -731,12 +726,6 @@ export default function AdminDashboardScreen({
 
         <Text style={styles.title}>
           {seccionActiva === 'usuarios' ? 'Listado general de usuarios' : 'Expedientes y certificados pendientes'}
-        </Text>
-
-        <Text style={styles.subtitle}>
-          {seccionActiva === 'usuarios'
-            ? 'Consulta los datos y administra el estado de las cuentas.'
-            : 'Revisa las cuentas nuevas y los certificados pendientes, incluso de niñeras activas.'}
         </Text>
 
         {errorMessage ? (

@@ -117,13 +117,24 @@ class ServicioReserva {
     const postulacion = postulantes.find((p) => Number(p.id) === idPostulacion);
     if (!postulacion) throw new NotFoundError('La postulación no existe.');
     if (oferta.estado !== 'ABIERTA' || postulacion.estado !== 'PENDIENTE') throw new ConflictError('La oferta o postulación ya no está disponible.');
-    const solicitud = this._validarSolicitud({ idNinera: postulacion.idNinera, fecha: oferta.fechaInicio,
+    const solicitud = this._validarSolicitud({ idNinera: postulacion.idNinera, idHijo: datos.idHijo, fecha: oferta.fechaInicio,
       horaInicio: oferta.horaInicio, horaFin: oferta.horaFin, direccion: datos.direccion }, { exigirDireccion: true });
-    await this._obtenerNineraActiva(solicitud.idNinera);
-    const nueva = new Reserva({ idPadre: Number(usuario.id), idNinera: solicitud.idNinera,
+    if (!solicitud.idHijo) {
+      throw new ValidationError('Selecciona al hijo que recibirá el servicio.', { idHijo: 'Este campo es obligatorio.' });
+    }
+    const [ninera, hijo, reservasHijo] = await Promise.all([
+      this._obtenerNineraActiva(solicitud.idNinera),
+      this.hijoRepository.findById(solicitud.idHijo),
+      this.reservaRepository.listarActivasDeHijoEnFecha(solicitud.idHijo, solicitud.fecha),
+    ]);
+    if (!hijo || !hijo.perteneceA(usuario.id)) throw new ForbiddenError('Selecciona un hijo de tu familia.');
+    const nueva = new Reserva({ idPadre: Number(usuario.id), idNinera: solicitud.idNinera, idHijo: solicitud.idHijo,
       fechaReserva: solicitud.fecha, horaInicio: solicitud.horaInicio, horaFin: solicitud.horaFin,
       direccion: solicitud.direccion, comentario: `Oferta: ${oferta.titulo}` });
     Object.assign(nueva, this._calcularTarifa(oferta.tarifaHora, nueva.horaInicio, nueva.horaFin));
+    const choqueHijo = reservasHijo.find((r) => r.estaActiva(this.reloj()) && nueva.seSolapaCon(r));
+    if (choqueHijo) throw new ConflictoHorarioError('El hijo ya tiene una reserva en ese horario.');
+    await this._validarDentroDeDisponibilidad(nueva);
     nueva.expiraEn = new Date(this.reloj().getTime() + MINUTOS_PARA_PAGAR * 60000);
     const guardada = await this.reservaRepository.crearDesdePostulacion(nueva, idOferta, idPostulacion);
     if (!guardada) throw new ConflictError('La oferta ya tiene una reserva pendiente de pago o el horario no está disponible.');

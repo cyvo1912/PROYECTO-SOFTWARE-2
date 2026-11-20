@@ -126,9 +126,6 @@ export default function RegisterNannyScreen({ onBack, onRegistered, onNavigateTo
           ) : (
             <>
               <Text style={styles.screenTitle}>Registro como Niñera</Text>
-              <Text style={styles.screenSubtitle}>
-                Completa tus datos para unirte a Mi Nana. Un administrador verificará tu cuenta antes de activarla.
-              </Text>
 
               <Text style={styles.sectionLabel}>Tus datos</Text>
               <Field label="Nombre" value={nombre} onChangeText={updateField(setNombre, 'nombre')} error={fieldErrors.nombre} placeholder="María" />

@@ -50,6 +50,46 @@ class DisponibilidadController {
       return responderError(res, error);
     }
   }
+
+  async consultarMia(req, res) {
+    try {
+      const data = await this.servicioDisponibilidad.consultarMiDisponibilidad(req.user, req.query);
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
+
+  async crearMia(req, res) {
+    try {
+      const data = await this.servicioDisponibilidad.crearMiBloque(req.user, req.body);
+      return res.status(201).json({ success: true, data });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
+
+  async actualizarMia(req, res) {
+    try {
+      const data = await this.servicioDisponibilidad.actualizarMiBloque(
+        req.user,
+        req.params.idDisponibilidad,
+        req.body,
+      );
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
+
+  async eliminarMia(req, res) {
+    try {
+      const data = await this.servicioDisponibilidad.eliminarMiBloque(req.user, req.params.idDisponibilidad);
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      return responderError(res, error);
+    }
+  }
 }
 
 module.exports = DisponibilidadController;

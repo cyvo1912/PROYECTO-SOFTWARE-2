@@ -74,6 +74,8 @@ export default function PublishJobOfferScreen({ token, user, onBack, onVerPerfil
   const [cargandoPostulantes, setCargandoPostulantes] = useState(false);
   const [seleccion, setSeleccion] = useState(null);
   const [direccion, setDireccion] = useState(user?.detalles?.direccion || '');
+  const [hijos, setHijos] = useState([]);
+  const [idHijoReserva, setIdHijoReserva] = useState(null);
   const [reservando, setReservando] = useState(false);
   const [reservaPago, setReservaPago] = useState(null);
 
@@ -84,7 +86,7 @@ export default function PublishJobOfferScreen({ token, user, onBack, onVerPerfil
     try {
       const response = await fetch(`${API_BASE_URL}/ofertas/${seleccion.oferta.id}/postulaciones/${seleccion.postulante.id}/reserva`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ direccion }),
+        body: JSON.stringify({ direccion, idHijo: idHijoReserva }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.message || 'No se pudo crear la reserva.');
@@ -127,6 +129,13 @@ export default function PublishJobOfferScreen({ token, user, onBack, onVerPerfil
   useEffect(() => {
     cargarMisOfertas();
   }, [cargarMisOfertas]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/hijos`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => response.json())
+      .then((data) => { if (data.success) setHijos(Array.isArray(data.data) ? data.data : []); })
+      .catch(() => setHijos([]));
+  }, [token]);
 
   const actualizar = (campo) => (texto) => {
     setForm((prev) => ({ ...prev, [campo]: texto }));
@@ -214,9 +223,6 @@ export default function PublishJobOfferScreen({ token, user, onBack, onVerPerfil
       >
         {mostrandoFormulario && <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
           <Text style={styles.screenTitle}>{editandoId ? 'Editar oferta' : 'Publicar oferta de trabajo'}</Text>
-          <Text style={styles.screenSubtitle}>
-            {editandoId ? 'Los cambios serán visibles para las postulantes. No se puede editar si hay una reserva vigente.' : 'Tu oferta aparecerá en la bolsa de trabajo para que las niñeras se postulen.'}
-          </Text>
 
           {successMessage ? (
             <View style={styles.successBanner}>
@@ -384,7 +390,7 @@ export default function PublishJobOfferScreen({ token, user, onBack, onVerPerfil
                           <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 6 }}>Ver perfil</Text>
                         </TouchableOpacity>
                         {oferta.estado === 'ABIERTA' && p.estado === 'PENDIENTE' && (
-                          <TouchableOpacity onPress={() => setSeleccion({ oferta, postulante: p })}>
+                          <TouchableOpacity onPress={() => { setSeleccion({ oferta, postulante: p }); setIdHijoReserva(null); }}>
                             <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 8 }}>Seleccionar y pagar</Text>
                           </TouchableOpacity>
                         )}
@@ -393,7 +399,12 @@ export default function PublishJobOfferScreen({ token, user, onBack, onVerPerfil
                             <Text style={styles.offerDesc}>Servicio: {oferta.fechaInicio.split('-').reverse().join('/')}, {oferta.horaInicio} a {oferta.horaFin}. Tarifa de la oferta: S/ {Number(oferta.tarifaHora).toFixed(2)} por hora.</Text>
                             <Text style={styles.offerTitle}>Total: S/ {totalOferta(oferta)}</Text>
                             <TextInput value={direccion} onChangeText={setDireccion} placeholder="Dirección del servicio" style={styles.input} />
-                            <TouchableOpacity style={styles.submitButton} disabled={reservando} onPress={reservarPostulacion}>
+                            <Text style={styles.offerDesc}>¿Para quién es el servicio?</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                              {hijos.map((hijo) => <TouchableOpacity key={hijo.id} onPress={() => setIdHijoReserva(hijo.id)} style={[styles.applicantsBadge, idHijoReserva === hijo.id && { backgroundColor: colors.primary }]}><Text style={[styles.applicantsBadgeText, idHijoReserva === hijo.id && { color: '#FFFFFF' }]}>{hijo.nombre}</Text></TouchableOpacity>)}
+                            </View>
+                            {hijos.length === 0 ? <Text style={styles.errorBannerText}>Registra un hijo antes de continuar.</Text> : null}
+                            <TouchableOpacity style={styles.submitButton} disabled={reservando || !idHijoReserva} onPress={reservarPostulacion}>
                               <Text style={styles.submitButtonText}>{reservando ? 'Reservando...' : 'Continuar al pago'}</Text>
                             </TouchableOpacity>
                           </View>

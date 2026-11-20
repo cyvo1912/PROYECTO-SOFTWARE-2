@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { AUTH_API_URL } from '../config/api';
+import { API_BASE_URL, AUTH_API_URL } from '../config/api';
 
 export default function LoginScreen({
   onBack,
@@ -33,6 +33,40 @@ export default function LoginScreen({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [loggedInUser, setLoggedInUser] = useState(null);
+  const [backendDisponible, setBackendDisponible] = useState(false);
+
+  // El servidor termina de iniciar después de cargar su configuración de
+  // seguridad. Esperamos su health check antes de habilitar el formulario y
+  // evitamos que el primer toque falle por intentar conectar demasiado pronto.
+  useEffect(() => {
+    let activo = true;
+    let temporizador;
+
+    const comprobarServidor = async () => {
+      const controlador = new AbortController();
+      const limite = setTimeout(() => controlador.abort(), 3500);
+      try {
+        const respuesta = await fetch(`${API_BASE_URL}/health`, {
+          signal: controlador.signal,
+        });
+        if (!respuesta.ok) throw new Error('Health check no disponible');
+        if (activo) setBackendDisponible(true);
+      } catch {
+        if (activo) {
+          setBackendDisponible(false);
+          temporizador = setTimeout(comprobarServidor, 1000);
+        }
+      } finally {
+        clearTimeout(limite);
+      }
+    };
+
+    comprobarServidor();
+    return () => {
+      activo = false;
+      if (temporizador) clearTimeout(temporizador);
+    };
+  }, []);
 
   const handleRoleChange = (role) => {
     setSelectedRole(role);
@@ -263,11 +297,18 @@ export default function LoginScreen({
                 </View>
               ) : null}
 
+              {!backendDisponible ? (
+                <View style={styles.connectionStatus}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.connectionStatusText}>Conectando con el servidor…</Text>
+                </View>
+              ) : null}
+
               {/* Botón Iniciar Sesión (Mockup) */}
               <TouchableOpacity
                 style={styles.submitButton}
                 onPress={handleLogin}
-                disabled={loading}
+                disabled={loading || !backendDisponible}
                 activeOpacity={0.85}
               >
                 {loading ? (
@@ -438,6 +479,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  connectionStatusText: {
+    color: '#64748B',
+    fontSize: 13,
   },
   submitButton: {
     backgroundColor: colors.buttonDark,

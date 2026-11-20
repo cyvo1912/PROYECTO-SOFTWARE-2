@@ -33,10 +33,42 @@ class DisponibilidadRepositoryEnMemoria extends DisponibilidadRepositoryPort {
   async listarReservasActivasPorRango(idNinera, _fechaDesde, _fechaHasta) {
     return this.reservas.filter((r) => r.idNinera === idNinera);
   }
+
+  async listarReservasActivasPorDiaSemana(idNinera, dia, fechaDesde) {
+    return this.reservas.filter((reserva) => (
+      reserva.idNinera === idNinera
+      && reserva.fechaReserva >= fechaDesde
+      && nombreDiaSemana(reserva.fechaReserva) === dia
+    ));
+  }
+
+  async obtenerBloquePropio(idNinera, idDisponibilidad) {
+    return this.bloques.find((b) => b.idNinera === idNinera && b.id === idDisponibilidad) || null;
+  }
+
+  async crearBloque(idNinera, datos) {
+    const bloque = new Disponibilidad({ id: this.bloques.length + 10, idNinera, ...datos });
+    this.bloques.push(bloque);
+    return bloque;
+  }
+
+  async actualizarBloquePropio(idNinera, idDisponibilidad, datos) {
+    const indice = this.bloques.findIndex((b) => b.idNinera === idNinera && b.id === idDisponibilidad);
+    if (indice < 0) return null;
+    this.bloques[indice] = new Disponibilidad({ id: idDisponibilidad, idNinera, ...datos });
+    return this.bloques[indice];
+  }
+
+  async eliminarBloquePropio(idNinera, idDisponibilidad) {
+    const totalInicial = this.bloques.length;
+    this.bloques = this.bloques.filter((b) => !(b.idNinera === idNinera && b.id === idDisponibilidad));
+    return this.bloques.length !== totalInicial;
+  }
 }
 
 const USUARIO_FAMILIA = { id: 10, tipo_usuario: 'FAMILIA' };
 const ID_NINERA = 5;
+const USUARIO_NINERA = { id: ID_NINERA, tipo_usuario: 'NINERA' };
 
 describe('ServicioDisponibilidad', () => {
   let repositorio;
@@ -135,4 +167,78 @@ describe('ServicioDisponibilidad', () => {
   test('responde 404 si la niñera no existe', async () => {
     await assert.rejects(servicio.consultarDisponibilidad(USUARIO_FAMILIA, 999, RANGO), NotFoundError);
   });
+
+  test('la niñera crea, edita y elimina sus propios horarios futuros', async () => {
+    const creado = await servicio.crearMiBloque(USUARIO_NINERA, {
+      fecha: '2030-11-10', horaInicio: '09:00', horaFin: '12:00',
+    });
+    assert.equal(creado.horaInicio, '09:00');
+
+    const actualizado = await servicio.actualizarMiBloque(USUARIO_NINERA, creado.id, {
+      fecha: '2030-11-10', horaInicio: '10:00', horaFin: '13:00',
+    });
+    assert.equal(actualizado.horaInicio, '10:00');
+
+    await servicio.eliminarMiBloque(USUARIO_NINERA, creado.id);
+    assert.equal(repositorio.bloques.length, 0);
+  });
+
+  test('no permite crear ni retirar una disponibilidad semanal que se cruce con una reserva futura', async () => {
+    repositorio.reservas = [{
+      idNinera: ID_NINERA,
+      fechaReserva: '2030-11-18', // lunes
+      horaInicio: '10:00',
+      horaFin: '12:00',
+    }];
+
+    await assert.rejects(
+      servicio.crearMiBloque(USUARIO_NINERA, {
+        fecha: '2030-11-11', horaInicio: '09:00', horaFin: '11:00', repetirSemanal: true,
+      }),
+      ValidationError,
+    );
+
+    repositorio.reservas = [];
+    const recurrente = await servicio.crearMiBloque(USUARIO_NINERA, {
+      fecha: '2030-11-11', horaInicio: '09:00', horaFin: '11:00', repetirSemanal: true,
+    });
+    assert.equal(recurrente.fecha, null);
+    assert.equal(recurrente.diaSemana, 'LUNES');
+
+    repositorio.reservas = [{
+      idNinera: ID_NINERA,
+      fechaReserva: '2030-11-25',
+      horaInicio: '10:00',
+      horaFin: '11:00',
+    }];
+    await assert.rejects(servicio.eliminarMiBloque(USUARIO_NINERA, recurrente.id), ValidationError);
+  });
+
+  test('no permite horarios que se crucen entre sí ni con una reserva activa', async () => {
+    repositorio.bloques = [new Disponibilidad({
+      id: 70, idNinera: ID_NINERA, fecha: '2030-11-10', horaInicio: '09:00', horaFin: '12:00',
+    })];
+    await assert.rejects(
+      servicio.crearMiBloque(USUARIO_NINERA, { fecha: '2030-11-10', horaInicio: '11:00', horaFin: '14:00' }),
+      ValidationError,
+    );
+
+    repositorio.bloques = [];
+    repositorio.reservas = [{ idNinera: ID_NINERA, fechaReserva: '2030-11-10', horaInicio: '10:00', horaFin: '12:00' }];
+    await assert.rejects(
+      servicio.crearMiBloque(USUARIO_NINERA, { fecha: '2030-11-10', horaInicio: '09:00', horaFin: '11:00' }),
+      ValidationError,
+    );
+  });
+
+  test('solo una niñera puede gestionar su disponibilidad', async () => {
+    await assert.rejects(
+      servicio.crearMiBloque(USUARIO_FAMILIA, { fecha: '2030-11-10', horaInicio: '09:00', horaFin: '12:00' }),
+      ForbiddenError,
+    );
+  });
 });
+
+function nombreDiaSemana(fecha) {
+  return ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'][new Date(`${fecha}T00:00:00.000Z`).getUTCDay()];
+}

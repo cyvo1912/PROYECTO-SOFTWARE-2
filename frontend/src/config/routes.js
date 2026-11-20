@@ -87,6 +87,10 @@ export const CONFIG_RUTAS = {
     roles: ['NINERA'],
     mostrarBottomNav: true,
   },
+  manageAvailability: {
+    roles: ['NINERA'],
+    mostrarBottomNav: true,
+  },
 
   // --- Rutas de Administración ---
   adminDashboard: {

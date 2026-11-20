@@ -83,7 +83,7 @@ class ServicioRegistro {
 
   /** HU: Registro de familia. Mockup "Registro como Familia". */
   async registrarPadre(datos) {
-    const { nombre, apellido, correo, dni, celular, contrasena, nombreFamilia, direccion, numeroNinos, edadesNinos } = datos;
+    const { nombre, apellido, correo, dni, celular, contrasena, nombreFamilia, direccion, numeroNinos, edadesNinos, nombresNinos } = datos;
 
     const errores = {};
     this._validarIdentidad(datos, errores);
@@ -99,11 +99,17 @@ class ServicioRegistro {
     }
 
     const listaEdades = Array.isArray(edadesNinos) ? edadesNinos.map(Number) : [];
+    const listaNombres = Array.isArray(nombresNinos) ? nombresNinos.map((n) => String(n || '').trim()) : [];
     if (listaEdades.length === 0) errores.edadesNinos = 'Indica la edad de cada niño.';
     else if (listaEdades.some((edad) => !Number.isInteger(edad) || edad < 0 || edad > 17)) {
       errores.edadesNinos = 'Cada edad debe ser un número entero entre 0 y 17.';
     } else if (!errores.numeroNinos && listaEdades.length !== numNinos) {
       errores.edadesNinos = `Indica ${numNinos} edad(es), una por cada niño.`;
+    }
+    if (listaNombres.length === 0 || listaNombres.some((nombreNino) => !nombreNino)) {
+      errores.nombresNinos = 'Indica el nombre de cada niño.';
+    } else if (!errores.numeroNinos && listaNombres.length !== numNinos) {
+      errores.nombresNinos = `Indica ${numNinos} nombre(s), uno por cada niño.`;
     }
 
     if (Object.keys(errores).length > 0) {
@@ -134,6 +140,7 @@ class ServicioRegistro {
         direccion: direccion.trim(),
         numeroNinos: numNinos,
         edadesNinos: listaEdades,
+        hijos: listaNombres.map((nombreHijo, indice) => ({ nombre: nombreHijo, edad: listaEdades[indice] })),
       },
     );
 

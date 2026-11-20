@@ -260,7 +260,6 @@ export default function FamilyDashboardScreen({
 
           <View style={styles.headerBlock}>
             <Text style={styles.screenTitle}>Panel de Familia</Text>
-            <Text style={styles.screenSubtitle}>Resumen de tu hogar y servicios</Text>
           </View>
 
           {/* Tarjeta del hogar */}

@@ -171,9 +171,6 @@ export default function JobBoardScreen({ token, onBack }) {
             <>
               <View style={styles.headerBlock}>
                 <Text style={styles.screenTitle}>Bolsa de trabajo</Text>
-                <Text style={styles.screenSubtitle}>
-                  Ofertas disponibles según tu perfil.
-                </Text>
               </View>
 
 

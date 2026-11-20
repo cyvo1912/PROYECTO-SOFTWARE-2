@@ -242,14 +242,7 @@ export default function SearchNanniesScreen({ token, onBack, onVerPerfil, onAuth
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={[styles.content, isMobile ? styles.contentMobile : styles.contentDesktop]}>
           <View style={styles.headerBlock}>
-            <Text style={styles.screenTitle}>
-              {buscaPorZona ? 'Buscar niñeras cerca de ti' : 'Buscar niñeras verificadas'}
-            </Text>
-            <Text style={styles.screenSubtitle}>
-              {buscaPorZona
-                ? 'Filtra por distancia, tarifa y experiencia para encontrar candidatas verificadas en tu zona'
-                : 'Explora perfiles verificados y filtra por tarifa o experiencia, sin activar tu ubicación'}
-            </Text>
+            <Text style={styles.screenTitle}>Buscar niñeras</Text>
           </View>
 
           {/* Tarjeta de filtros */}

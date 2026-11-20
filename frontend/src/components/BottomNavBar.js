@@ -139,7 +139,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F1EEF9',
-    paddingBottom: Platform.OS === 'ios' ? 22 : 8,
+    // Se eleva el contenido dentro de una franja blanca continua para no
+    // dejar visible el fondo de la pantalla junto a la barra de gestos.
+    paddingBottom: Platform.OS === 'ios' ? 22 : 20,
     paddingTop: 8,
     ...Platform.select({
       ios: {

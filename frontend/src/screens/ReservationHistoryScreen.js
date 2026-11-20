@@ -196,7 +196,6 @@ export default function ReservationHistoryScreen({ token, user, onBack }) {
           <Text style={styles.backText}>Volver</Text>
         </TouchableOpacity>
     <Text style={styles.title}>{esNinera ? 'Mis servicios' : 'Mis reservas'}</Text>
-    <Text style={styles.subtitle}>{esNinera ? 'Acepta, rechaza o completa servicios asignados.' : 'Consulta tus servicios, completa pagos pendientes, cancela si corresponde y valora los servicios terminados.'}</Text>
     {errorAccion ? <Text style={{ color: '#DC2626', marginBottom: 12 }}>{errorAccion}</Text> : null}
     {loading ? (
       <SkeletonList count={3} />

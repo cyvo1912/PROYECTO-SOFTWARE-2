@@ -65,6 +65,41 @@ export async function obtenerDisponibilidadNinera({ token, idNinera, desde, hast
   return payload.data;
 }
 
+async function solicitarGestion(path, { token, method = 'GET', body } = {}) {
+  const response = await fetch(`${API_BASE_URL}/nineras/mia/disponibilidad${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.success) {
+    const error = new Error(payload.message || 'No se pudo actualizar tu disponibilidad.');
+    error.fields = payload.fields;
+    throw error;
+  }
+  return payload.data;
+}
+
+export function obtenerMiDisponibilidad({ token, desde, hasta }) {
+  const params = new URLSearchParams({ desde, hasta });
+  return solicitarGestion(`?${params.toString()}`, { token });
+}
+
+export function crearMiDisponibilidad({ token, bloque }) {
+  return solicitarGestion('', { token, method: 'POST', body: bloque });
+}
+
+export function actualizarMiDisponibilidad({ token, idDisponibilidad, bloque }) {
+  return solicitarGestion(`/${idDisponibilidad}`, { token, method: 'PATCH', body: bloque });
+}
+
+export function eliminarMiDisponibilidad({ token, idDisponibilidad }) {
+  return solicitarGestion(`/${idDisponibilidad}`, { token, method: 'DELETE' });
+}
+
 /**
  * Patrón Adapter (GoF): transforma el diccionario `disponibilidadPorFecha` del backend
  * y la fecha activa `selectedDate` al objeto `markedDates` que consume `react-native-calendars`.

@@ -36,6 +36,7 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
   const [direccion, setDireccion] = useState('');
   const [numeroNinos, setNumeroNinos] = useState('');
   const [edadesNinos, setEdadesNinos] = useState('');
+  const [nombresNinos, setNombresNinos] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -73,6 +74,10 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
             .map((e) => e.trim())
             .filter((e) => e.length > 0)
             .map(Number),
+          nombresNinos: nombresNinos
+            .split(',')
+            .map((n) => n.trim())
+            .filter((n) => n.length > 0),
         }),
       });
 
@@ -131,7 +136,6 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
           ) : (
             <>
               <Text style={styles.screenTitle}>Registro como Familia</Text>
-              <Text style={styles.screenSubtitle}>Crea tu cuenta para empezar a buscar niñeras de confianza.</Text>
 
               <Text style={styles.sectionLabel}>Tus datos</Text>
               <Field label="Nombre" value={nombre} onChangeText={updateField(setNombre, 'nombre')} error={fieldErrors.nombre} placeholder="María" />
@@ -175,6 +179,15 @@ export default function RegisterFamilyScreen({ onBack, onRegistered, onNavigateT
                 keyboardType="number-pad"
                 maxLength={14}
                 helpText="Escribe una edad por hijo, separadas por comas. Ej.: 3, 5."
+              />
+              <Field
+                label="Nombres de los hijos"
+                value={nombresNinos}
+                onChangeText={updateField(setNombresNinos, 'nombresNinos')}
+                error={fieldErrors.nombresNinos}
+                placeholder="Valentina, Mateo"
+                maxLength={200}
+                helpText="Escribe un nombre por hijo, separados por comas."
               />
 
               {errorMessage ? (

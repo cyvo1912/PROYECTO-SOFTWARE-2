@@ -32,6 +32,7 @@ export default function NannyDashboardScreen({
   onNavigateToEditProfile,
   onNavigateToMultimedia,
   onNavigateToPublicProfile,
+  onNavigateToManageAvailability,
   onLogout,
   logoutLoading = false,
   onNotificaciones,
@@ -50,6 +51,7 @@ export default function NannyDashboardScreen({
   const [cargandoOfertas, setCargandoOfertas] = useState(Boolean(token));
   const [perfilPublico, setPerfilPublico] = useState(null);
   const [ingresosMes, setIngresosMes] = useState(null);
+  const [trabajosActivos, setTrabajosActivos] = useState(null);
 
   useEffect(() => {
     if (!token) return undefined;
@@ -70,8 +72,11 @@ export default function NannyDashboardScreen({
           const comision = r.comisionPlataforma == null ? Math.round(bruto * 0.05) : Math.round(Number(r.comisionPlataforma) * 100);
           return total + bruto - comision;
         }, 0);
-        if (activo) setIngresosMes(centimos / 100);
-      } catch (error) { if (activo) setIngresosMes(null); }
+        if (activo) {
+          setIngresosMes(centimos / 100);
+          setTrabajosActivos(data.data.filter((r) => ['PAGADA', 'ACEPTADA'].includes(String(r.estadoReserva || '').toUpperCase())).length);
+        }
+      } catch (error) { if (activo) { setIngresosMes(null); setTrabajosActivos(null); } }
     };
     cargarIngresos();
     const intervalo = setInterval(cargarIngresos, 10000);
@@ -203,9 +208,6 @@ export default function NannyDashboardScreen({
           {/* Título de la pantalla */}
           <View style={styles.headerBlock}>
             <Text style={styles.screenTitle}>Panel de Niñera</Text>
-            <Text style={styles.screenSubtitle}>
-              Gestiona tus ofertas de trabajo y perfil profesional
-            </Text>
           </View>
 
           {/* Tarjeta de Resumen de Perfil Profesional (HU5) */}
@@ -260,6 +262,14 @@ export default function NannyDashboardScreen({
                   <Text style={styles.mediaBtnText}>Presentación pública</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
+                  style={styles.mediaBtn}
+                  onPress={onNavigateToManageAvailability}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                  <Text style={styles.mediaBtnText}>Disponibilidad</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={styles.editProfileBtn}
                   onPress={onNavigateToEditProfile}
                   activeOpacity={0.8}
@@ -304,7 +314,7 @@ export default function NannyDashboardScreen({
               <View style={[styles.metricIconWrap, { backgroundColor: '#FCE7F3' }]}>
                 <Ionicons name="heart-outline" size={22} color="#DB2777" />
               </View>
-              <Text style={styles.metricValue}>2</Text>
+              <Text style={styles.metricValue}>{trabajosActivos === null ? '—' : trabajosActivos}</Text>
               <Text style={styles.metricLabel}>Trabajos Activos</Text>
             </View>
 

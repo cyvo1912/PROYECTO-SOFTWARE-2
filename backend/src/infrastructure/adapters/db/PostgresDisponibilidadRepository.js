@@ -137,6 +137,83 @@ class PostgresDisponibilidadRepository extends DisponibilidadRepositoryPort {
       estadoReserva: row.estado_reserva,
     }));
   }
+
+  async listarReservasActivasPorDiaSemana(idNinera, diaSemana, fechaDesde) {
+    const diaNumero = numeroDiaSemana(diaSemana);
+    const query = `
+      SELECT id_reserva, TO_CHAR(fecha_reserva, 'YYYY-MM-DD') AS fecha_reserva,
+             TO_CHAR(hora_inicio, 'HH24:MI') AS hora_inicio,
+             TO_CHAR(hora_fin, 'HH24:MI') AS hora_fin, estado_reserva
+      FROM reserva
+      WHERE id_ninera = $1
+        AND fecha_reserva >= $2::date
+        AND EXTRACT(DOW FROM fecha_reserva) = $3
+        AND LOWER(COALESCE(estado_reserva, 'pendiente')) NOT IN ('cancelada', 'rechazada')
+        AND NOT (
+          LOWER(COALESCE(estado_reserva, 'pendiente')) = 'pendiente'
+          AND expira_en IS NOT NULL
+          AND expira_en <= NOW()
+        )
+      ORDER BY fecha_reserva ASC, hora_inicio ASC;
+    `;
+    const result = await this.pool.query(query, [idNinera, fechaDesde, diaNumero]);
+    return result.rows.map((row) => ({
+      idReserva: row.id_reserva,
+      fechaReserva: row.fecha_reserva,
+      horaInicio: row.hora_inicio,
+      horaFin: row.hora_fin,
+      estadoReserva: row.estado_reserva,
+    }));
+  }
+
+  async obtenerBloquePropio(idNinera, idDisponibilidad) {
+    const result = await this.pool.query(
+      `SELECT id_disponibilidad, id_ninera, TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha,
+              dia_semana, TO_CHAR(hora_inicio, 'HH24:MI') AS hora_inicio,
+              TO_CHAR(hora_fin, 'HH24:MI') AS hora_fin, estado
+       FROM disponibilidad
+       WHERE id_disponibilidad = $1 AND id_ninera = $2
+       LIMIT 1;`,
+      [idDisponibilidad, idNinera],
+    );
+    return result.rows[0] ? filaADisponibilidad(result.rows[0]) : null;
+  }
+
+  async crearBloque(idNinera, { fecha, horaInicio, horaFin, diaSemana = null }) {
+    const result = await this.pool.query(
+      `INSERT INTO disponibilidad (id_ninera, fecha, dia_semana, hora_inicio, hora_fin, estado)
+       VALUES ($1, CASE WHEN $2::boolean THEN NULL ELSE $3::date END, $4, $5::time, $6::time, 'Disponible')
+       RETURNING id_disponibilidad, id_ninera, TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha,
+                 dia_semana, TO_CHAR(hora_inicio, 'HH24:MI') AS hora_inicio,
+                 TO_CHAR(hora_fin, 'HH24:MI') AS hora_fin, estado;`,
+      [idNinera, Boolean(diaSemana), fecha, diaSemana, horaInicio, horaFin],
+    );
+    return filaADisponibilidad(result.rows[0]);
+  }
+
+  async actualizarBloquePropio(idNinera, idDisponibilidad, { fecha, horaInicio, horaFin, diaSemana = null }) {
+    const result = await this.pool.query(
+      `UPDATE disponibilidad
+       SET fecha = CASE WHEN $1::boolean THEN NULL ELSE $2::date END, dia_semana = $3,
+           hora_inicio = $4::time, hora_fin = $5::time, estado = 'Disponible'
+       WHERE id_disponibilidad = $6 AND id_ninera = $7
+       RETURNING id_disponibilidad, id_ninera, TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha,
+                 dia_semana, TO_CHAR(hora_inicio, 'HH24:MI') AS hora_inicio,
+                 TO_CHAR(hora_fin, 'HH24:MI') AS hora_fin, estado;`,
+      [Boolean(diaSemana), fecha, diaSemana, horaInicio, horaFin, idDisponibilidad, idNinera],
+    );
+    return result.rows[0] ? filaADisponibilidad(result.rows[0]) : null;
+  }
+
+  async eliminarBloquePropio(idNinera, idDisponibilidad) {
+    const result = await this.pool.query(
+      `DELETE FROM disponibilidad
+       WHERE id_disponibilidad = $1 AND id_ninera = $2
+       RETURNING id_disponibilidad;`,
+      [idDisponibilidad, idNinera],
+    );
+    return result.rows.length > 0;
+  }
 }
 
 function filaADisponibilidad(row) {
@@ -149,6 +226,13 @@ function filaADisponibilidad(row) {
     horaFin: row.hora_fin,
     estado: row.estado,
   });
+}
+
+function numeroDiaSemana(diaSemana) {
+  const dias = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+  const numero = dias.indexOf(String(diaSemana || '').toUpperCase());
+  if (numero < 0) throw new Error('El día de semana no es válido.');
+  return numero;
 }
 
 module.exports = PostgresDisponibilidadRepository;

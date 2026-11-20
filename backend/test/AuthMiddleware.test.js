@@ -12,7 +12,7 @@ function respuesta() {
 }
 
 describe('authMiddleware', () => {
-  test('la sesión limitada de una niñera solo permite completar multimedia', () => {
+  test('la sesión limitada de una niñera solo permite completar multimedia', async () => {
     const auth = crearAuthMiddleware({
       verifyToken: () => ({ id: 8, tipo_usuario: 'NINERA', accesoLimitado: true }),
     });
@@ -21,7 +21,7 @@ describe('authMiddleware', () => {
       baseUrl: '/api/ofertas',
     };
     const resBloqueada = respuesta();
-    auth.autenticar(reqBloqueada, resBloqueada, () => assert.fail('No debe continuar'));
+    await auth.autenticar(reqBloqueada, resBloqueada, () => assert.fail('No debe continuar'));
     assert.equal(resBloqueada.statusCode, 403);
 
     const reqExpediente = {
@@ -30,8 +30,18 @@ describe('authMiddleware', () => {
     };
     const resExpediente = respuesta();
     let continuo = false;
-    auth.autenticar(reqExpediente, resExpediente, () => { continuo = true; });
+    await auth.autenticar(reqExpediente, resExpediente, () => { continuo = true; });
     assert.equal(continuo, true);
     assert.equal(reqExpediente.user.id, 8);
+  });
+
+  test('rechaza al instante la sesión de una cuenta suspendida', async () => {
+    const auth = crearAuthMiddleware(
+      { verifyToken: () => ({ id: 8, tipo_usuario: 'NINERA', accesoLimitado: false }) },
+      { findById: async () => ({ id: 8, tipoUsuario: 'NINERA', estadoCuenta: 'SUSPENDIDA' }) },
+    );
+    const res = respuesta();
+    await auth.autenticar({ headers: { authorization: 'Bearer vigente' }, baseUrl: '/api/reservas' }, res, () => assert.fail('No debe continuar'));
+    assert.equal(res.statusCode, 403);
   });
 });

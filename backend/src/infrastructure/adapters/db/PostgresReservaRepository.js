@@ -94,15 +94,15 @@ class PostgresReservaRepository extends ReservaRepositoryPort {
       if (!oferta.rows.length) { await client.query('ROLLBACK'); return null; }
       const result = await client.query(`INSERT INTO reserva
         (id_padre,id_ninera,id_hijo,fecha_reserva,hora_inicio,hora_fin,direccion,estado_reserva,comentario,tarifa_hora,horas,monto_total,expira_en,id_postulacion)
-        SELECT $1,$2,NULL,$3::date,$4::time,$5::time,$6,'Pendiente',$7,$8,$9,$10,$11::timestamptz,$12
-        WHERE EXISTS (SELECT 1 FROM postulacion WHERE id_postulacion=$12 AND id_oferta=$13 AND id_ninera=$2 AND estado='PENDIENTE')
+        SELECT $1,$2,$3,$4::date,$5::time,$6::time,$7,'Pendiente',$8,$9,$10,$11,$12::timestamptz,$13
+        WHERE EXISTS (SELECT 1 FROM postulacion WHERE id_postulacion=$13 AND id_oferta=$14 AND id_ninera=$2 AND estado='PENDIENTE')
         AND NOT EXISTS (SELECT 1 FROM reserva r JOIN postulacion p ON p.id_postulacion=r.id_postulacion
-          WHERE p.id_oferta=$13 AND LOWER(r.estado_reserva) NOT IN ('cancelada','rechazada')
+          WHERE p.id_oferta=$14 AND LOWER(r.estado_reserva) NOT IN ('cancelada','rechazada')
           AND NOT (LOWER(r.estado_reserva)='pendiente' AND r.expira_en <= NOW()))
-        AND NOT EXISTS (SELECT 1 FROM reserva WHERE id_ninera=$2 AND fecha_reserva=$3::date
-          AND ${FILTRO_ACTIVA} AND hora_inicio<$5::time AND $4::time<hora_fin)
+        AND NOT EXISTS (SELECT 1 FROM reserva WHERE id_ninera=$2 AND fecha_reserva=$4::date
+          AND ${FILTRO_ACTIVA} AND hora_inicio<$6::time AND $5::time<hora_fin)
         RETURNING ${COLUMNAS}`,
-      [reserva.idPadre,reserva.idNinera,reserva.fechaReserva,reserva.horaInicio,reserva.horaFin,
+      [reserva.idPadre,reserva.idNinera,reserva.idHijo,reserva.fechaReserva,reserva.horaInicio,reserva.horaFin,
         reserva.direccion,reserva.comentario,reserva.tarifaHora,reserva.horas,reserva.montoTotal,reserva.expiraEn,idPostulacion,idOferta]);
       await client.query('COMMIT');
       return result.rows[0] ? filaAReserva(result.rows[0]) : null;

@@ -25,6 +25,7 @@ function familiaValida(overrides = {}) {
     direccion: 'Av. Principal 123',
     numeroNinos: 1,
     edadesNinos: [5],
+    nombresNinos: ['Sofía'],
     ...overrides,
   };
 }

@@ -43,6 +43,30 @@ class DisponibilidadRepositoryPort {
   async listarReservasActivasPorRango(idNinera, fechaDesde, fechaHasta) {
     throw new Error('Método listarReservasActivasPorRango no implementado');
   }
+
+  /**
+   * Lista las reservas activas futuras que recaen en un día semanal.
+   * Se usa al validar cambios a disponibilidades recurrentes.
+   */
+  async listarReservasActivasPorDiaSemana(idNinera, diaSemana, fechaDesde) {
+    throw new Error('Método listarReservasActivasPorDiaSemana no implementado');
+  }
+
+  async obtenerBloquePropio(idNinera, idDisponibilidad) {
+    throw new Error('Método obtenerBloquePropio no implementado');
+  }
+
+  async crearBloque(idNinera, bloque) {
+    throw new Error('Método crearBloque no implementado');
+  }
+
+  async actualizarBloquePropio(idNinera, idDisponibilidad, bloque) {
+    throw new Error('Método actualizarBloquePropio no implementado');
+  }
+
+  async eliminarBloquePropio(idNinera, idDisponibilidad) {
+    throw new Error('Método eliminarBloquePropio no implementado');
+  }
 }
 
 module.exports = DisponibilidadRepositoryPort;

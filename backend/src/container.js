@@ -181,7 +181,7 @@ class Container {
     );
 
     // Middleware de Autenticación
-    this.authMiddleware = crearAuthMiddleware(this.tokenService);
+    this.authMiddleware = crearAuthMiddleware(this.tokenService, this.userRepository);
   }
 
   /**

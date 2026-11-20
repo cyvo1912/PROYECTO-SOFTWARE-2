@@ -339,9 +339,6 @@ export default function EditNannyProfileScreen({
         <View style={[styles.mainCard, isMobile ? styles.mainCardMobile : styles.mainCardDesktop]}>
           {/* Encabezado del Formulario (Figura 17) */}
           <Text style={styles.screenTitle}>Datos de cuenta</Text>
-          <Text style={styles.screenSubtitle}>
-            Actualiza tus datos personales, foto, tarifa y zona.
-          </Text>
 
           {loadingInitial ? (
             <View style={styles.loadingBox}>
